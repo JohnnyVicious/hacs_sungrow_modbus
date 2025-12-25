@@ -1,0 +1,26 @@
+name: Run tests
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          pip install voluptuous homeassistant pymodbus pytest pytest-asyncio pytest_homeassistant_custom_component
+
+      - name: Run all tests
+        run: PYTHONPATH=. pytest tests

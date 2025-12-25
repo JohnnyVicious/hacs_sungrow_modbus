@@ -1,0 +1,42 @@
+import logging
+from typing import List
+
+from homeassistant.components.sensor import SensorEntity
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant, callback
+
+from custom_components.sungrow_modbus import ModbusController
+from custom_components.sungrow_modbus.const import DOMAIN, VALUES, SENSOR_DERIVED_ENTITIES, \
+    SENSOR_ENTITIES
+from custom_components.sungrow_modbus.helpers import get_controller_from_entry
+from custom_components.sungrow_modbus.sensors.sungrow_derived_sensor import SungrowDerivedSensor
+from custom_components.sungrow_modbus.sensors.sungrow_sensor import SungrowSensor
+
+_LOGGER = logging.getLogger(__name__)
+
+
+async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry, async_add_entities):
+    """Set up Modbus sensors from a config entry."""
+    controller: ModbusController = get_controller_from_entry(hass, config_entry)
+    sensor_entities: List[SungrowSensor] = []
+    sensor_derived_entities: List[SensorEntity] = []
+    hass.data[DOMAIN].setdefault(VALUES, {})
+
+    for sensor_group in controller.sensor_groups:
+        for sensor in sensor_group.sensors:
+            if sensor.name != "reserve":
+                sensor_entities.append(SungrowSensor(hass, sensor))
+
+    for sensor in controller.derived_sensors:
+        sensor_derived_entities.append(SungrowDerivedSensor(hass, sensor))
+
+    hass.data[DOMAIN][SENSOR_ENTITIES] = sensor_entities
+    hass.data[DOMAIN][SENSOR_DERIVED_ENTITIES] = sensor_derived_entities
+
+    async_add_entities(sensor_entities, True)
+    async_add_entities(sensor_derived_entities, True)
+
+    @callback
+    def update(now):
+        """Update Modbus data periodically."""
+    return True

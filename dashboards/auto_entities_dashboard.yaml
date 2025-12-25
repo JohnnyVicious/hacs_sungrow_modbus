@@ -1,0 +1,425 @@
+# Sungrow Multi-Inverter Dashboard (Auto-Entities)
+#
+# REQUIREMENTS:
+# Install "auto-entities" from HACS: https://github.com/thomasloven/lovelace-auto-entities
+#
+# FEATURES:
+# - Automatically discovers all Sungrow inverters
+# - Works with any number of inverters (1, 2, 10, etc.)
+# - No manual entity ID editing required
+# - New inverters appear automatically
+
+title: Sungrow PV System
+views:
+  # ============================================================================
+  # OVERVIEW TAB
+  # ============================================================================
+  - title: Overview
+    icon: mdi:solar-power-variant
+    cards:
+      # System Status - All Inverters
+      - type: custom:auto-entities
+        card:
+          type: entities
+          title: System Status
+        filter:
+          include:
+            - entity_id: sensor.sungrow_*running_state
+            - entity_id: sensor.sungrow_*system_state
+            - entity_id: sensor.sungrow_*ems_mode_selection
+        sort:
+          method: entity_id
+
+      # Current Power - All Inverters
+      - type: custom:auto-entities
+        card:
+          type: entities
+          title: Solar Production
+        filter:
+          include:
+            - entity_id: sensor.sungrow_*total_dc_power
+        sort:
+          method: entity_id
+
+      - type: custom:auto-entities
+        card:
+          type: entities
+          title: Home Consumption
+        filter:
+          include:
+            - entity_id: sensor.sungrow_*load_power
+        sort:
+          method: entity_id
+
+      - type: custom:auto-entities
+        card:
+          type: entities
+          title: Grid Power
+        filter:
+          include:
+            - entity_id: sensor.sungrow_*export_power
+            - entity_id: sensor.sungrow_*meter_active_power
+        sort:
+          method: entity_id
+
+      # Battery Gauges - One per inverter
+      - type: custom:auto-entities
+        card:
+          type: horizontal-stack
+        card_param: cards
+        filter:
+          include:
+            - entity_id: sensor.sungrow_*battery_level
+              not:
+                entity_id: "*nominal*"
+              options:
+                type: gauge
+                min: 0
+                max: 100
+                severity:
+                  green: 70
+                  yellow: 40
+                  red: 20
+        sort:
+          method: entity_id
+
+      # Today's Energy - All Inverters
+      - type: custom:auto-entities
+        card:
+          type: entities
+          title: Today's Generation
+        filter:
+          include:
+            - entity_id: sensor.sungrow_*daily_pv_generation
+            - entity_id: sensor.sungrow_*daily_pv_energy
+        sort:
+          method: entity_id
+
+      - type: custom:auto-entities
+        card:
+          type: entities
+          title: Today's Grid Exchange
+        filter:
+          include:
+            - entity_id: sensor.sungrow_*daily_exported_energy
+            - entity_id: sensor.sungrow_*daily_imported_energy
+        sort:
+          method: entity_id
+
+      # Temperature Overview
+      - type: custom:auto-entities
+        card:
+          type: glance
+          title: Temperatures
+          columns: 4
+        filter:
+          include:
+            - entity_id: sensor.sungrow_*inverter_temperature
+            - entity_id: sensor.sungrow_*battery_temperature
+        sort:
+          method: entity_id
+
+  # ============================================================================
+  # PV PRODUCTION TAB
+  # ============================================================================
+  - title: PV Production
+    icon: mdi:solar-panel-large
+    cards:
+      # Total DC Power
+      - type: custom:auto-entities
+        card:
+          type: entities
+          title: DC Power
+        filter:
+          include:
+            - entity_id: sensor.sungrow_*total_dc_power
+        sort:
+          method: entity_id
+
+      # MPPT Details
+      - type: custom:auto-entities
+        card:
+          type: entities
+          title: MPPT1
+        filter:
+          include:
+            - entity_id: sensor.sungrow_*mppt1_voltage
+            - entity_id: sensor.sungrow_*mppt1_current
+        sort:
+          method: entity_id
+
+      - type: custom:auto-entities
+        card:
+          type: entities
+          title: MPPT2
+        filter:
+          include:
+            - entity_id: sensor.sungrow_*mppt2_voltage
+            - entity_id: sensor.sungrow_*mppt2_current
+        sort:
+          method: entity_id
+
+      - type: custom:auto-entities
+        card:
+          type: entities
+          title: MPPT3
+        filter:
+          include:
+            - entity_id: sensor.sungrow_*mppt3_voltage
+            - entity_id: sensor.sungrow_*mppt3_current
+        sort:
+          method: entity_id
+        show_empty: false
+
+      # PV Energy Stats
+      - type: custom:auto-entities
+        card:
+          type: entities
+          title: Daily PV Energy
+        filter:
+          include:
+            - entity_id: sensor.sungrow_*daily_pv_generation
+            - entity_id: sensor.sungrow_*daily_pv_energy
+            - entity_id: sensor.sungrow_*daily_direct_energy_consumption
+            - entity_id: sensor.sungrow_*daily_battery_charge_from_pv
+        sort:
+          method: entity_id
+
+      - type: custom:auto-entities
+        card:
+          type: entities
+          title: Total PV Energy
+        filter:
+          include:
+            - entity_id: sensor.sungrow_*total_pv_generation
+            - entity_id: sensor.sungrow_*total_pv_energy
+            - entity_id: sensor.sungrow_*total_direct_energy_consumption
+            - entity_id: sensor.sungrow_*total_battery_charge_from_pv
+        sort:
+          method: entity_id
+
+  # ============================================================================
+  # BATTERY TAB
+  # ============================================================================
+  - title: Battery
+    icon: mdi:battery-charging-high
+    cards:
+      # Battery Gauges
+      - type: custom:auto-entities
+        card:
+          type: horizontal-stack
+        card_param: cards
+        filter:
+          include:
+            - entity_id: sensor.sungrow_*battery_level
+              not:
+                entity_id: "*nominal*"
+              options:
+                type: gauge
+                name: Battery SoC
+                min: 0
+                max: 100
+                severity:
+                  green: 70
+                  yellow: 40
+                  red: 20
+        sort:
+          method: entity_id
+
+      # Battery Status
+      - type: custom:auto-entities
+        card:
+          type: entities
+          title: Battery Status
+        filter:
+          include:
+            - entity_id: sensor.sungrow_*battery_level
+              not:
+                entity_id: "*nominal*"
+            - entity_id: sensor.sungrow_*battery_state_of_health
+            - entity_id: sensor.sungrow_*battery_capacity
+            - entity_id: sensor.sungrow_*battery_voltage
+            - entity_id: sensor.sungrow_*battery_current
+            - entity_id: sensor.sungrow_*battery_power
+            - entity_id: sensor.sungrow_*battery_temperature
+        sort:
+          method: entity_id
+
+      # Battery Energy
+      - type: custom:auto-entities
+        card:
+          type: entities
+          title: Daily Battery Energy
+        filter:
+          include:
+            - entity_id: sensor.sungrow_*daily_battery_charge
+              not:
+                entity_id: "*from_pv*"
+            - entity_id: sensor.sungrow_*daily_battery_discharge
+        sort:
+          method: entity_id
+
+      - type: custom:auto-entities
+        card:
+          type: entities
+          title: Total Battery Energy
+        filter:
+          include:
+            - entity_id: sensor.sungrow_*total_battery_charge
+              not:
+                entity_id: "*from_pv*"
+            - entity_id: sensor.sungrow_*total_battery_discharge
+        sort:
+          method: entity_id
+
+      # Battery Settings
+      - type: custom:auto-entities
+        card:
+          type: entities
+          title: Battery Settings
+        filter:
+          include:
+            - entity_id: sensor.sungrow_*min_soc
+            - entity_id: sensor.sungrow_*max_soc
+            - entity_id: sensor.sungrow_*reserved_soc_for_backup
+            - entity_id: sensor.sungrow_*battery_max_charge_power
+            - entity_id: sensor.sungrow_*battery_max_discharge_power
+            - entity_id: sensor.sungrow_*bms_max_charging_current
+            - entity_id: sensor.sungrow_*bms_max_discharging_current
+        sort:
+          method: entity_id
+
+  # ============================================================================
+  # GRID TAB
+  # ============================================================================
+  - title: Grid
+    icon: mdi:transmission-tower
+    cards:
+      # Grid Power
+      - type: custom:auto-entities
+        card:
+          type: entities
+          title: Grid Power
+        filter:
+          include:
+            - entity_id: sensor.sungrow_*meter_active_power
+            - entity_id: sensor.sungrow_*export_power
+            - entity_id: sensor.sungrow_*grid_frequency
+        sort:
+          method: entity_id
+
+      # Grid Energy
+      - type: custom:auto-entities
+        card:
+          type: entities
+          title: Daily Grid Energy
+        filter:
+          include:
+            - entity_id: sensor.sungrow_*daily_exported_energy
+            - entity_id: sensor.sungrow_*daily_imported_energy
+        sort:
+          method: entity_id
+
+      - type: custom:auto-entities
+        card:
+          type: entities
+          title: Total Grid Energy
+        filter:
+          include:
+            - entity_id: sensor.sungrow_*total_exported_energy
+            - entity_id: sensor.sungrow_*total_imported_energy
+        sort:
+          method: entity_id
+
+      # Phase Details
+      - type: custom:auto-entities
+        card:
+          type: entities
+          title: Phase A
+        filter:
+          include:
+            - entity_id: sensor.sungrow_*phase_a_voltage
+            - entity_id: sensor.sungrow_*phase_a_current
+        sort:
+          method: entity_id
+
+      - type: custom:auto-entities
+        card:
+          type: entities
+          title: Phase B
+        filter:
+          include:
+            - entity_id: sensor.sungrow_*phase_b_voltage
+            - entity_id: sensor.sungrow_*phase_b_current
+        sort:
+          method: entity_id
+
+      - type: custom:auto-entities
+        card:
+          type: entities
+          title: Phase C
+        filter:
+          include:
+            - entity_id: sensor.sungrow_*phase_c_voltage
+            - entity_id: sensor.sungrow_*phase_c_current
+        sort:
+          method: entity_id
+
+      # Export Settings
+      - type: custom:auto-entities
+        card:
+          type: entities
+          title: Export Settings
+        filter:
+          include:
+            - entity_id: sensor.sungrow_*export_power_limit_mode
+            - entity_id: sensor.sungrow_*export_power_limit
+        sort:
+          method: entity_id
+
+  # ============================================================================
+  # INVERTER INFO TAB
+  # ============================================================================
+  - title: Inverters
+    icon: mdi:information-outline
+    cards:
+      # Device Info
+      - type: custom:auto-entities
+        card:
+          type: entities
+          title: Inverter Details
+        filter:
+          include:
+            - entity_id: sensor.sungrow_*inverter_serial
+            - entity_id: sensor.sungrow_*device_type_code
+            - entity_id: sensor.sungrow_*nominal_active_power
+            - entity_id: sensor.sungrow_*running_state
+            - entity_id: sensor.sungrow_*system_state
+            - entity_id: sensor.sungrow_*inverter_temperature
+        sort:
+          method: entity_id
+
+      # EMS Settings
+      - type: custom:auto-entities
+        card:
+          type: entities
+          title: Energy Management
+        filter:
+          include:
+            - entity_id: sensor.sungrow_*ems_mode_selection
+            - entity_id: sensor.sungrow_*backup_mode
+            - entity_id: sensor.sungrow_*battery_forced_charge_discharge_cmd
+            - entity_id: sensor.sungrow_*battery_forced_charge_discharge_power
+        sort:
+          method: entity_id
+
+      # Firmware
+      - type: custom:auto-entities
+        card:
+          type: entities
+          title: Firmware Versions
+        filter:
+          include:
+            - entity_id: sensor.sungrow_*firmware_version
+        sort:
+          method: entity_id

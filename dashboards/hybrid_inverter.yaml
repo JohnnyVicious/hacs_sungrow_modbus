@@ -1,0 +1,295 @@
+# Sungrow Hybrid Inverter Dashboard
+#
+# INSTRUCTIONS:
+# 1. Copy this file's contents to your Lovelace dashboard raw editor
+# 2. Find and replace "sungrow_sh10rt_" with your actual entity prefix
+#    Example: If your inverter shows as "Sungrow SH25T", replace with "sungrow_sh25t_"
+# 3. Save and reload
+#
+# To find your prefix: Settings > Devices & Services > Sungrow Modbus > click device > view entities
+
+title: Sungrow PV System
+views:
+  # ============================================================================
+  # OVERVIEW TAB
+  # ============================================================================
+  - title: Overview
+    icon: mdi:solar-power-variant
+    cards:
+      # Status
+      - type: entities
+        title: System Status
+        entities:
+          - entity: sensor.sungrow_sh10rt_running_state
+          - entity: sensor.sungrow_sh10rt_system_state
+          - entity: sensor.sungrow_sh10rt_ems_mode_selection
+
+      # Current Power
+      - type: entities
+        title: Current Power
+        entities:
+          - entity: sensor.sungrow_sh10rt_total_dc_power
+            name: Solar Production
+          - entity: sensor.sungrow_sh10rt_load_power
+            name: Home Consumption
+          - entity: sensor.sungrow_sh10rt_export_power
+            name: Grid Export
+          - entity: sensor.sungrow_sh10rt_battery_power
+            name: Battery Power
+
+      # Battery Gauge
+      - type: gauge
+        entity: sensor.sungrow_sh10rt_battery_level
+        name: Battery
+        min: 0
+        max: 100
+        severity:
+          green: 70
+          yellow: 40
+          red: 20
+
+      # Today's Energy
+      - type: entities
+        title: Today's Energy
+        entities:
+          - entity: sensor.sungrow_sh10rt_daily_pv_generation
+            name: Solar Generated
+          - entity: sensor.sungrow_sh10rt_daily_exported_energy
+            name: Exported to Grid
+          - entity: sensor.sungrow_sh10rt_daily_imported_energy
+            name: Imported from Grid
+          - entity: sensor.sungrow_sh10rt_daily_battery_charge
+            name: Battery Charged
+          - entity: sensor.sungrow_sh10rt_daily_battery_discharge
+            name: Battery Discharged
+
+      # Quick Status
+      - type: glance
+        title: Quick Status
+        columns: 4
+        show_state: true
+        state_color: true
+        entities:
+          - entity: sun.sun
+            name: Sun
+          - entity: sensor.sungrow_sh10rt_inverter_temperature
+            name: Inverter Temp
+          - entity: sensor.sungrow_sh10rt_battery_temperature
+            name: Battery Temp
+          - entity: sensor.sungrow_sh10rt_grid_frequency
+            name: Grid Freq
+
+      # Power Chart
+      - type: statistics-graph
+        title: Power Distribution (24h)
+        chart_type: line
+        period: hour
+        days_to_show: 1
+        stat_types:
+          - mean
+        entities:
+          - sensor.sungrow_sh10rt_total_dc_power
+          - sensor.sungrow_sh10rt_load_power
+          - sensor.sungrow_sh10rt_export_power
+          - sensor.sungrow_sh10rt_battery_power
+
+  # ============================================================================
+  # PV DETAILS TAB
+  # ============================================================================
+  - title: PV Details
+    icon: mdi:solar-panel-large
+    cards:
+      # MPPT Power
+      - type: entities
+        title: Solar Strings
+        entities:
+          - entity: sensor.sungrow_sh10rt_total_dc_power
+            name: Total DC Power
+          - type: divider
+          - entity: sensor.sungrow_sh10rt_mppt1_voltage
+          - entity: sensor.sungrow_sh10rt_mppt1_current
+          - type: divider
+          - entity: sensor.sungrow_sh10rt_mppt2_voltage
+          - entity: sensor.sungrow_sh10rt_mppt2_current
+
+      # PV Energy Totals
+      - type: entities
+        title: PV Energy
+        entities:
+          - entity: sensor.sungrow_sh10rt_daily_pv_generation
+            name: Today
+          - entity: sensor.sungrow_sh10rt_total_pv_generation
+            name: Lifetime Total
+          - type: divider
+          - entity: sensor.sungrow_sh10rt_daily_direct_energy_consumption
+            name: Direct Use Today
+          - entity: sensor.sungrow_sh10rt_daily_battery_charge_from_pv
+            name: To Battery Today
+
+  # ============================================================================
+  # BATTERY TAB
+  # ============================================================================
+  - title: Battery
+    icon: mdi:battery-charging-high
+    cards:
+      # Battery Status
+      - type: gauge
+        entity: sensor.sungrow_sh10rt_battery_level
+        name: State of Charge
+        min: 0
+        max: 100
+        severity:
+          green: 70
+          yellow: 40
+          red: 20
+
+      - type: entities
+        title: Battery Status
+        entities:
+          - entity: sensor.sungrow_sh10rt_battery_level
+            name: State of Charge
+          - entity: sensor.sungrow_sh10rt_battery_state_of_health
+            name: Health
+          - entity: sensor.sungrow_sh10rt_battery_capacity
+            name: Capacity
+          - type: divider
+          - entity: sensor.sungrow_sh10rt_battery_voltage
+          - entity: sensor.sungrow_sh10rt_battery_current
+          - entity: sensor.sungrow_sh10rt_battery_power
+          - entity: sensor.sungrow_sh10rt_battery_temperature
+
+      # Battery Energy
+      - type: entities
+        title: Battery Energy
+        entities:
+          - entity: sensor.sungrow_sh10rt_daily_battery_charge
+            name: Charged Today
+          - entity: sensor.sungrow_sh10rt_daily_battery_discharge
+            name: Discharged Today
+          - type: divider
+          - entity: sensor.sungrow_sh10rt_total_battery_charge
+            name: Total Charged
+          - entity: sensor.sungrow_sh10rt_total_battery_discharge
+            name: Total Discharged
+
+      # Battery Settings
+      - type: entities
+        title: Battery Settings
+        entities:
+          - entity: sensor.sungrow_sh10rt_min_soc
+            name: Minimum SoC
+          - entity: sensor.sungrow_sh10rt_max_soc
+            name: Maximum SoC
+          - entity: sensor.sungrow_sh10rt_reserved_soc_for_backup
+            name: Backup Reserve
+          - type: divider
+          - entity: sensor.sungrow_sh10rt_battery_max_charge_power
+          - entity: sensor.sungrow_sh10rt_battery_max_discharge_power
+          - entity: sensor.sungrow_sh10rt_bms_max_charging_current
+          - entity: sensor.sungrow_sh10rt_bms_max_discharging_current
+
+      # Battery SoC History
+      - type: statistics-graph
+        title: Battery Level (30 days)
+        chart_type: line
+        period: day
+        days_to_show: 30
+        stat_types:
+          - min
+          - max
+          - mean
+        entities:
+          - sensor.sungrow_sh10rt_battery_level
+
+  # ============================================================================
+  # GRID TAB
+  # ============================================================================
+  - title: Grid
+    icon: mdi:transmission-tower
+    cards:
+      # Grid Power
+      - type: entities
+        title: Grid Connection
+        entities:
+          - entity: sensor.sungrow_sh10rt_meter_active_power
+            name: Meter Power
+          - entity: sensor.sungrow_sh10rt_export_power
+            name: Export Power
+          - entity: sensor.sungrow_sh10rt_grid_frequency
+            name: Grid Frequency
+
+      # Grid Energy
+      - type: entities
+        title: Grid Energy
+        entities:
+          - entity: sensor.sungrow_sh10rt_daily_exported_energy
+            name: Exported Today
+          - entity: sensor.sungrow_sh10rt_daily_imported_energy
+            name: Imported Today
+          - type: divider
+          - entity: sensor.sungrow_sh10rt_total_exported_energy
+            name: Total Exported
+          - entity: sensor.sungrow_sh10rt_total_imported_energy
+            name: Total Imported
+
+      # Phase Details
+      - type: entities
+        title: Phase Details
+        entities:
+          - entity: sensor.sungrow_sh10rt_phase_a_voltage
+          - entity: sensor.sungrow_sh10rt_phase_a_current
+          - type: divider
+          - entity: sensor.sungrow_sh10rt_phase_b_voltage
+          - entity: sensor.sungrow_sh10rt_phase_b_current
+          - type: divider
+          - entity: sensor.sungrow_sh10rt_phase_c_voltage
+          - entity: sensor.sungrow_sh10rt_phase_c_current
+
+      # Export Settings
+      - type: entities
+        title: Export Settings
+        entities:
+          - entity: sensor.sungrow_sh10rt_export_power_limit_mode
+          - entity: sensor.sungrow_sh10rt_export_power_limit
+
+  # ============================================================================
+  # SETTINGS TAB
+  # ============================================================================
+  - title: Settings
+    icon: mdi:cog
+    cards:
+      # EMS Settings
+      - type: entities
+        title: Energy Management
+        entities:
+          - entity: sensor.sungrow_sh10rt_ems_mode_selection
+            name: EMS Mode
+          - entity: sensor.sungrow_sh10rt_backup_mode
+            name: Backup Mode
+          - entity: sensor.sungrow_sh10rt_battery_forced_charge_discharge_cmd
+            name: Force Charge/Discharge
+          - entity: sensor.sungrow_sh10rt_battery_forced_charge_discharge_power
+            name: Forced Power
+
+      # Inverter Info
+      - type: entities
+        title: Inverter Information
+        entities:
+          - entity: sensor.sungrow_sh10rt_inverter_serial
+            name: Serial Number
+          - entity: sensor.sungrow_sh10rt_device_type_code
+            name: Device Type
+          - entity: sensor.sungrow_sh10rt_nominal_active_power
+            name: Rated Power
+          - type: divider
+          - entity: sensor.sungrow_sh10rt_running_state
+          - entity: sensor.sungrow_sh10rt_system_state
+          - entity: sensor.sungrow_sh10rt_inverter_temperature
+
+      # Firmware
+      - type: entities
+        title: Firmware Versions
+        entities:
+          - entity: sensor.sungrow_sh10rt_inverter_firmware_version
+          - entity: sensor.sungrow_sh10rt_communication_module_firmware_version
+          - entity: sensor.sungrow_sh10rt_battery_firmware_version
