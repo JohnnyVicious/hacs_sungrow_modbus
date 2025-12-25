@@ -250,6 +250,10 @@ class ModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             (inv for inv in SUNGROW_INVERTERS if inv.model == inverter_model), None
         )
 
+        if inverter_config_template is None:
+            _LOGGER.error(f"Unknown inverter model: {inverter_model}")
+            return False
+
         # Clone to avoid mutating the shared template
         inverter_config = copy.deepcopy(inverter_config_template)
 
