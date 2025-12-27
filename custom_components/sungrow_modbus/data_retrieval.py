@@ -323,8 +323,8 @@ class DataRetrieval:
                 data = await battery_controller.read_status()
 
                 if data:
-                    # Update sensors for this stack
-                    for sensor in battery_sensors:
+                    # Update sensors for this stack (iterate over copy to avoid mutation during iteration)
+                    for sensor in list(battery_sensors):
                         if sensor._stack_index == battery_controller.stack_index:
                             sensor.update_from_battery_data(data)
 

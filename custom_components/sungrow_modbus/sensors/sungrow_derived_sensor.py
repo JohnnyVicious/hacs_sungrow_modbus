@@ -110,20 +110,22 @@ class SungrowDerivedSensor(RestoreSensor, SensorEntity):
                 new_value = STATUS_MAPPING.get(new_value, "Unknown")
 
             if 33049 in self._register or 33051 in self._register or 33053 in self._register or 33055 in self._register:
-                r1_value = self._received_values[self._register[0]] * self.base_sensor.multiplier
-                r2_value = self._received_values[self._register[1]] * self.base_sensor.multiplier
-                new_value = round(r1_value * r2_value)
+                if len(self._register) >= 2:
+                    r1_value = self._received_values[self._register[0]] * self.base_sensor.multiplier
+                    r2_value = self._received_values[self._register[1]] * self.base_sensor.multiplier
+                    new_value = round(r1_value * r2_value)
 
             if 33079 in self._register or 33080 in self._register or 33081 in self._register or 33082 in self._register:
-                active_power = self.base_sensor.convert_value(
-                    [self._received_values[self._register[0]], self._received_values[self._register[1]]])
-                reactive_power = self.base_sensor.convert_value(
-                    [self._received_values[self._register[2]], self._received_values[self._register[3]]])
+                if len(self._register) >= 4:
+                    active_power = self.base_sensor.convert_value(
+                        [self._received_values[self._register[0]], self._received_values[self._register[1]]])
+                    reactive_power = self.base_sensor.convert_value(
+                        [self._received_values[self._register[2]], self._received_values[self._register[3]]])
 
-                if active_power == 0 or reactive_power == 0:
-                    new_value = 1
-                else:
-                    new_value = round(active_power / ((active_power ** 2 + reactive_power ** 2) ** 0.5), 3)
+                    if active_power == 0 or reactive_power == 0:
+                        new_value = 1
+                    else:
+                        new_value = round(active_power / ((active_power ** 2 + reactive_power ** 2) ** 0.5), 3)
 
             if 33135 in self._register and len(self._register) == 4:
                 registers = self._register.copy()

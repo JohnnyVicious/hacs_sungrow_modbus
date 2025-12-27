@@ -53,11 +53,28 @@ async def async_setup(hass: HomeAssistant, entry: ConfigEntry):
         host = call.data.get("host")
         slave = call.data.get("slave", 1)
 
+        # Validate register address is in reasonable range for Sungrow inverters
+        if not (0 <= address <= 65535):
+            _LOGGER.error("Invalid register address %s: must be 0-65535", address)
+            return
+
+        # Validate value is within 16-bit unsigned range
+        if not (0 <= value <= 65535):
+            _LOGGER.error("Invalid register value %s: must be 0-65535", value)
+            return
+
         if host:
             controller = get_controller(hass, host, slave)
+            if controller is None:
+                _LOGGER.error("No controller found for host %s, slave %s", host, slave)
+                return
             hass.create_task(controller.async_write_holding_register(int(address), int(value)))
         else:
-            for controller in hass.data[DOMAIN][CONTROLLER].values():
+            controllers = hass.data.get(DOMAIN, {}).get(CONTROLLER, {})
+            if not controllers:
+                _LOGGER.error("No controllers available for write operation")
+                return
+            for controller in controllers.values():
                 hass.create_task(controller.async_write_holding_register(int(address), int(value)))
 
     # @Ian-Johnston
