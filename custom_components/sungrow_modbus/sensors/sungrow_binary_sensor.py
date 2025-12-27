@@ -29,6 +29,7 @@ class SungrowBinaryEntity(RestoreEntity, SwitchEntity):
         self._attr_unique_id = "{}_{}_{}_{}".format(DOMAIN, modbus_controller.device_serial_number, self._register,
                                                     self._on_value if self._on_value is not None else self._bit_position)
         self._attr_name = entity_definition["name"]
+        self._attr_has_entity_name = True
         self._attr_is_on = False
         self._attr_available = False
 

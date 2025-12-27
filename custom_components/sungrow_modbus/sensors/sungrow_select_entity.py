@@ -17,6 +17,7 @@ class SungrowSelectEntity(RestoreEntity, SelectEntity):
         self._modbus_controller: ModbusController = modbus_controller
         self._register = entity_definition["register"]
         self._attr_name = entity_definition["name"]
+        self._attr_has_entity_name = True
         self._attr_unique_id = "{}_{}_{}_select".format(DOMAIN,
                                                         self._modbus_controller.device_serial_number,
                                                         entity_definition["register"])

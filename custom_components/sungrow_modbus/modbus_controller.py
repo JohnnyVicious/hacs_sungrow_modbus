@@ -499,9 +499,8 @@ class ModbusController:
     @property
     def device_info(self):
         """Return device info."""
-        # Fallback identifier if serial isn't ready yet
-
-        name = f"{MANUFACTURER} {self.model}"
+        # Include serial number in device name for unique entity IDs when multiple inverters exist
+        name = f"{MANUFACTURER} {self.model} {self.serial_number}"
 
         return DeviceInfo(
             identifiers={(DOMAIN, self.serial_number)},
