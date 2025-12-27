@@ -135,3 +135,12 @@ class SungrowSensor(RestoreSensor, SensorEntity):
     def device_info(self):
         """Return device info."""
         return self.base_sensor.controller.device_info
+
+    @property
+    def extra_state_attributes(self):
+        """Return extra state attributes."""
+        attrs = {}
+        # Expose raw numeric value when value mapping is used
+        if self.base_sensor.has_value_mapping and self.base_sensor.raw_value is not None:
+            attrs["raw_value"] = self.base_sensor.raw_value
+        return attrs if attrs else None

@@ -270,6 +270,54 @@ hybrid_sensors = [
         ]
     },
 
+    # ==================== FAULT CODES (Input Registers 5045-5049) ====================
+    {
+        "register_start": 5045,
+        "poll_speed": PollSpeed.NORMAL,
+        "entities": [
+            {
+                "name": "Fault Code 1",
+                "unique": "sungrow_modbus_fault_code_1",
+                "category": Category.STATUS_INFORMATION,
+                "register": ['5045'],
+                "multiplier": 1,
+                "value_mapping": "alarm"
+            },
+            {
+                "name": "Fault Code 2",
+                "unique": "sungrow_modbus_fault_code_2",
+                "category": Category.STATUS_INFORMATION,
+                "register": ['5046'],
+                "multiplier": 1,
+                "value_mapping": "alarm"
+            },
+            {
+                "name": "Fault Code 3",
+                "unique": "sungrow_modbus_fault_code_3",
+                "category": Category.STATUS_INFORMATION,
+                "register": ['5047'],
+                "multiplier": 1,
+                "value_mapping": "alarm"
+            },
+            {
+                "name": "Fault Code 4",
+                "unique": "sungrow_modbus_fault_code_4",
+                "category": Category.STATUS_INFORMATION,
+                "register": ['5048'],
+                "multiplier": 1,
+                "value_mapping": "alarm"
+            },
+            {
+                "name": "Fault Code 5",
+                "unique": "sungrow_modbus_fault_code_5",
+                "category": Category.STATUS_INFORMATION,
+                "register": ['5049'],
+                "multiplier": 1,
+                "value_mapping": "alarm"
+            },
+        ]
+    },
+
     # ==================== GRID FREQUENCY (Input Register 5241) ====================
     {
         "register_start": 5241,
@@ -537,7 +585,7 @@ hybrid_sensors = [
                 "category": Category.STATUS_INFORMATION,
                 "register": ['12999'],
                 "multiplier": 1,
-                "state_class": SensorStateClass.MEASUREMENT
+                "value_mapping": "system_state"
             },
             {
                 "name": "Running State",
@@ -545,7 +593,7 @@ hybrid_sensors = [
                 "category": Category.STATUS_INFORMATION,
                 "register": ['13000'],
                 "multiplier": 1,
-                "state_class": SensorStateClass.MEASUREMENT
+                "value_mapping": "running_state"
             },
         ]
     },

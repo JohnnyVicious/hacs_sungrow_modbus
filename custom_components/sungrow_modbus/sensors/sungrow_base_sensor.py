@@ -1,6 +1,6 @@
 # sungrow_base.py
 import logging
-from typing import Union
+from typing import Union, Dict, Any
 
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
 from homeassistant.components.switch import SwitchDeviceClass
@@ -11,9 +11,24 @@ from typing_extensions import List, Optional
 
 from custom_components.sungrow_modbus.const import DOMAIN
 from custom_components.sungrow_modbus.data.enums import PollSpeed, Category, InverterFeature
+from custom_components.sungrow_modbus.data.alarm_codes import (
+    get_alarm_description,
+    get_running_state,
+    get_system_state,
+    ALARM_CODES,
+    RUNNING_STATE_CODES,
+    SYSTEM_STATE_CODES,
+)
 from custom_components.sungrow_modbus.helpers import cache_get, extract_serial_number, split_s32, _any_in
 
 _LOGGER = logging.getLogger(__name__)
+
+# Mapping type names to lookup functions
+VALUE_MAPPING_FUNCTIONS = {
+    "alarm": get_alarm_description,
+    "running_state": get_running_state,
+    "system_state": get_system_state,
+}
 
 
 class SungrowBaseSensor:
@@ -38,10 +53,14 @@ class SungrowBaseSensor:
                  category: Category = None,
                  min_value: Optional[int] = None,
                  max_value: Optional[int] = None,
-                 poll_speed=PollSpeed.NORMAL):
+                 poll_speed=PollSpeed.NORMAL,
+                 value_mapping: Optional[Union[str, Dict[int, str]]] = None):
         """
         :param name: Sensor name
         :param registrars: First register address
+        :param value_mapping: Optional mapping for value lookup. Can be:
+            - A string: "alarm", "running_state", "system_state" to use predefined mappings
+            - A dict: Custom {int: str} mapping for this specific sensor
         """
         self.hass = hass
         self.unique_id = unique_id
@@ -64,6 +83,8 @@ class SungrowBaseSensor:
         self.min_value = min_value
         self.poll_speed = poll_speed
         self.category = category
+        self.value_mapping = value_mapping
+        self._last_raw_value = None  # Store raw value for attributes
 
         self.dynamic_adjustments()
 
@@ -147,7 +168,52 @@ class SungrowBaseSensor:
             else:
                 n_value = values[0] * self.multiplier
 
+        # Store raw value for attribute access
+        self._last_raw_value = n_value
+
+        # Apply value mapping if configured
+        if self.value_mapping is not None:
+            n_value = self._apply_value_mapping(n_value)
+
         return n_value
+
+    def _apply_value_mapping(self, raw_value: int) -> str:
+        """
+        Convert a raw numeric value to a human-readable string using the configured mapping.
+
+        Args:
+            raw_value: The numeric value to look up
+
+        Returns:
+            The mapped string value, or a default "Unknown" string if not found
+        """
+        if raw_value is None:
+            return None
+
+        # Handle string mapping type (predefined mappings)
+        if isinstance(self.value_mapping, str):
+            lookup_func = VALUE_MAPPING_FUNCTIONS.get(self.value_mapping)
+            if lookup_func:
+                return lookup_func(int(raw_value))
+            else:
+                _LOGGER.warning(f"Unknown value mapping type: {self.value_mapping}")
+                return str(raw_value)
+
+        # Handle dict mapping type (custom mapping)
+        elif isinstance(self.value_mapping, dict):
+            return self.value_mapping.get(int(raw_value), f"Unknown ({raw_value})")
+
+        return str(raw_value)
+
+    @property
+    def raw_value(self) -> Optional[int]:
+        """Get the last raw numeric value before mapping was applied."""
+        return self._last_raw_value
+
+    @property
+    def has_value_mapping(self) -> bool:
+        """Check if this sensor uses value mapping."""
+        return self.value_mapping is not None
 
     def get_info(self):
         """Return basic sensor information."""
@@ -178,6 +244,7 @@ class SungrowSensorGroup:
             category=entity.get("category", None),
             default=entity.get("default", 0),
             multiplier=entity.get("multiplier", 1),
+            value_mapping=entity.get("value_mapping", None),
             unique_id="{}_{}_{}".format(DOMAIN, controller.device_serial_number, entity.get("unique", "reserve")),
             poll_speed=definition.get("poll_speed", PollSpeed.NORMAL)
         ), definition.get("entities", [])))
