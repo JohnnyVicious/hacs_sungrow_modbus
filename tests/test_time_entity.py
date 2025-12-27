@@ -13,22 +13,23 @@ from custom_components.sungrow_modbus.time import async_setup_entry, SungrowTime
 def create_mock_controller(host="10.0.0.1", slave=1, inverter_type=InverterType.HYBRID, features=None):
     """Create a mock controller."""
     if features is None:
-        features = {InverterFeature.V2}
+        features = {InverterFeature.BATTERY}
 
     controller = MagicMock()
     controller.host = host
     controller.device_id = slave
     controller.slave = slave
     controller.connected.return_value = True
+    controller.controller_key = f"{host}:502_{slave}"
     controller.inverter_config = MagicMock()
     controller.inverter_config.type = inverter_type
     controller.inverter_config.features = features
-    controller.model = "S6-EH3P10K"
+    controller.model = "SH10RT"
     controller.device_serial_number = "SN123456"
     controller.device_info = {
         "identifiers": {(DOMAIN, f"{host}:502_{slave}")},
         "manufacturer": "Sungrow",
-        "name": "S6-EH3P10K",
+        "name": "SH10RT",
     }
     controller.poll_speed = {PollSpeed.FAST: 5, PollSpeed.NORMAL: 15, PollSpeed.SLOW: 30}
     controller.async_write_holding_registers = AsyncMock()
@@ -39,45 +40,11 @@ class TestTimeEntityPlatformSetup:
     """Test time platform async_setup_entry."""
 
     @pytest.mark.asyncio
-    async def test_hybrid_creates_time_charging_slots(self):
-        """Test HYBRID inverter creates time-charging slot entities."""
-        controller = create_mock_controller(inverter_type=InverterType.HYBRID)
-
-        hass = MagicMock()
-        hass.data = {
-            DOMAIN: {
-                CONTROLLER: {
-                    "10.0.0.1:502_1": controller
-                }
-            }
-        }
-
-        config_entry = MagicMock()
-        config_entry.data = {"host": "10.0.0.1", "port": 502, "slave": 1}
-        config_entry.options = {}
-
-        captured_entities = []
-
-        def capture_add_devices(entities, update_immediately):
-            captured_entities.extend(entities)
-
-        await async_setup_entry(hass, config_entry, capture_add_devices)
-
-        # HYBRID should create 5 slots × 4 times each = 20 time-charging entities
-        # Plus 6 Grid ToU slots × 4 times = 24 entities (if V2 feature)
-        assert len(captured_entities) >= 20  # At minimum the time-charging slots
-        assert TIME_ENTITIES in hass.data[DOMAIN]
-
-        # Verify slot 1 entities exist
-        slot1_names = [e._attr_name for e in captured_entities if "Slot 1" in e._attr_name]
-        assert len(slot1_names) >= 4  # Charge start/end, discharge start/end
-
-    @pytest.mark.asyncio
-    async def test_hybrid_with_v2_creates_grid_tou_slots(self):
-        """Test HYBRID with V2 feature creates Grid ToU time slots."""
+    async def test_hybrid_with_battery_creates_load_timing_entities(self):
+        """Test HYBRID inverter with BATTERY feature creates load timing entities."""
         controller = create_mock_controller(
             inverter_type=InverterType.HYBRID,
-            features={InverterFeature.V2}
+            features={InverterFeature.BATTERY}
         )
 
         hass = MagicMock()
@@ -100,17 +67,28 @@ class TestTimeEntityPlatformSetup:
 
         await async_setup_entry(hass, config_entry, capture_add_devices)
 
-        # Check for Grid ToU entities
-        grid_tou_entities = [e for e in captured_entities if "Grid Time of Use" in e._attr_name]
-        # 6 slots × 4 times = 24 Grid ToU entities
-        assert len(grid_tou_entities) == 24
+        # HYBRID with BATTERY should create 6 load timing entities:
+        # - Load Timing Period 1 Start/End (2)
+        # - Load Timing Period 2 Start/End (2)
+        # - Load Power Optimized Period Start/End (2)
+        assert len(captured_entities) == 6
+        assert TIME_ENTITIES in hass.data[DOMAIN]
+
+        # Verify entity names
+        entity_names = [e._attr_name for e in captured_entities]
+        assert "Load Timing Period 1 Start" in entity_names
+        assert "Load Timing Period 1 End" in entity_names
+        assert "Load Timing Period 2 Start" in entity_names
+        assert "Load Timing Period 2 End" in entity_names
+        assert "Load Power Optimized Period Start" in entity_names
+        assert "Load Power Optimized Period End" in entity_names
 
     @pytest.mark.asyncio
-    async def test_string_inverter_creates_minimal_time_entities(self):
-        """Test STRING inverter creates only V2 time entities if available."""
+    async def test_hybrid_without_battery_creates_no_time_entities(self):
+        """Test HYBRID inverter without BATTERY feature creates no time entities."""
         controller = create_mock_controller(
-            inverter_type=InverterType.STRING,
-            features={InverterFeature.V2}
+            inverter_type=InverterType.HYBRID,
+            features=set()  # No BATTERY feature
         )
 
         hass = MagicMock()
@@ -133,39 +111,76 @@ class TestTimeEntityPlatformSetup:
 
         await async_setup_entry(hass, config_entry, capture_add_devices)
 
-        # STRING should not have time-charging slots, only Grid ToU if V2
-        time_charging = [e for e in captured_entities if "Time-Charging" in e._attr_name]
-        assert len(time_charging) == 0
-
-    @pytest.mark.asyncio
-    async def test_string_without_v2_creates_no_time_entities(self):
-        """Test STRING without V2 creates no time entities."""
-        controller = create_mock_controller(
-            inverter_type=InverterType.STRING,
-            features=set()  # No V2
-        )
-
-        hass = MagicMock()
-        hass.data = {
-            DOMAIN: {
-                CONTROLLER: {
-                    "10.0.0.1:502_1": controller
-                }
-            }
-        }
-
-        config_entry = MagicMock()
-        config_entry.data = {"host": "10.0.0.1", "port": 502, "slave": 1}
-        config_entry.options = {}
-
-        captured_entities = []
-
-        def capture_add_devices(entities, update_immediately):
-            captured_entities.extend(entities)
-
-        await async_setup_entry(hass, config_entry, capture_add_devices)
-
+        # HYBRID without BATTERY should have no time entities
         assert len(captured_entities) == 0
+
+    @pytest.mark.asyncio
+    async def test_string_inverter_creates_no_time_entities(self):
+        """Test STRING inverter creates no time entities."""
+        controller = create_mock_controller(
+            inverter_type=InverterType.STRING,
+            features={InverterFeature.BATTERY}  # Even with battery, STRING has no load timing
+        )
+
+        hass = MagicMock()
+        hass.data = {
+            DOMAIN: {
+                CONTROLLER: {
+                    "10.0.0.1:502_1": controller
+                }
+            }
+        }
+
+        config_entry = MagicMock()
+        config_entry.data = {"host": "10.0.0.1", "port": 502, "slave": 1}
+        config_entry.options = {}
+
+        captured_entities = []
+
+        def capture_add_devices(entities, update_immediately):
+            captured_entities.extend(entities)
+
+        await async_setup_entry(hass, config_entry, capture_add_devices)
+
+        # STRING should have no time entities
+        assert len(captured_entities) == 0
+
+    @pytest.mark.asyncio
+    async def test_load_timing_registers_are_correct(self):
+        """Test that load timing entities use correct Sungrow registers."""
+        controller = create_mock_controller(
+            inverter_type=InverterType.HYBRID,
+            features={InverterFeature.BATTERY}
+        )
+
+        hass = MagicMock()
+        hass.data = {
+            DOMAIN: {
+                CONTROLLER: {
+                    "10.0.0.1:502_1": controller
+                }
+            }
+        }
+
+        config_entry = MagicMock()
+        config_entry.data = {"host": "10.0.0.1", "port": 502, "slave": 1}
+        config_entry.options = {}
+
+        captured_entities = []
+
+        def capture_add_devices(entities, update_immediately):
+            captured_entities.extend(entities)
+
+        await async_setup_entry(hass, config_entry, capture_add_devices)
+
+        # Verify correct Sungrow registers are used
+        registers = {e._attr_name: e._register for e in captured_entities}
+        assert registers["Load Timing Period 1 Start"] == 13003
+        assert registers["Load Timing Period 1 End"] == 13005
+        assert registers["Load Timing Period 2 Start"] == 13007
+        assert registers["Load Timing Period 2 End"] == 13009
+        assert registers["Load Power Optimized Period Start"] == 13012
+        assert registers["Load Power Optimized Period End"] == 13014
 
 
 class TestSungrowTimeEntity:
@@ -177,15 +192,15 @@ class TestSungrowTimeEntity:
         controller = create_mock_controller()
 
         entity_def = {
-            "name": "Time-Charging Charge Start (Slot 1)",
-            "register": 43143,
+            "name": "Load Timing Period 1 Start",
+            "register": 13003,
             "enabled": True
         }
 
         entity = SungrowTimeEntity(hass, controller, entity_def)
 
-        assert entity._register == 43143
-        assert entity._attr_name == "Time-Charging Charge Start (Slot 1)"
+        assert entity._register == 13003
+        assert entity._attr_name == "Load Timing Period 1 Start"
         assert entity._attr_available is True
         assert "SN123456" in entity._attr_unique_id
 
@@ -195,7 +210,7 @@ class TestSungrowTimeEntity:
         controller = create_mock_controller()
         controller.device_serial_number = "ABC123"
 
-        entity_def = {"name": "Test", "register": 43143, "enabled": True}
+        entity_def = {"name": "Test", "register": 13003, "enabled": True}
         entity = SungrowTimeEntity(hass, controller, entity_def)
 
         assert "ABC123" in entity._attr_unique_id
@@ -206,7 +221,7 @@ class TestSungrowTimeEntity:
         controller = create_mock_controller()
         controller.device_serial_number = None
 
-        entity_def = {"name": "Test", "register": 43143, "enabled": True}
+        entity_def = {"name": "Test", "register": 13003, "enabled": True}
         entity = SungrowTimeEntity(hass, controller, entity_def)
 
         assert "10.0.0.1" in entity._attr_unique_id
@@ -217,14 +232,14 @@ class TestSungrowTimeEntity:
         hass = MagicMock()
         controller = create_mock_controller()
 
-        entity_def = {"name": "Test", "register": 43143, "enabled": True}
+        entity_def = {"name": "Test", "register": 13003, "enabled": True}
         entity = SungrowTimeEntity(hass, controller, entity_def)
         entity.async_write_ha_state = MagicMock()  # Mock to avoid hass dependency
 
         new_time = time(hour=14, minute=30)
         await entity.async_set_value(new_time)
 
-        controller.async_write_holding_registers.assert_called_once_with(43143, [14, 30])
+        controller.async_write_holding_registers.assert_called_once_with(13003, [14, 30])
         assert entity._attr_native_value == new_time
 
     @pytest.mark.asyncio
@@ -234,24 +249,25 @@ class TestSungrowTimeEntity:
         hass.data = {DOMAIN: {VALUES: {}}}
         controller = create_mock_controller()
 
-        entity_def = {"name": "Test", "register": 43143, "enabled": True}
+        entity_def = {"name": "Test", "register": 13003, "enabled": True}
         entity = SungrowTimeEntity(hass, controller, entity_def)
         entity.schedule_update_ha_state = MagicMock()
 
         # Simulate cache values for hour and minute
-        hass.data[DOMAIN][VALUES]["43143"] = 14  # hour
-        hass.data[DOMAIN][VALUES]["43144"] = 30  # minute
+        hass.data[DOMAIN][VALUES]["13003"] = 14  # hour
+        hass.data[DOMAIN][VALUES]["13004"] = 30  # minute
 
         event = MagicMock()
         event.data = {
-            REGISTER: 43143,
+            REGISTER: 13003,
             VALUE: 14,
             CONTROLLER: "10.0.0.1",
             SLAVE: 1
         }
 
         with patch('custom_components.sungrow_modbus.time.cache_get') as mock_cache:
-            mock_cache.side_effect = lambda h, r: {43143: 14, 43144: 30}.get(r)
+            # cache_get takes 3 args: hass, register, controller_key
+            mock_cache.side_effect = lambda h, r, k: {13003: 14, 13004: 30}.get(r)
             entity.handle_modbus_update(event)
 
         assert entity._attr_native_value == time(hour=14, minute=30)
@@ -263,20 +279,20 @@ class TestSungrowTimeEntity:
         hass = MagicMock()
         controller = create_mock_controller()
 
-        entity_def = {"name": "Test", "register": 43143, "enabled": True}
+        entity_def = {"name": "Test", "register": 13003, "enabled": True}
         entity = SungrowTimeEntity(hass, controller, entity_def)
         entity.schedule_update_ha_state = MagicMock()
 
         event = MagicMock()
         event.data = {
-            REGISTER: 43143,
+            REGISTER: 13003,
             VALUE: 25,  # Invalid hour (> 23)
             CONTROLLER: "10.0.0.1",
             SLAVE: 1
         }
 
         with patch('custom_components.sungrow_modbus.time.cache_get') as mock_cache:
-            mock_cache.side_effect = lambda h, r: {43143: 25, 43144: 30}.get(r)
+            mock_cache.side_effect = lambda h, r, k: {13003: 25, 13004: 30}.get(r)
             entity.handle_modbus_update(event)
 
         assert entity._attr_available is False
@@ -287,20 +303,20 @@ class TestSungrowTimeEntity:
         hass = MagicMock()
         controller = create_mock_controller()
 
-        entity_def = {"name": "Test", "register": 43143, "enabled": True}
+        entity_def = {"name": "Test", "register": 13003, "enabled": True}
         entity = SungrowTimeEntity(hass, controller, entity_def)
         entity.schedule_update_ha_state = MagicMock()
 
         event = MagicMock()
         event.data = {
-            REGISTER: 43143,
+            REGISTER: 13003,
             VALUE: 14,
             CONTROLLER: "10.0.0.1",
             SLAVE: 1
         }
 
         with patch('custom_components.sungrow_modbus.time.cache_get') as mock_cache:
-            mock_cache.side_effect = lambda h, r: {43143: 14, 43144: 70}.get(r)  # 70 is invalid minute
+            mock_cache.side_effect = lambda h, r, k: {13003: 14, 13004: 70}.get(r)  # 70 is invalid minute
             entity.handle_modbus_update(event)
 
         assert entity._attr_available is False
@@ -311,20 +327,20 @@ class TestSungrowTimeEntity:
         hass = MagicMock()
         controller = create_mock_controller()
 
-        entity_def = {"name": "Test", "register": 43143, "enabled": True}
+        entity_def = {"name": "Test", "register": 13003, "enabled": True}
         entity = SungrowTimeEntity(hass, controller, entity_def)
         entity.schedule_update_ha_state = MagicMock()
 
         event = MagicMock()
         event.data = {
-            REGISTER: 43143,
+            REGISTER: 13003,
             VALUE: 14,
             CONTROLLER: "10.0.0.1",
             SLAVE: 1
         }
 
         with patch('custom_components.sungrow_modbus.time.cache_get') as mock_cache:
-            mock_cache.side_effect = lambda h, r: {43143: 14}.get(r)  # minute not in cache
+            mock_cache.side_effect = lambda h, r, k: {13003: 14}.get(r)  # minute not in cache
             entity.handle_modbus_update(event)
 
         assert entity._attr_available is False
@@ -335,13 +351,13 @@ class TestSungrowTimeEntity:
         hass = MagicMock()
         controller = create_mock_controller(host="10.0.0.1", slave=1)
 
-        entity_def = {"name": "Test", "register": 43143, "enabled": True}
+        entity_def = {"name": "Test", "register": 13003, "enabled": True}
         entity = SungrowTimeEntity(hass, controller, entity_def)
         entity._attr_native_value = time(hour=10, minute=0)  # Existing value
 
         event = MagicMock()
         event.data = {
-            REGISTER: 43143,
+            REGISTER: 13003,
             VALUE: 14,
             CONTROLLER: "10.0.0.2",  # Different host
             SLAVE: 1
@@ -358,13 +374,13 @@ class TestSungrowTimeEntity:
         hass = MagicMock()
         controller = create_mock_controller()
 
-        entity_def = {"name": "Test", "register": 43143, "enabled": True}
+        entity_def = {"name": "Test", "register": 13003, "enabled": True}
         entity = SungrowTimeEntity(hass, controller, entity_def)
         entity._attr_native_value = time(hour=10, minute=0)
 
         event = MagicMock()
         event.data = {
-            REGISTER: 43999,  # Different register
+            REGISTER: 13999,  # Different register
             VALUE: 14,
             CONTROLLER: "10.0.0.1",
             SLAVE: 1
@@ -382,7 +398,7 @@ class TestSungrowTimeEntity:
         hass.bus.async_listen = MagicMock(return_value=MagicMock())
         controller = create_mock_controller()
 
-        entity_def = {"name": "Test", "register": 43143, "enabled": True}
+        entity_def = {"name": "Test", "register": 13003, "enabled": True}
         entity = SungrowTimeEntity(hass, controller, entity_def)
 
         with patch.object(entity, 'async_get_last_sensor_data', new_callable=AsyncMock) as mock_restore:
@@ -400,7 +416,7 @@ class TestSungrowTimeEntity:
         hass.bus.async_listen = MagicMock(return_value=unsub_mock)
         controller = create_mock_controller()
 
-        entity_def = {"name": "Test", "register": 43143, "enabled": True}
+        entity_def = {"name": "Test", "register": 13003, "enabled": True}
         entity = SungrowTimeEntity(hass, controller, entity_def)
 
         with patch.object(entity, 'async_get_last_sensor_data', new_callable=AsyncMock) as mock_restore:
@@ -419,7 +435,7 @@ class TestSungrowTimeEntity:
         hass.bus.async_listen = MagicMock(return_value=MagicMock())
         controller = create_mock_controller()
 
-        entity_def = {"name": "Test", "register": 43143, "enabled": True}
+        entity_def = {"name": "Test", "register": 13003, "enabled": True}
         entity = SungrowTimeEntity(hass, controller, entity_def)
 
         mock_state = MagicMock()
@@ -441,13 +457,13 @@ class TestTimeEdgeCases:
         hass = MagicMock()
         controller = create_mock_controller()
 
-        entity_def = {"name": "Test", "register": 43143, "enabled": True}
+        entity_def = {"name": "Test", "register": 13003, "enabled": True}
         entity = SungrowTimeEntity(hass, controller, entity_def)
         entity.async_write_ha_state = MagicMock()
 
         await entity.async_set_value(time(hour=0, minute=0))
 
-        controller.async_write_holding_registers.assert_called_once_with(43143, [0, 0])
+        controller.async_write_holding_registers.assert_called_once_with(13003, [0, 0])
 
     @pytest.mark.asyncio
     async def test_end_of_day_time(self):
@@ -455,10 +471,10 @@ class TestTimeEdgeCases:
         hass = MagicMock()
         controller = create_mock_controller()
 
-        entity_def = {"name": "Test", "register": 43143, "enabled": True}
+        entity_def = {"name": "Test", "register": 13003, "enabled": True}
         entity = SungrowTimeEntity(hass, controller, entity_def)
         entity.async_write_ha_state = MagicMock()
 
         await entity.async_set_value(time(hour=23, minute=59))
 
-        controller.async_write_holding_registers.assert_called_once_with(43143, [23, 59])
+        controller.async_write_holding_registers.assert_called_once_with(13003, [23, 59])

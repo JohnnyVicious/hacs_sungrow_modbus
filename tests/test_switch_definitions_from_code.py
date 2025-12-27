@@ -2,19 +2,22 @@ import pytest
 from unittest.mock import MagicMock
 
 from custom_components.sungrow_modbus.const import DOMAIN, CONTROLLER
-from custom_components.sungrow_modbus.data.enums import InverterType
+from custom_components.sungrow_modbus.data.enums import InverterType, InverterFeature
 from custom_components.sungrow_modbus.switch import async_setup_entry
+
 
 @pytest.mark.asyncio
 async def test_switch_bit_position_requires_combinations_are_unique():
     controller = MagicMock()
     controller.host = "10.0.0.1"
+    controller.device_id = 1
     controller.slave = 1
     controller.connected.return_value = True
     controller.inverter_config = MagicMock()
     controller.inverter_config.type = InverterType.HYBRID
-    controller.model = "S6"
-    controller.device_identification = "XYZ"
+    controller.inverter_config.features = {InverterFeature.BATTERY}
+    controller.model = "SH10RT"
+    controller.device_serial_number = "SN123456"
     controller.sw_version = "1.0"
 
     hass = MagicMock()
@@ -22,7 +25,7 @@ async def test_switch_bit_position_requires_combinations_are_unique():
     hass.data = {
         DOMAIN: {
             CONTROLLER: {
-                "10.0.0.1:502_1": controller  # Key format: host:port_slave
+                "10.0.0.1:502_1": controller
             }
         }
     }
@@ -33,7 +36,7 @@ async def test_switch_bit_position_requires_combinations_are_unique():
 
     captured_entities = []
 
-    async def capture_add_devices(entities, update_immediately):
+    def capture_add_devices(entities, update_immediately):
         captured_entities.extend(entities)
 
     await async_setup_entry(hass, config_entry, capture_add_devices)
@@ -48,3 +51,91 @@ async def test_switch_bit_position_requires_combinations_are_unique():
         key = (register, bit, requires)
         assert key not in seen_keys, f"Duplicate (register, bit_position, requires): {key} in entity: {entity._attr_name}"
         seen_keys.add(key)
+
+
+@pytest.mark.asyncio
+async def test_hybrid_switch_entities_created():
+    """Test that HYBRID inverter creates expected switch entities."""
+    controller = MagicMock()
+    controller.host = "10.0.0.1"
+    controller.device_id = 1
+    controller.slave = 1
+    controller.connected.return_value = True
+    controller.inverter_config = MagicMock()
+    controller.inverter_config.type = InverterType.HYBRID
+    controller.inverter_config.features = {InverterFeature.BATTERY}
+    controller.model = "SH10RT"
+    controller.device_serial_number = "SN123456"
+    controller.sw_version = "1.0"
+
+    hass = MagicMock()
+    hass.create_task = MagicMock()
+    hass.data = {
+        DOMAIN: {
+            CONTROLLER: {
+                "10.0.0.1:502_1": controller
+            }
+        }
+    }
+
+    config_entry = MagicMock()
+    config_entry.data = {"host": "10.0.0.1", "port": 502, "slave": 1}
+    config_entry.options = {}
+
+    captured_entities = []
+
+    def capture_add_devices(entities, update_immediately):
+        captured_entities.extend(entities)
+
+    await async_setup_entry(hass, config_entry, capture_add_devices)
+
+    # Check we have the expected switches
+    entity_names = [e._attr_name for e in captured_entities]
+    assert "Sungrow Modbus Enabled" in entity_names
+    assert "Inverter Power" in entity_names
+    assert "Backup Mode" in entity_names
+    assert "Export Power Limit Mode" in entity_names
+    assert "Load Adjustment Switch" in entity_names
+
+
+@pytest.mark.asyncio
+async def test_string_inverter_switch_entities():
+    """Test that STRING inverter creates expected switch entities."""
+    controller = MagicMock()
+    controller.host = "10.0.0.1"
+    controller.device_id = 1
+    controller.slave = 1
+    controller.connected.return_value = True
+    controller.inverter_config = MagicMock()
+    controller.inverter_config.type = InverterType.STRING
+    controller.inverter_config.features = set()
+    controller.model = "SG10RT"
+    controller.device_serial_number = "SN123456"
+    controller.sw_version = "1.0"
+
+    hass = MagicMock()
+    hass.create_task = MagicMock()
+    hass.data = {
+        DOMAIN: {
+            CONTROLLER: {
+                "10.0.0.1:502_1": controller
+            }
+        }
+    }
+
+    config_entry = MagicMock()
+    config_entry.data = {"host": "10.0.0.1", "port": 502, "slave": 1}
+    config_entry.options = {}
+
+    captured_entities = []
+
+    def capture_add_devices(entities, update_immediately):
+        captured_entities.extend(entities)
+
+    await async_setup_entry(hass, config_entry, capture_add_devices)
+
+    # Check we have the expected switches for string inverter
+    entity_names = [e._attr_name for e in captured_entities]
+    assert "Sungrow Modbus Enabled" in entity_names
+    assert "Power Limitation Switch" in entity_names
+    assert "Export Power Limitation" in entity_names

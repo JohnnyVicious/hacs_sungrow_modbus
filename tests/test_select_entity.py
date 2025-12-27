@@ -20,6 +20,7 @@ def create_mock_controller(host="10.0.0.1", slave=1, inverter_type=InverterType.
     controller.device_id = slave
     controller.slave = slave
     controller.connected.return_value = True
+    controller.controller_key = f"{host}:502_{slave}"
     controller.inverter_config = MagicMock()
     controller.inverter_config.type = inverter_type
     controller.inverter_config.features = features
@@ -117,15 +118,83 @@ class TestSelectPlatformSetup:
 
         await async_setup_entry(hass, config_entry, capture_add_devices)
 
-        # HYBRID should create select entities (RC Force, Work Mode, Battery Model)
-        assert len(captured_entities) >= 2  # At minimum RC Force and Work Mode
+        # HYBRID should create EMS Mode and Battery Forced Charge/Discharge selects
+        assert len(captured_entities) >= 2
 
     @pytest.mark.asyncio
-    async def test_hybrid_with_hv_battery_creates_hv_battery_model_options(self):
-        """Test HYBRID with HV battery creates HV battery model select."""
+    async def test_hybrid_creates_ems_mode_select(self):
+        """Test HYBRID creates EMS Mode select with correct options."""
+        controller = create_mock_controller(inverter_type=InverterType.HYBRID)
+
+        hass = MagicMock()
+        hass.data = {
+            DOMAIN: {
+                CONTROLLER: {
+                    "10.0.0.1:502_1": controller
+                }
+            }
+        }
+
+        config_entry = MagicMock()
+        config_entry.data = {"host": "10.0.0.1", "port": 502, "slave": 1}
+        config_entry.options = {}
+
+        captured_entities = []
+
+        def capture_add_devices(entities, update_immediately):
+            captured_entities.extend(entities)
+
+        await async_setup_entry(hass, config_entry, capture_add_devices)
+
+        # Find EMS Mode entity
+        ems_entities = [e for e in captured_entities if "EMS Mode" in e._attr_name]
+        assert len(ems_entities) == 1
+
+        ems_options = ems_entities[0]._attr_options
+        assert "Self-consumption" in ems_options
+        assert "Forced mode" in ems_options
+        assert "VPP" in ems_options
+
+    @pytest.mark.asyncio
+    async def test_hybrid_creates_battery_force_charge_select(self):
+        """Test HYBRID creates Battery Forced Charge/Discharge select."""
+        controller = create_mock_controller(inverter_type=InverterType.HYBRID)
+
+        hass = MagicMock()
+        hass.data = {
+            DOMAIN: {
+                CONTROLLER: {
+                    "10.0.0.1:502_1": controller
+                }
+            }
+        }
+
+        config_entry = MagicMock()
+        config_entry.data = {"host": "10.0.0.1", "port": 502, "slave": 1}
+        config_entry.options = {}
+
+        captured_entities = []
+
+        def capture_add_devices(entities, update_immediately):
+            captured_entities.extend(entities)
+
+        await async_setup_entry(hass, config_entry, capture_add_devices)
+
+        # Find Battery Forced Charge/Discharge entity
+        battery_entities = [e for e in captured_entities if "Battery Forced" in e._attr_name]
+        assert len(battery_entities) == 1
+
+        battery_options = battery_entities[0]._attr_options
+        assert "Stop" in battery_options
+        assert "Force Charge" in battery_options
+        assert "Force Discharge" in battery_options
+
+    @pytest.mark.asyncio
+    async def test_hybrid_with_battery_creates_load_adjustment_select(self):
+        """Test HYBRID with battery feature creates Load Adjustment Mode select."""
         controller = create_mock_controller(
             inverter_type=InverterType.HYBRID,
-            features={InverterFeature.HV_BATTERY}
+            features={InverterFeature.BATTERY}
         )
 
         hass = MagicMock()
@@ -148,49 +217,14 @@ class TestSelectPlatformSetup:
 
         await async_setup_entry(hass, config_entry, capture_add_devices)
 
-        # Find battery model entity
-        battery_entities = [e for e in captured_entities if "Battery Model" in e._attr_name]
-        assert len(battery_entities) == 1
+        # Find Load Adjustment Mode entity
+        load_entities = [e for e in captured_entities if "Load Adjustment" in e._attr_name]
+        assert len(load_entities) == 1
 
-        # HV battery should have HV options like PYLON_HV
-        battery_options = battery_entities[0]._attr_options
-        assert "PYLON_HV" in battery_options
-
-    @pytest.mark.asyncio
-    async def test_hybrid_without_hv_battery_creates_lv_battery_model_options(self):
-        """Test HYBRID without HV creates LV battery model select."""
-        controller = create_mock_controller(
-            inverter_type=InverterType.HYBRID,
-            features=set()  # No HV_BATTERY
-        )
-
-        hass = MagicMock()
-        hass.data = {
-            DOMAIN: {
-                CONTROLLER: {
-                    "10.0.0.1:502_1": controller
-                }
-            }
-        }
-
-        config_entry = MagicMock()
-        config_entry.data = {"host": "10.0.0.1", "port": 502, "slave": 1}
-        config_entry.options = {}
-
-        captured_entities = []
-
-        def capture_add_devices(entities, update_immediately):
-            captured_entities.extend(entities)
-
-        await async_setup_entry(hass, config_entry, capture_add_devices)
-
-        # Find battery model entity
-        battery_entities = [e for e in captured_entities if "Battery Model" in e._attr_name]
-        assert len(battery_entities) == 1
-
-        # LV battery should have LV options like PYLON_LV
-        battery_options = battery_entities[0]._attr_options
-        assert "PYLON_LV" in battery_options
+        load_options = load_entities[0]._attr_options
+        assert "Timing" in load_options
+        assert "ON/OFF" in load_options
+        assert "Disabled" in load_options
 
     @pytest.mark.asyncio
     async def test_string_inverter_creates_no_select_entities(self):
@@ -217,7 +251,7 @@ class TestSelectPlatformSetup:
 
         await async_setup_entry(hass, config_entry, capture_add_devices)
 
-        # STRING should have no select entities (no battery, no RC force)
+        # STRING should have no select entities
         assert len(captured_entities) == 0
 
 
@@ -230,59 +264,41 @@ class TestSungrowSelectEntity:
         hass.data = {DOMAIN: {VALUES: {}}}
         controller = create_mock_controller()
 
+        # Using Sungrow register 13050 (Battery Forced Charge/Discharge)
         entity_def = {
-            "register": 43135,
-            "name": "RC Force Charge/Discharge",
+            "register": 13050,
+            "name": "Battery Forced Charge/Discharge",
             "entities": [
-                {"name": "None", "on_value": 0},
-                {"name": "Force Charge", "on_value": 1},
-                {"name": "Force Discharge", "on_value": 2},
+                {"name": "Stop", "on_value": 0xCC},
+                {"name": "Force Charge", "on_value": 0xAA},
+                {"name": "Force Discharge", "on_value": 0xBB},
             ]
         }
 
         entity = SungrowSelectEntity(hass, controller, entity_def)
 
-        assert entity._attr_name == "RC Force Charge/Discharge"
-        assert entity._register == 43135
+        assert entity._attr_name == "Battery Forced Charge/Discharge"
+        assert entity._register == 13050
         assert len(entity._attr_options) == 3
-        assert "None" in entity._attr_options
+        assert "Stop" in entity._attr_options
         assert "Force Charge" in entity._attr_options
-
-    def test_entity_initialization_with_bit_position(self):
-        """Test select entity initialization with bit_position options."""
-        hass = MagicMock()
-        hass.data = {DOMAIN: {VALUES: {}}}
-        controller = create_mock_controller()
-
-        entity_def = {
-            "register": 43110,
-            "name": "Work Mode",
-            "entities": [
-                {"bit_position": 0, "name": "Self-Use", "conflicts_with": [0, 6, 11]},
-                {"bit_position": 6, "name": "Feed-in Priority", "conflicts_with": [0, 6, 11]},
-            ]
-        }
-
-        entity = SungrowSelectEntity(hass, controller, entity_def)
-
-        assert entity._attr_name == "Work Mode"
-        assert len(entity._attr_options) == 2
-        assert "Self-Use" in entity._attr_options
-        assert "Feed-in Priority" in entity._attr_options
 
     def test_current_option_with_on_value(self):
         """Test current_option returns correct option based on register value."""
         hass = MagicMock()
-        hass.data = {DOMAIN: {VALUES: {"43135": 1}}}  # Value 1 = Force Charge
         controller = create_mock_controller()
 
+        # Using Sungrow register 13050 - value 0xAA (170) = Force Charge
+        # Cache key format is {controller_key}:{register}
+        hass.data = {DOMAIN: {VALUES: {f"{controller.controller_key}:13050": 0xAA}}}
+
         entity_def = {
-            "register": 43135,
-            "name": "RC Force",
+            "register": 13050,
+            "name": "Battery Forced Charge/Discharge",
             "entities": [
-                {"name": "None", "on_value": 0},
-                {"name": "Force Charge", "on_value": 1},
-                {"name": "Force Discharge", "on_value": 2},
+                {"name": "Stop", "on_value": 0xCC},
+                {"name": "Force Charge", "on_value": 0xAA},
+                {"name": "Force Discharge", "on_value": 0xBB},
             ]
         }
 
@@ -290,46 +306,30 @@ class TestSungrowSelectEntity:
 
         assert entity.current_option == "Force Charge"
 
-    def test_current_option_with_bit_position(self):
-        """Test current_option returns correct option based on bit position."""
+    def test_current_option_ems_mode(self):
+        """Test current_option for EMS Mode select."""
         hass = MagicMock()
-        # Bit 6 set = Feed-in Priority (0b1000000 = 64)
-        hass.data = {DOMAIN: {VALUES: {"43110": 64}}}
         controller = create_mock_controller()
 
+        # Using Sungrow register 13049 - value 4 = VPP
+        # Cache key format is {controller_key}:{register}
+        hass.data = {DOMAIN: {VALUES: {f"{controller.controller_key}:13049": 4}}}
+
         entity_def = {
-            "register": 43110,
-            "name": "Work Mode",
+            "register": 13049,
+            "name": "EMS Mode",
             "entities": [
-                {"bit_position": 0, "name": "Self-Use", "conflicts_with": [0, 6, 11]},
-                {"bit_position": 6, "name": "Feed-in Priority", "conflicts_with": [0, 6, 11]},
+                {"name": "Self-consumption", "on_value": 0},
+                {"name": "Forced mode", "on_value": 2},
+                {"name": "External EMS", "on_value": 3},
+                {"name": "VPP", "on_value": 4},
+                {"name": "MicroGrid", "on_value": 8},
             ]
         }
 
         entity = SungrowSelectEntity(hass, controller, entity_def)
 
-        assert entity.current_option == "Feed-in Priority"
-
-    def test_current_option_with_requires(self):
-        """Test current_option respects requires condition."""
-        hass = MagicMock()
-        # Bit 0 and bit 1 both set = Self-Use + TOU (0b11 = 3)
-        hass.data = {DOMAIN: {VALUES: {"43110": 3}}}
-        controller = create_mock_controller()
-
-        entity_def = {
-            "register": 43110,
-            "name": "Work Mode",
-            "entities": [
-                {"bit_position": 0, "name": "Self-Use", "conflicts_with": [0, 6, 11]},
-                {"bit_position": 0, "name": "Self-Use + TOU", "conflicts_with": [0, 6, 11], "requires": [1]},
-            ]
-        }
-
-        entity = SungrowSelectEntity(hass, controller, entity_def)
-
-        # Should return Self-Use + TOU because both bit 0 and bit 1 are set
-        assert entity.current_option == "Self-Use + TOU"
+        assert entity.current_option == "VPP"
 
     def test_current_option_no_cache_returns_none(self):
         """Test current_option returns None when no cache value."""
@@ -338,10 +338,10 @@ class TestSungrowSelectEntity:
         controller = create_mock_controller()
 
         entity_def = {
-            "register": 43135,
-            "name": "RC Force",
+            "register": 13050,
+            "name": "Battery Forced Charge/Discharge",
             "entities": [
-                {"name": "None", "on_value": 0},
+                {"name": "Stop", "on_value": 0xCC},
             ]
         }
 
@@ -357,11 +357,11 @@ class TestSungrowSelectEntity:
         controller = create_mock_controller()
 
         entity_def = {
-            "register": 43135,
-            "name": "RC Force",
+            "register": 13050,
+            "name": "Battery Forced Charge/Discharge",
             "entities": [
-                {"name": "None", "on_value": 0},
-                {"name": "Force Charge", "on_value": 1},
+                {"name": "Stop", "on_value": 0xCC},
+                {"name": "Force Charge", "on_value": 0xAA},
             ]
         }
 
@@ -370,54 +370,31 @@ class TestSungrowSelectEntity:
 
         await entity.async_select_option("Force Charge")
 
-        controller.async_write_holding_register.assert_called_once_with(43135, 1)
+        controller.async_write_holding_register.assert_called_once_with(13050, 0xAA)
 
-    def test_set_register_bit_clears_conflicts(self):
-        """Test set_register_bit clears conflict bits."""
+    @pytest.mark.asyncio
+    async def test_async_select_ems_mode(self):
+        """Test selecting EMS mode writes correct value."""
         hass = MagicMock()
-        # Start with bit 6 set (Feed-in Priority)
-        hass.data = {DOMAIN: {VALUES: {"43110": 64}}}
-        hass.create_task = MagicMock()
+        hass.data = {DOMAIN: {VALUES: {}}}
         controller = create_mock_controller()
 
         entity_def = {
-            "register": 43110,
-            "name": "Work Mode",
+            "register": 13049,
+            "name": "EMS Mode",
             "entities": [
-                {"bit_position": 0, "name": "Self-Use", "conflicts_with": [0, 6, 11]},
-                {"bit_position": 6, "name": "Feed-in Priority", "conflicts_with": [0, 6, 11]},
+                {"name": "Self-consumption", "on_value": 0},
+                {"name": "Forced mode", "on_value": 2},
+                {"name": "VPP", "on_value": 4},
             ]
         }
 
         entity = SungrowSelectEntity(hass, controller, entity_def)
+        entity.async_write_ha_state = MagicMock()
 
-        # Select Self-Use (bit 0), should clear bit 6
-        entity.set_register_bit(None, 0, [0, 6, 11], None)
+        await entity.async_select_option("Forced mode")
 
-        # Verify write was triggered
-        hass.create_task.assert_called_once()
-
-    def test_set_register_bit_sets_requires(self):
-        """Test set_register_bit sets required bits."""
-        hass = MagicMock()
-        hass.data = {DOMAIN: {VALUES: {"43110": 0}}}
-        hass.create_task = MagicMock()
-        controller = create_mock_controller()
-
-        entity_def = {
-            "register": 43110,
-            "name": "Work Mode",
-            "entities": [
-                {"bit_position": 0, "name": "Self-Use + TOU", "conflicts_with": [0, 6, 11], "requires": [1]},
-            ]
-        }
-
-        entity = SungrowSelectEntity(hass, controller, entity_def)
-
-        # Select Self-Use + TOU, should set both bit 0 and bit 1
-        entity.set_register_bit(None, 0, [0, 6, 11], [1])
-
-        hass.create_task.assert_called_once()
+        controller.async_write_holding_register.assert_called_once_with(13049, 2)
 
     def test_device_info_returns_controller_info(self):
         """Test device_info returns controller's device info."""
@@ -426,8 +403,8 @@ class TestSungrowSelectEntity:
         controller = create_mock_controller()
 
         entity_def = {
-            "register": 43135,
-            "name": "RC Force",
+            "register": 13050,
+            "name": "Battery Forced Charge/Discharge",
             "entities": []
         }
 
