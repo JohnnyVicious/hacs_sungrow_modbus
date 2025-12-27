@@ -57,6 +57,39 @@ class InverterConfig:
         if self.type == InverterType.WAVESHARE or self.connection == "WAVESHARE":
             self.features.append(InverterFeature.TCP)
 
+        # Three-phase detection based on phases count
+        if self.phases == 3:
+            self.features.append(InverterFeature.THREE_PHASE)
+
+        # MPPT3 detection based on model and wattage
+        # T-series hybrids (SH5T-SH25T) with 15kW+ typically have 3 MPPTs
+        # Large commercial inverters (25kW+) typically have 3+ MPPTs
+        if self._has_mppt3():
+            self.features.append(InverterFeature.MPPT3)
+
+    def _has_mppt3(self) -> bool:
+        """Determine if this inverter model has a third MPPT."""
+        model_upper = self.model.upper()
+
+        # T-series hybrids (SH5T, SH10T, etc.) - larger models have 3 MPPTs
+        # Pattern: SHxxT (not SHxxRT which is RT-series with 2 MPPTs)
+        if model_upper.startswith("SH") and model_upper.endswith("T") and "RT" not in model_upper:
+            # SH15T, SH20T, SH25T have 3 MPPTs
+            if self.wattage_chosen >= 15000:
+                return True
+
+        # Large commercial string inverters (SG series) with 3+ MPPTs
+        # Models like SG30KTL-M, SG40CX, etc.
+        if model_upper.startswith("SG"):
+            if self.wattage_chosen >= 30000:
+                return True
+
+        # Any inverter 25kW+ is likely to have 3 MPPTs
+        if self.wattage_chosen >= 25000:
+            return True
+
+        return False
+
     def update_options(self, options: dict, connection: str = None):
         """Update options and rebuild features."""
         self.options = options

@@ -100,6 +100,7 @@ hybrid_sensors = [
     },
 
     # ==================== MPPT DATA (Input Registers 5011-5018) ====================
+    # MPPT1 and MPPT2 - All PV inverters have at least 2 MPPTs
     {
         "register_start": 5011,
         "poll_speed": PollSpeed.FAST,
@@ -145,6 +146,14 @@ hybrid_sensors = [
                 "unit_of_measurement": UnitOfElectricCurrent.AMPERE,
                 "state_class": SensorStateClass.MEASUREMENT
             },
+        ]
+    },
+    # MPPT3 - Only for larger inverters (15kW+ T-series, 25kW+, or 30kW+ commercial)
+    {
+        "register_start": 5015,
+        "poll_speed": PollSpeed.FAST,
+        "feature_requirement": [InverterFeature.PV, InverterFeature.MPPT3],
+        "entities": [
             {
                 "name": "MPPT3 Voltage",
                 "unique": "sungrow_modbus_mppt3_voltage",
@@ -165,6 +174,14 @@ hybrid_sensors = [
                 "unit_of_measurement": UnitOfElectricCurrent.AMPERE,
                 "state_class": SensorStateClass.MEASUREMENT
             },
+        ]
+    },
+    # Total DC Power - All PV inverters
+    {
+        "register_start": 5017,
+        "poll_speed": PollSpeed.FAST,
+        "feature_requirement": [InverterFeature.PV],
+        "entities": [
             {
                 "name": "Total DC Power",
                 "unique": "sungrow_modbus_total_dc_power",
@@ -179,6 +196,7 @@ hybrid_sensors = [
     },
 
     # ==================== AC OUTPUT (Input Registers 5018-5035) ====================
+    # Phase A - All inverters
     {
         "register_start": 5018,
         "poll_speed": PollSpeed.FAST,
@@ -193,6 +211,14 @@ hybrid_sensors = [
                 "unit_of_measurement": UnitOfElectricPotential.VOLT,
                 "state_class": SensorStateClass.MEASUREMENT
             },
+        ]
+    },
+    # Phase B and C - Only three-phase inverters
+    {
+        "register_start": 5019,
+        "poll_speed": PollSpeed.FAST,
+        "feature_requirement": [InverterFeature.THREE_PHASE],
+        "entities": [
             {
                 "name": "Phase B Voltage",
                 "unique": "sungrow_modbus_phase_b_voltage",
@@ -749,6 +775,7 @@ hybrid_sensors = [
     },
 
     # ==================== AC CURRENTS AND POWER (Input Registers 13030-13038) ====================
+    # Phase A Current - All inverters
     {
         "register_start": 13030,
         "poll_speed": PollSpeed.FAST,
@@ -764,6 +791,14 @@ hybrid_sensors = [
                 "state_class": SensorStateClass.MEASUREMENT,
                 "signed": True
             },
+        ]
+    },
+    # Phase B and C Current - Only three-phase inverters
+    {
+        "register_start": 13031,
+        "poll_speed": PollSpeed.FAST,
+        "feature_requirement": [InverterFeature.THREE_PHASE],
+        "entities": [
             {
                 "name": "Phase B Current",
                 "unique": "sungrow_modbus_phase_b_current",
@@ -786,6 +821,13 @@ hybrid_sensors = [
                 "state_class": SensorStateClass.MEASUREMENT,
                 "signed": True
             },
+        ]
+    },
+    # Total Active Power - All inverters
+    {
+        "register_start": 13033,
+        "poll_speed": PollSpeed.FAST,
+        "entities": [
             {
                 "name": "Total Active Power",
                 "unique": "sungrow_modbus_total_active_power",
