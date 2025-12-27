@@ -89,17 +89,6 @@ hybrid_sensors.py     →  Base register definitions
 model_overrides.py    →  Per-model register adjustments
 ```
 
-### SH25T Register Offsets
-
-The SH25T uses registers offset by -1 compared to residential hybrids:
-
-| Sensor          | Residential | SH25T |
-|-----------------|-------------|-------|
-| MPPT1 Voltage   | 5011        | 5010  |
-| Daily PV Energy | 13002       | 13001 |
-| Battery SOC     | 13023       | 13022 |
-| Battery SOH     | 13024       | 13023 |
-
 ### Adding Model Overrides
 
 Edit `sensor_data/model_overrides.py`:
