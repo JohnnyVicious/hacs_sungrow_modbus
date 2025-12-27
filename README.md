@@ -15,6 +15,20 @@ A Home Assistant custom integration for Sungrow inverters via Modbus TCP or Seri
 - **String inverter support** - PV and grid monitoring
 - **Example dashboards** - ready-to-use Lovelace dashboard templates
 
+## Why a Native Integration?
+
+This integration is built from the ground up as a native Home Assistant component rather than wrapping existing projects like [SunGather](https://github.com/bohdan-s/SunGather). While SunGather provides excellent register documentation (which we gratefully use as a reference), a native approach offers significant advantages:
+
+| Aspect | SunGather Approach | This Integration |
+|--------|-------------------|------------------|
+| **Model filtering** | Per-register model lists (100+ models × 200+ registers) | Semantic features (`BATTERY`, `THREE_PHASE`, `MPPT3`) |
+| **Polling** | Single interval for all registers | Multi-speed polling (fast/normal/slow) optimizes bandwidth |
+| **HA Integration** | External via MQTT | Native entities with proper device grouping |
+| **New model support** | Update hundreds of register lists | Add feature flags or pattern-matched overrides |
+| **Auto-detection** | Manual model configuration | Reads device type code during setup |
+
+The semantic feature system means adding support for a new inverter family often requires zero code changes - if it has battery storage, it automatically gets battery sensors. Pattern matching like `SH*T` applies overrides to all T-series models at once.
+
 ## Supported Inverters
 
 ### Tested
