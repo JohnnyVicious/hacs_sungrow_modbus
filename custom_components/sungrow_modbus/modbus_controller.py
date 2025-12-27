@@ -30,7 +30,8 @@ class ModbusController:
                  host=None, port=502,
                  # Serial parameters
                  serial_port=None, baudrate=DEFAULT_BAUDRATE, bytesize=DEFAULT_BYTESIZE,
-                 parity=DEFAULT_PARITY, stopbits=DEFAULT_STOPBITS, serial_number=None):
+                 parity=DEFAULT_PARITY, stopbits=DEFAULT_STOPBITS, serial_number=None,
+                 firmware_version=None):
         """
         Initialize ModbusController with support for both TCP and Serial connections.
 
@@ -91,7 +92,7 @@ class ModbusController:
         self._poll_interval_slow = slow_poll
         self._model = inverter_config.model
         self.inverter_config = inverter_config
-        self._sw_version = "N/A"
+        self._sw_version = firmware_version or "N/A"
         self.enabled = True
         self._last_attempt = 0  # Track last connection attempt time
         self._sensor_groups = sensor_groups

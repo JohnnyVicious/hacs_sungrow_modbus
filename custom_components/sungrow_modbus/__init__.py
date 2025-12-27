@@ -219,7 +219,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
         "slow_poll": poll_interval_slow,
         "inverter_config": inverter_config,
         "connection_type": connection_type,
-        "serial_number": inverter_serial
+        "serial_number": inverter_serial,
+        "firmware_version": config.get("firmware_version"),
     }
 
     if connection_type == CONN_TYPE_TCP:

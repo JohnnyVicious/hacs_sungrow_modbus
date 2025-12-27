@@ -212,15 +212,23 @@ class ModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             result = await client.read_input_registers(address=5000, count=1, device_id=slave_id)
             nominal_power = result.registers[0] * 0.1 if not result.isError() else 0
 
+            # Read firmware version (registers 13249-13263, 15 registers)
+            firmware_version = "N/A"
+            result = await client.read_input_registers(address=13249, count=15, device_id=slave_id)
+            if not result.isError():
+                packed = struct.pack('>' + 'H' * len(result.registers), *result.registers)
+                firmware_version = packed.decode('ascii', errors='ignore').strip('\x00\r\n ')
+
             client.close()
 
-            _LOGGER.info(f"Detected inverter: {model}, Serial: {serial_number}, Power: {nominal_power}kW")
+            _LOGGER.info(f"Detected inverter: {model}, Serial: {serial_number}, Power: {nominal_power}kW, Firmware: {firmware_version}")
 
             return {
                 "serial_number": serial_number,
                 "device_type_code": device_type_code,
                 "model": model,
                 "nominal_power": nominal_power,
+                "firmware_version": firmware_version,
             }
 
         except Exception as e:
@@ -232,6 +240,7 @@ class ModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         serial = self._device_info.get("serial_number", "unknown")
         model = self._device_info.get("model", "Sungrow")
         device_type_code = self._device_info.get("device_type_code", 0)
+        firmware_version = self._device_info.get("firmware_version", "N/A")
 
         # Find matching inverter config or use first hybrid as default
         inverter_config = next(
@@ -245,6 +254,7 @@ class ModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             CONF_INVERTER_SERIAL: serial,
             "model": inverter_config.model,
             "device_type_code": device_type_code,
+            "firmware_version": firmware_version,
             # Default settings - can be changed in options
             "poll_interval_fast": 10,
             "poll_interval_normal": 15,
