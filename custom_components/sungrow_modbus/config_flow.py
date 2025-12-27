@@ -33,9 +33,15 @@ PARITY_OPTIONS = {
     "O": "Odd"
 }
 
-# Device type code to model mapping (from registers-sungrow.yaml and Sungrow docs)
+# Device type code to model mapping
+# Sources: SunGather registers-sungrow.yaml, Sungrow Modbus Protocol documentation
+# Organized by inverter family for maintainability
 DEVICE_TYPE_MAP = {
-    # Hybrid Inverters - SH-RS series (single phase)
+    # ==========================================================================
+    # RESIDENTIAL HYBRID INVERTERS (SH Series - with battery storage)
+    # ==========================================================================
+
+    # --- SH-RS series (single phase residential hybrid) ---
     0x0D0F: "SH5.0RS",
     0x0D10: "SH3.6RS",
     0x0D11: "SH4.6RS",
@@ -44,38 +50,143 @@ DEVICE_TYPE_MAP = {
     0x0D24: "SH10RS",
     0x0D25: "SH3.0RS",
     0x0D26: "SH4.0RS",
-    # Hybrid Inverters - SH-RT series (three phase)
-    0x0E03: "SH5.0RT",
-    0x0E04: "SH6.0RT",
-    0x0E05: "SH8.0RT",
-    0x0E06: "SH10RT",
+
+    # --- SH-RT series (three phase residential hybrid) ---
+    0x0E00: "SH5.0RT",
+    0x0E01: "SH6.0RT",
+    0x0E02: "SH8.0RT",
+    0x0E03: "SH10RT",
+    0x0E04: "SH6.0RT",      # Alternate code
+    0x0E05: "SH8.0RT",      # Alternate code
+    0x0E06: "SH10RT",       # Alternate code
     0x0E07: "SH5.0RT-20",
     0x0E08: "SH6.0RT-20",
     0x0E09: "SH8.0RT-20",
     0x0E0A: "SH10RT-20",
     0x0E0B: "SH5.0RT-V112",
-    0x0E0C: "SH6.0RT-V112",
+    0x0E0C: "SH5.0RT-V112", # Alternate mapping
     0x0E0D: "SH8.0RT-V112",
     0x0E0E: "SH10RT-V112",
+    0x0E0F: "SH10RT-V112",  # Alternate code
+    0x0E13: "SH10RT-20",    # Alternate code
     0x0E23: "SH5.0RT-V122",
     0x0E24: "SH6.0RT-V122",
     0x0E25: "SH8.0RT-V122",
     0x0E26: "SH10RT-V122",
-    # Hybrid Inverters - SH-T series (three phase, larger)
+
+    # --- SH-T series (three phase large hybrid) ---
     0x0E27: "SH5T",
     0x0E28: "SH25T",
     0x0E29: "SH15T",
     0x0E2A: "SH20T",
     0x0E2B: "SH10T",
-    # Legacy Hybrid Inverters
-    0x0D09: "SH5K-20",
+
+    # --- Legacy SH series (older models) ---
+    0x0D03: "SH5K-V13",
     0x0D06: "SH3K6",
     0x0D07: "SH4K6",
-    0x0D0A: "SH5K-V13",
-    0x0D0B: "SH5K-30",
+    0x0D09: "SH5K-20",
+    0x0D0A: "SH5K-30",
+    0x0D0B: "SH5K-30",      # Alternate code
     0x0D0C: "SH3K6-30",
     0x0D0D: "SH4K6-30",
-    # String Inverters
+
+    # ==========================================================================
+    # STRING INVERTERS - RESIDENTIAL (SG-RS Series - grid-tied, no battery)
+    # ==========================================================================
+
+    # --- SG-RS series (single phase residential string) ---
+    0x2603: "SG3.0RS",
+    0x2604: "SG3.6RS",
+    0x2605: "SG4.0RS",
+    0x2606: "SG5.0RS",
+    0x2607: "SG6.0RS",
+    0x260E: "SG9.0RS",
+    0x2609: "SG10RS",
+
+    # --- SG-RT series (three phase residential string) ---
+    0x243D: "SG3.0RT",
+    0x243E: "SG4.0RT",
+    0x2430: "SG5.0RT",
+    0x2431: "SG6.0RT",
+    0x243C: "SG7.0RT",
+    0x2432: "SG8.0RT",
+    0x2433: "SG10RT",
+    0x2434: "SG12RT",
+    0x2435: "SG15RT",
+    0x2436: "SG17RT",
+    0x2437: "SG20RT",
+
+    # ==========================================================================
+    # STRING INVERTERS - COMMERCIAL (SG-KTL/CX/HX Series)
+    # ==========================================================================
+
+    # --- SG-KTL series (commercial string, older) ---
+    0x0027: "SG30KTL",
+    0x0026: "SG10KTL",
+    0x0029: "SG12KTL",
+    0x0028: "SG15KTL",
+    0x002A: "SG20KTL",
+    0x002C: "SG30KU",
+    0x002D: "SG36KTL",
+    0x002E: "SG36KU",
+    0x002F: "SG40KTL",
+    0x0070: "SG30KTL-M-V31",
+    0x0072: "SG34KJ",
+    0x0073: "LP_P34KSG",
+    0x0074: "SG36KTL-M",
+    0x010F: "SG60KTL",
+    0x011B: "SG50KTL-M-20",
+    0x0131: "SG60KTL-M",
+    0x0132: "SG60KU-M",
+    0x0134: "SG33KTL-M",
+    0x0135: "SG40KTL-M",
+    0x0136: "SG60KU",
+    0x0137: "SG49K5J",
+    0x0138: "SG80KTL",
+    0x0139: "SG80KTL-M",
+    0x013B: "SG125HV",
+    0x013C: "SG12KTL-M",
+    0x013D: "SG33K3J",
+    0x013E: "SG10KTL-M",
+    0x013F: "SG8KTL-M",
+    0x0141: "SG30KTL-M",
+    0x0142: "SG15KTL-M",
+    0x0143: "SG20KTL-M",
+    0x0147: "SG5KTL-MT",
+    0x0148: "SG6KTL-MT",
+    0x0149: "SG17KTL-M",
+    0x014C: "SG111HV",
+
+    # --- SG-CX series (commercial string, current gen) ---
+    0x2C00: "SG33CX",
+    0x2C01: "SG40CX",
+    0x2C02: "SG50CX",
+    0x2C03: "SG125HV-20",
+    0x2C06: "SG110CX",
+    0x2C0A: "SG36CX-US",
+    0x2C0B: "SG60CX-US",
+    0x2C0F: "SG10KTL-MT",
+    0x2C10: "SG30CX",
+    0x2C12: "SG100CX",
+    0x2C13: "SG250HX-IN",
+    0x2C15: "SG25CX-SA",
+    0x2C22: "SG75CX",
+
+    # --- SG-HX series (commercial high power) ---
+    0x2C0C: "SG250HX",
+    0x2C11: "SG250HX-US",
+
+    # ==========================================================================
+    # G2 INVERTERS (Older generation)
+    # ==========================================================================
+    0x0122: "SG3K-D",
+    0x0126: "SG5K-D",
+    0x2403: "SG8K-D",
+
+    # ==========================================================================
+    # LEGACY STRING INVERTERS (kept for backwards compatibility)
+    # ==========================================================================
     0x0233: "SG3.0RS",
     0x0234: "SG4.0RS",
     0x0235: "SG5.0RS",
