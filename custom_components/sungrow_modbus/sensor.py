@@ -32,8 +32,11 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry, asyn
     for sensor in controller.derived_sensors:
         sensor_derived_entities.append(SungrowDerivedSensor(hass, sensor))
 
-    hass.data[DOMAIN][SENSOR_ENTITIES] = sensor_entities
-    hass.data[DOMAIN][SENSOR_DERIVED_ENTITIES] = sensor_derived_entities
+    # Namespace by entry_id to support multi-inverter setups
+    hass.data[DOMAIN].setdefault(SENSOR_ENTITIES, {})
+    hass.data[DOMAIN].setdefault(SENSOR_DERIVED_ENTITIES, {})
+    hass.data[DOMAIN][SENSOR_ENTITIES][config_entry.entry_id] = sensor_entities
+    hass.data[DOMAIN][SENSOR_DERIVED_ENTITIES][config_entry.entry_id] = sensor_derived_entities
 
     async_add_entities(sensor_entities, True)
     async_add_entities(sensor_derived_entities, True)

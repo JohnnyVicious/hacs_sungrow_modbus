@@ -72,6 +72,8 @@ class SungrowSelectEntity(RestoreEntity, SelectEntity):
                     break
                 else:
                     self.set_register_bit(on_value, bit_position, conflicts_with, requires)
+                    self.async_write_ha_state()
+                    break
 
     @property
     def device_info(self):
@@ -81,7 +83,11 @@ class SungrowSelectEntity(RestoreEntity, SelectEntity):
     def set_register_bit(self, on_value, bit_position, conflicts_with, requires):
         """Set or clear a specific bit in the Modbus register."""
         controller = self._modbus_controller
-        current_register_value: int = cache_get(self._hass, self._register, self._modbus_controller.controller_key)
+        current_register_value = cache_get(self._hass, self._register, self._modbus_controller.controller_key)
+
+        # Default to 0 if cache is empty (before first poll)
+        if current_register_value is None:
+            current_register_value = 0
 
         if bit_position is not None:
             # Clear conflicts

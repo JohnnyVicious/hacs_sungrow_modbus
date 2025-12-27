@@ -381,6 +381,7 @@ class TestSungrowBinaryEntityUpdate:
         }
 
         entity = SungrowBinaryEntity(hass, controller, entity_def)
+        entity.async_write_ha_state = MagicMock()  # Mock HA state update
 
         event = MagicMock()
         event.data = {
@@ -394,6 +395,7 @@ class TestSungrowBinaryEntityUpdate:
 
         assert entity._attr_is_on is True
         assert entity._attr_available is True
+        entity.async_write_ha_state.assert_called_once()
 
     def test_handle_modbus_update_bit_off(self):
         """Test entity updates when bit is clear."""
@@ -407,6 +409,7 @@ class TestSungrowBinaryEntityUpdate:
         }
 
         entity = SungrowBinaryEntity(hass, controller, entity_def)
+        entity.async_write_ha_state = MagicMock()  # Mock HA state update
 
         event = MagicMock()
         event.data = {
@@ -419,6 +422,7 @@ class TestSungrowBinaryEntityUpdate:
         entity.handle_modbus_update(event)
 
         assert entity._attr_is_on is False
+        entity.async_write_ha_state.assert_called_once()
 
     def test_handle_modbus_update_on_value_match(self):
         """Test entity updates with matching on_value."""
@@ -433,6 +437,7 @@ class TestSungrowBinaryEntityUpdate:
         }
 
         entity = SungrowBinaryEntity(hass, controller, entity_def)
+        entity.async_write_ha_state = MagicMock()  # Mock HA state update
 
         event = MagicMock()
         event.data = {
@@ -445,6 +450,7 @@ class TestSungrowBinaryEntityUpdate:
         entity.handle_modbus_update(event)
 
         assert entity._attr_is_on is True
+        entity.async_write_ha_state.assert_called_once()
 
     def test_handle_modbus_update_on_value_no_match(self):
         """Test entity updates with non-matching on_value."""
@@ -459,6 +465,7 @@ class TestSungrowBinaryEntityUpdate:
         }
 
         entity = SungrowBinaryEntity(hass, controller, entity_def)
+        entity.async_write_ha_state = MagicMock()  # Mock HA state update
 
         event = MagicMock()
         event.data = {
@@ -471,6 +478,7 @@ class TestSungrowBinaryEntityUpdate:
         entity.handle_modbus_update(event)
 
         assert entity._attr_is_on is False
+        entity.async_write_ha_state.assert_called_once()
 
     def test_handle_modbus_update_wrong_controller(self):
         """Test entity ignores updates from different controller."""

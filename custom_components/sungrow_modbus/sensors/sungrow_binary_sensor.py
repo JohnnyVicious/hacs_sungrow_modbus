@@ -82,6 +82,9 @@ class SungrowBinaryEntity(RestoreEntity, SwitchEntity):
                 self._attr_is_on = value == self._on_value
             _LOGGER.debug(f"switch {self.unique_id} set to {self._attr_is_on}, value = {updated_value}")
 
+            # Notify Home Assistant of state change
+            self.async_write_ha_state()
+
     @property
     def is_on(self):
         """Return true if the binary sensor is on."""
@@ -104,7 +107,11 @@ class SungrowBinaryEntity(RestoreEntity, SwitchEntity):
     def set_register_bit(self, value: bool):
         """Set or clear a specific bit in the Modbus register, enforcing dependencies and conflicts."""
         controller = self._modbus_controller
-        current_register_value: int = cache_get(self._hass, self._register, self._modbus_controller.controller_key)
+        current_register_value = cache_get(self._hass, self._register, self._modbus_controller.controller_key)
+
+        # Default to 0 if cache is empty (before first poll)
+        if current_register_value is None:
+            current_register_value = 0
 
         new_register_value = current_register_value
 
