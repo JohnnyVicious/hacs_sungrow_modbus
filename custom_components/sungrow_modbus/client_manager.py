@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import threading
 from typing import Dict, Tuple, Union
 from pymodbus.client import AsyncModbusTcpClient, AsyncModbusSerialClient
 
@@ -9,47 +10,53 @@ _LOGGER = logging.getLogger(__name__)
 
 class ModbusClientManager:
     _instance = None
+    _instance_lock = threading.Lock()
 
     def __init__(self):
         # Key: connection_id (str), Value: {'client': AsyncModbusTcpClient|AsyncModbusSerialClient, 'ref_count': int, 'lock': asyncio.Lock, 'type': str}
         self._clients: Dict[str, Dict] = {}
+        # Protect dictionary operations from concurrent access
+        self._clients_lock = threading.Lock()
 
     @classmethod
     def get_instance(cls):
-        if cls._instance is None:
-            cls._instance = cls()
-        return cls._instance
+        with cls._instance_lock:
+            if cls._instance is None:
+                cls._instance = cls()
+            return cls._instance
 
     def get_tcp_client(self, host: str, port: int) -> AsyncModbusTcpClient:
         """Get or create a TCP Modbus client."""
         key = f"{host}:{port}"
-        if key not in self._clients:
-            _LOGGER.debug(f"Creating new Modbus TCP client for {host}:{port}")
-            client = AsyncModbusTcpClient(host=host, port=port, timeout=5, retries=5)
-            self._clients[key] = {'client': client, 'ref_count': 0, 'lock': asyncio.Lock(), 'type': CONN_TYPE_TCP}
+        with self._clients_lock:
+            if key not in self._clients:
+                _LOGGER.debug(f"Creating new Modbus TCP client for {host}:{port}")
+                client = AsyncModbusTcpClient(host=host, port=port, timeout=5, retries=5)
+                self._clients[key] = {'client': client, 'ref_count': 0, 'lock': asyncio.Lock(), 'type': CONN_TYPE_TCP}
 
-        self._clients[key]['ref_count'] += 1
-        _LOGGER.debug(f"TCP client ref count for {host}:{port} is now {self._clients[key]['ref_count']}")
-        return self._clients[key]['client']
+            self._clients[key]['ref_count'] += 1
+            _LOGGER.debug(f"TCP client ref count for {host}:{port} is now {self._clients[key]['ref_count']}")
+            return self._clients[key]['client']
 
     def get_serial_client(self, serial_port: str, baudrate: int, bytesize: int, parity: str, stopbits: int) -> AsyncModbusSerialClient:
         """Get or create a Serial Modbus client."""
         key = serial_port  # Use serial_port as the key
-        if key not in self._clients:
-            _LOGGER.debug(f"Creating new Modbus Serial client for {serial_port} (baudrate={baudrate})")
-            client = AsyncModbusSerialClient(
-                port=serial_port,
-                baudrate=baudrate,
-                bytesize=bytesize,
-                parity=parity,
-                stopbits=stopbits,
-                timeout=5
-            )
-            self._clients[key] = {'client': client, 'ref_count': 0, 'lock': asyncio.Lock(), 'type': CONN_TYPE_SERIAL}
+        with self._clients_lock:
+            if key not in self._clients:
+                _LOGGER.debug(f"Creating new Modbus Serial client for {serial_port} (baudrate={baudrate})")
+                client = AsyncModbusSerialClient(
+                    port=serial_port,
+                    baudrate=baudrate,
+                    bytesize=bytesize,
+                    parity=parity,
+                    stopbits=stopbits,
+                    timeout=5
+                )
+                self._clients[key] = {'client': client, 'ref_count': 0, 'lock': asyncio.Lock(), 'type': CONN_TYPE_SERIAL}
 
-        self._clients[key]['ref_count'] += 1
-        _LOGGER.debug(f"Serial client ref count for {serial_port} is now {self._clients[key]['ref_count']}")
-        return self._clients[key]['client']
+            self._clients[key]['ref_count'] += 1
+            _LOGGER.debug(f"Serial client ref count for {serial_port} is now {self._clients[key]['ref_count']}")
+            return self._clients[key]['client']
 
     def get_client(self, host: str = None, port: int = 502, serial_port: str = None,
                    baudrate: int = 9600, bytesize: int = 8, parity: str = 'N',
@@ -67,13 +74,17 @@ class ModbusClientManager:
 
     def get_client_lock(self, connection_id: str) -> asyncio.Lock:
         """Get the lock for a specific client connection."""
-        if connection_id in self._clients:
-            return self._clients[connection_id]['lock']
-        return None
+        with self._clients_lock:
+            if connection_id in self._clients:
+                return self._clients[connection_id]['lock']
+            return None
 
     def release_client(self, connection_id: str):
         """Release a client and clean up if no more references."""
-        if connection_id in self._clients:
+        with self._clients_lock:
+            if connection_id not in self._clients:
+                return
+
             self._clients[connection_id]['ref_count'] -= 1
             _LOGGER.debug(f"Client ref count for {connection_id} is now {self._clients[connection_id]['ref_count']}")
 
