@@ -2,12 +2,16 @@ import asyncio
 import logging
 import time
 from datetime import timedelta
+from typing import Optional
 
 from homeassistant.const import EVENT_HOMEASSISTANT_STARTED
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.event import async_track_time_interval
 from typing_extensions import List
-from custom_components.sungrow_modbus.const import REGISTER, VALUE, DOMAIN, CONTROLLER, SLAVE
+from custom_components.sungrow_modbus.const import (
+    REGISTER, VALUE, DOMAIN, CONTROLLER, SLAVE,
+    BATTERY_CONTROLLER, BATTERY_SENSORS,
+)
 from custom_components.sungrow_modbus.helpers import cache_save, cache_get
 from .data.enums import PollSpeed
 from .modbus_controller import ModbusController
@@ -16,10 +20,11 @@ from .sensors.sungrow_base_sensor import SungrowSensorGroup
 _LOGGER = logging.getLogger(__name__)
 
 class DataRetrieval:
-    def __init__(self, hass: HomeAssistant, controller: ModbusController):
+    def __init__(self, hass: HomeAssistant, controller: ModbusController, entry_id: Optional[str] = None):
         self._spike_counter = {}
         self.controller: ModbusController = controller
         self.hass = hass
+        self.entry_id = entry_id
         self.poll_lock = asyncio.Lock()
         self.connection_check = False
         self.first_poll = True
@@ -152,6 +157,7 @@ class DataRetrieval:
         """Updates sensor groups with slow poll speed.
 
         This method retrieves data for all sensor groups with a slow poll speed.
+        Also polls battery stacks if multi-battery is enabled.
 
         Args:
             now (datetime, optional): Current time, provided by the scheduler. Defaults to None.
@@ -160,6 +166,9 @@ class DataRetrieval:
             None
         """
         await self.get_modbus_updates([g for g in self.controller.sensor_groups if g.poll_speed == PollSpeed.SLOW], PollSpeed.SLOW)
+
+        # Poll battery stacks if enabled
+        await self.poll_battery_stacks()
 
     async def modbus_update_normal(self, now = None):
         """Updates sensor groups with normal poll speed.
@@ -287,3 +296,47 @@ class DataRetrieval:
                 self._spike_counter[register] = 0
 
         return value
+
+    async def poll_battery_stacks(self):
+        """Poll battery stacks if multi-battery monitoring is enabled.
+
+        Reads status from all detected battery stacks and updates their sensors.
+        """
+        if not self.entry_id:
+            return
+
+        # Get battery controllers for this entry
+        battery_controllers = self.hass.data.get(DOMAIN, {}).get(BATTERY_CONTROLLER, {}).get(self.entry_id)
+        if not battery_controllers:
+            return
+
+        # Get battery sensors for this entry
+        battery_sensors = self.hass.data.get(DOMAIN, {}).get(BATTERY_SENSORS, {}).get(self.entry_id)
+        if not battery_sensors:
+            return
+
+        for battery_controller in battery_controllers:
+            try:
+                # Read battery status
+                data = await battery_controller.read_status()
+
+                if data:
+                    # Update sensors for this stack
+                    for sensor in battery_sensors:
+                        if sensor._stack_index == battery_controller.stack_index:
+                            sensor.update_from_battery_data(data)
+
+                    _LOGGER.debug(
+                        "Battery stack %d: V=%.1fV, I=%.1fA, SOC=%.1f%%, T=%.1fC",
+                        battery_controller.stack_index,
+                        data.get("voltage", 0),
+                        data.get("current", 0),
+                        data.get("soc", 0),
+                        data.get("temperature", 0),
+                    )
+            except Exception as e:
+                _LOGGER.warning(
+                    "Failed to poll battery stack %d: %s",
+                    battery_controller.stack_index,
+                    e
+                )

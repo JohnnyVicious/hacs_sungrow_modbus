@@ -309,7 +309,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
 
     # Start data retrieval
     hass.data[DOMAIN].setdefault("data_retrieval", {})
-    hass.data[DOMAIN]["data_retrieval"][entry.entry_id] = DataRetrieval(hass, controller)
+    hass.data[DOMAIN]["data_retrieval"][entry.entry_id] = DataRetrieval(hass, controller, entry.entry_id)
 
     return True
 

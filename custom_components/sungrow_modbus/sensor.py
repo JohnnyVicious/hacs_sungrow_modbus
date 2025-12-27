@@ -6,8 +6,10 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 
 from custom_components.sungrow_modbus import ModbusController
-from custom_components.sungrow_modbus.const import DOMAIN, VALUES, SENSOR_DERIVED_ENTITIES, \
-    SENSOR_ENTITIES
+from custom_components.sungrow_modbus.const import (
+    DOMAIN, VALUES, SENSOR_DERIVED_ENTITIES, SENSOR_ENTITIES,
+    BATTERY_CONTROLLER, BATTERY_SENSORS,
+)
 from custom_components.sungrow_modbus.helpers import get_controller_from_entry
 from custom_components.sungrow_modbus.sensors.sungrow_derived_sensor import SungrowDerivedSensor
 from custom_components.sungrow_modbus.sensors.sungrow_sensor import SungrowSensor
@@ -35,6 +37,26 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry, asyn
 
     async_add_entities(sensor_entities, True)
     async_add_entities(sensor_derived_entities, True)
+
+    # Set up battery stack sensors if multi-battery is enabled
+    battery_controllers = hass.data[DOMAIN].get(BATTERY_CONTROLLER, {}).get(config_entry.entry_id)
+    if battery_controllers:
+        from custom_components.sungrow_modbus.sensors.sungrow_battery_sensor import create_battery_sensors
+
+        status_sensors, diagnostic_sensors = create_battery_sensors(hass, battery_controllers)
+
+        # Store for later access (e.g., by data retrieval)
+        hass.data[DOMAIN].setdefault(BATTERY_SENSORS, {})
+        hass.data[DOMAIN][BATTERY_SENSORS][config_entry.entry_id] = status_sensors
+
+        async_add_entities(status_sensors, True)
+        async_add_entities(diagnostic_sensors, True)
+
+        _LOGGER.info(
+            "Added %d battery sensors for %d stack(s)",
+            len(status_sensors) + len(diagnostic_sensors),
+            len(battery_controllers)
+        )
 
     @callback
     def update(now):

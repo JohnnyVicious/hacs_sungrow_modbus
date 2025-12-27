@@ -38,4 +38,5 @@ CONF_MULTI_BATTERY = "multi_battery"
 BATTERY_SLAVE_BASE = 200  # Battery stacks use slave IDs 200, 201, 202, 203
 MAX_BATTERY_STACKS = 4
 BATTERY_ENTITIES = "battery_entities"
+BATTERY_SENSORS = "battery_sensors"
 BATTERY_CONTROLLER = "battery_controller"

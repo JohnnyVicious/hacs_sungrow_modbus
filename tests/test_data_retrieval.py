@@ -257,3 +257,119 @@ class TestDataRetrieval(unittest.TestCase):
         # Check if once_group is removed from controller.sensor_groups
         self.assertNotIn(self.once_group, self.controller.sensor_groups)
         self.assertIn(self.normal_group, self.controller.sensor_groups)
+
+
+class TestDataRetrievalBatteryPolling(unittest.TestCase):
+    """Test battery polling in DataRetrieval."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        # Mock Home Assistant
+        self.hass = MagicMock()
+        self.hass.is_running = True
+        self.hass.bus.async_fire = MagicMock()
+        self.hass.create_task = MagicMock()
+        self.hass.data = {}
+
+        # Mock the ModbusController
+        self.controller = MagicMock()
+        self.controller.host = "192.168.1.100"
+        self.controller.slave = 1
+        self.controller.enabled = True
+        self.controller.connected = MagicMock(return_value=True)
+        self.controller.sensor_groups = []
+        self.controller.poll_speed = {
+            PollSpeed.FAST: 5,
+            PollSpeed.NORMAL: 15,
+            PollSpeed.SLOW: 30
+        }
+
+    async def test_poll_battery_stacks_no_entry_id(self):
+        """Test poll_battery_stacks returns early when no entry_id."""
+        with patch('custom_components.sungrow_modbus.data_retrieval.async_track_time_interval'):
+            data_retrieval = DataRetrieval(self.hass, self.controller, entry_id=None)
+
+        await data_retrieval.poll_battery_stacks()
+
+        # Should return early without accessing hass.data
+        # (no exception means it worked)
+
+    async def test_poll_battery_stacks_no_battery_controllers(self):
+        """Test poll_battery_stacks when no battery controllers exist."""
+        from custom_components.sungrow_modbus.const import DOMAIN, BATTERY_CONTROLLER
+
+        self.hass.data[DOMAIN] = {BATTERY_CONTROLLER: {}}
+
+        with patch('custom_components.sungrow_modbus.data_retrieval.async_track_time_interval'):
+            data_retrieval = DataRetrieval(self.hass, self.controller, entry_id="test_entry")
+
+        await data_retrieval.poll_battery_stacks()
+
+        # Should return early without error
+
+    async def test_poll_battery_stacks_success(self):
+        """Test successful battery polling."""
+        from custom_components.sungrow_modbus.const import DOMAIN, BATTERY_CONTROLLER, BATTERY_SENSORS
+
+        # Create mock battery controller
+        mock_battery_controller = MagicMock()
+        mock_battery_controller.stack_index = 0
+        mock_battery_controller.read_status = AsyncMock(return_value={
+            "voltage": 51.2,
+            "current": -5.0,
+            "soc": 85.5,
+            "temperature": 25.0
+        })
+
+        # Create mock battery sensor
+        mock_sensor = MagicMock()
+        mock_sensor._stack_index = 0
+        mock_sensor.update_from_battery_data = MagicMock()
+
+        self.hass.data[DOMAIN] = {
+            BATTERY_CONTROLLER: {"test_entry": [mock_battery_controller]},
+            BATTERY_SENSORS: {"test_entry": [mock_sensor]}
+        }
+
+        with patch('custom_components.sungrow_modbus.data_retrieval.async_track_time_interval'):
+            data_retrieval = DataRetrieval(self.hass, self.controller, entry_id="test_entry")
+
+        await data_retrieval.poll_battery_stacks()
+
+        # Verify battery controller was polled
+        mock_battery_controller.read_status.assert_called_once()
+        # Verify sensor was updated
+        mock_sensor.update_from_battery_data.assert_called_once()
+
+    async def test_poll_battery_stacks_exception_handling(self):
+        """Test poll_battery_stacks handles exceptions gracefully."""
+        from custom_components.sungrow_modbus.const import DOMAIN, BATTERY_CONTROLLER, BATTERY_SENSORS
+
+        # Create mock battery controller that raises exception
+        mock_battery_controller = MagicMock()
+        mock_battery_controller.stack_index = 0
+        mock_battery_controller.read_status = AsyncMock(side_effect=Exception("Connection failed"))
+
+        self.hass.data[DOMAIN] = {
+            BATTERY_CONTROLLER: {"test_entry": [mock_battery_controller]},
+            BATTERY_SENSORS: {"test_entry": []}
+        }
+
+        with patch('custom_components.sungrow_modbus.data_retrieval.async_track_time_interval'):
+            data_retrieval = DataRetrieval(self.hass, self.controller, entry_id="test_entry")
+
+        # Should not raise exception
+        await data_retrieval.poll_battery_stacks()
+
+    async def test_modbus_update_slow_calls_poll_battery_stacks(self):
+        """Test that modbus_update_slow calls poll_battery_stacks."""
+        with patch('custom_components.sungrow_modbus.data_retrieval.async_track_time_interval'):
+            data_retrieval = DataRetrieval(self.hass, self.controller, entry_id="test_entry")
+
+        data_retrieval.get_modbus_updates = AsyncMock()
+        data_retrieval.poll_battery_stacks = AsyncMock()
+
+        await data_retrieval.modbus_update_slow()
+
+        # Verify poll_battery_stacks was called
+        data_retrieval.poll_battery_stacks.assert_called_once()
