@@ -11,11 +11,11 @@ from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import ConfigEntryError
 
 from .const import (
-    DOMAIN, CONTROLLER, TIME_ENTITIES,
+    DOMAIN, CONTROLLER, TIME_ENTITIES, BATTERY_CONTROLLER,
     CONN_TYPE_TCP, CONN_TYPE_SERIAL, CONF_SERIAL_PORT,
     CONF_BAUDRATE, CONF_BYTESIZE, CONF_PARITY, CONF_STOPBITS,
-    CONF_CONNECTION_TYPE, CONF_INVERTER_SERIAL, DEFAULT_BAUDRATE, DEFAULT_BYTESIZE,
-    DEFAULT_PARITY, DEFAULT_STOPBITS
+    CONF_CONNECTION_TYPE, CONF_INVERTER_SERIAL, CONF_MULTI_BATTERY,
+    DEFAULT_BAUDRATE, DEFAULT_BYTESIZE, DEFAULT_PARITY, DEFAULT_STOPBITS
 )
 from .data.enums import InverterFeature
 from .data.sungrow_config import SUNGROW_INVERTERS, InverterConfig, InverterType
@@ -272,6 +272,38 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
 
     _LOGGER.debug(f"Config entry setup for {connection_type} connection: {connection_id}, slave {slave}")
 
+    # Multi-battery detection (if enabled and using direct LAN connection)
+    hass.data[DOMAIN].setdefault(BATTERY_CONTROLLER, {})
+    multi_battery_enabled = config.get(CONF_MULTI_BATTERY, False)
+
+    if multi_battery_enabled and InverterFeature.BATTERY in inverter_config.features:
+        # Only attempt battery detection on TCP connections (requires direct LAN port)
+        if connection_type == CONN_TYPE_TCP:
+            from .battery_controller import detect_battery_stacks
+
+            _LOGGER.info("Multi-battery monitoring enabled, detecting battery stacks...")
+            try:
+                battery_controllers = await detect_battery_stacks(hass, controller)
+                if battery_controllers:
+                    hass.data[DOMAIN][BATTERY_CONTROLLER][entry.entry_id] = battery_controllers
+                    _LOGGER.info(
+                        "Detected %d battery stack(s) for inverter %s",
+                        len(battery_controllers),
+                        inverter_serial
+                    )
+                    # Add MULTI_BATTERY feature if stacks detected
+                    if InverterFeature.MULTI_BATTERY not in inverter_config.features:
+                        inverter_config.features.append(InverterFeature.MULTI_BATTERY)
+                else:
+                    _LOGGER.info("No battery stacks detected on slave IDs 200-203")
+            except Exception as e:
+                _LOGGER.warning("Failed to detect battery stacks: %s", e)
+        else:
+            _LOGGER.warning(
+                "Multi-battery monitoring requires TCP connection via direct LAN port, "
+                "not available on serial connections"
+            )
+
     # Forward entry to platforms (SENSOR is included in PLATFORMS)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
@@ -305,6 +337,11 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
             # Remove from controller registry using proper key
             controller_key = get_controller_key(controller)
             hass.data[DOMAIN][CONTROLLER].pop(controller_key, None)
+
+        # Clean up battery controllers
+        battery_controllers = hass.data[DOMAIN].get(BATTERY_CONTROLLER, {}).pop(entry.entry_id, None)
+        if battery_controllers:
+            _LOGGER.debug("Cleaned up %d battery controller(s)", len(battery_controllers))
 
         # Clean up entry data
         hass.data[DOMAIN].pop(entry.entry_id, None)

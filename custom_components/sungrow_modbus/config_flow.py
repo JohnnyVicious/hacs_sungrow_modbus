@@ -10,8 +10,8 @@ from homeassistant.config_entries import OptionsFlowWithConfigEntry
 from .const import (
     DOMAIN, CONN_TYPE_TCP, CONN_TYPE_SERIAL, CONF_SERIAL_PORT,
     CONF_BAUDRATE, CONF_BYTESIZE, CONF_PARITY, CONF_STOPBITS,
-    CONF_CONNECTION_TYPE, CONF_INVERTER_SERIAL, DEFAULT_BAUDRATE, DEFAULT_BYTESIZE,
-    DEFAULT_PARITY, DEFAULT_STOPBITS
+    CONF_CONNECTION_TYPE, CONF_INVERTER_SERIAL, CONF_MULTI_BATTERY,
+    DEFAULT_BAUDRATE, DEFAULT_BYTESIZE, DEFAULT_PARITY, DEFAULT_STOPBITS
 )
 from .data.sungrow_config import SUNGROW_INVERTERS, CONNECTION_METHOD
 
@@ -328,6 +328,7 @@ OPTIONS_SCHEMA = vol.Schema(
         vol.Required("has_pv", default=True): vol.Coerce(bool),
         vol.Required("has_battery", default=True): vol.Coerce(bool),
         vol.Required("has_hv_battery", default=False): vol.Coerce(bool),
+        vol.Optional(CONF_MULTI_BATTERY, default=False): vol.Coerce(bool),
     }
 )
 

@@ -28,6 +28,8 @@ class InverterFeature(Enum):
     ZONNEPLAN = "zonneplan"
     THREE_PHASE = "three_phase"
     MPPT3 = "mppt3"
+    MULTI_BATTERY = "multi_battery"  # Multiple battery stacks (slave ID 200-203)
+    BATTERY_DIRECT = "battery_direct"  # Direct battery communication available
 
 class Category(Enum):
     BASIC_INFORMATION = "Basic Information"

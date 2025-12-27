@@ -61,6 +61,7 @@
           "has_pv": "Has PV (Solar Panels)",
           "has_battery": "Has Battery Storage",
           "has_hv_battery": "Has HV Battery Storage (100v+)",
+          "multi_battery": "Multi-Battery Monitoring (requires direct LAN port)",
           "phases": "Phases",
           "connection": "Connection Type",
           "inverter_serial": "Inverter Serial"
