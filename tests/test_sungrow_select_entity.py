@@ -36,8 +36,7 @@ async def test_set_register_bit_enforces_conflicts_and_requires(mock_hass, mock_
     }
 
     # 6 and 11 are on
-    with patch("custom_components.sungrow_modbus.sensors.sungrow_select_entity.cache_get", return_value=set_bit(set_bit(0, 6, True), 11, True)), \
-            patch("custom_components.sungrow_modbus.sensors.sungrow_select_entity.cache_save"):
+    with patch("custom_components.sungrow_modbus.sensors.sungrow_select_entity.cache_get", return_value=set_bit(set_bit(0, 6, True), 11, True)):
 
         entity = SungrowSelectEntity(mock_hass, mock_controller, entity_def)
         entity.set_register_bit(None, bit_position=0, conflicts_with=(6, 11), requires=None)
@@ -52,8 +51,7 @@ async def test_set_register_bit_enforces_conflicts_and_requires(mock_hass, mock_
 @pytest.mark.asyncio
 async def test_set_register_bit_with_requires(mock_hass, mock_controller):
     register = 43110
-    with patch("custom_components.sungrow_modbus.sensors.sungrow_select_entity.cache_get", return_value=0), \
-            patch("custom_components.sungrow_modbus.sensors.sungrow_select_entity.cache_save"):
+    with patch("custom_components.sungrow_modbus.sensors.sungrow_select_entity.cache_get", return_value=0):
 
         entity = SungrowSelectEntity(mock_hass, mock_controller, {
             "register": register,

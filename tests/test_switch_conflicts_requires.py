@@ -48,8 +48,7 @@ async def test_conflicts_self_use_mode(mock_hass, controller):
 
     initial = set_bit(set_bit(0, 6, True), 11, True)
 
-    with patch("custom_components.sungrow_modbus.sensors.sungrow_binary_sensor.cache_get", return_value=initial), \
-            patch("custom_components.sungrow_modbus.sensors.sungrow_binary_sensor.cache_save"):
+    with patch("custom_components.sungrow_modbus.sensors.sungrow_binary_sensor.cache_get", return_value=initial):
 
         entity = SungrowBinaryEntity(mock_hass, controller, entity_def)
         entity.set_register_bit(True)
@@ -68,8 +67,7 @@ async def test_requires_tou(mock_hass, controller):
         "name": "TOU (Self-Use)",
     }
 
-    with patch("custom_components.sungrow_modbus.sensors.sungrow_binary_sensor.cache_get", return_value=0), \
-            patch("custom_components.sungrow_modbus.sensors.sungrow_binary_sensor.cache_save"):
+    with patch("custom_components.sungrow_modbus.sensors.sungrow_binary_sensor.cache_get", return_value=0):
 
         entity = SungrowBinaryEntity(mock_hass, controller, entity_def)
         entity.set_register_bit(True)
@@ -89,8 +87,7 @@ async def test_conflicts_and_requires_combined(mock_hass, controller):
 
     initial = set_bit(set_bit(set_bit(0, 0, True), 6, True), 1, True)
 
-    with patch("custom_components.sungrow_modbus.sensors.sungrow_binary_sensor.cache_get", return_value=initial), \
-            patch("custom_components.sungrow_modbus.sensors.sungrow_binary_sensor.cache_save"):
+    with patch("custom_components.sungrow_modbus.sensors.sungrow_binary_sensor.cache_get", return_value=initial):
 
         entity = SungrowBinaryEntity(mock_hass, controller, entity_def)
         entity.set_register_bit(True)

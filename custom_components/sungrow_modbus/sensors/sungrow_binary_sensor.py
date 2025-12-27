@@ -3,7 +3,7 @@ from typing import Any
 
 from homeassistant.helpers.restore_state import RestoreEntity
 
-from custom_components.sungrow_modbus.helpers import cache_get, cache_save, is_correct_controller
+from custom_components.sungrow_modbus.helpers import cache_get, is_correct_controller
 from homeassistant.core import callback
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.components.switch import SwitchEntity
@@ -151,8 +151,8 @@ class SungrowBinaryEntity(RestoreEntity, SwitchEntity):
 
         if current_register_value != new_register_value and controller.connected():
             target_register = self._write_register
+            # Note: cache_save is handled by ModbusController on successful write
             self._hass.create_task(controller.async_write_holding_register(target_register, new_register_value))
-            cache_save(self._hass, target_register, new_register_value, self._modbus_controller.controller_key)
 
         self._attr_is_on = value
         self._attr_available = True

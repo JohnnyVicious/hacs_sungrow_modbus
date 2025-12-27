@@ -127,13 +127,12 @@ class SungrowDerivedSensor(RestoreSensor, SensorEntity):
 
             if 33135 in self._register and len(self._register) == 4:
                 registers = self._register.copy()
-                self._register = registers[:2]
+                # Use local copy for convert_value to avoid mutating self._register
+                power_registers = registers[:2]
 
-                p_value = self.base_sensor.convert_value([self._received_values[reg] for reg in filtered_registers])
+                p_value = self.base_sensor.convert_value([self._received_values[reg] for reg in power_registers])
                 d_w_value = registers[3]
                 d_value = self._received_values[registers[2]]
-
-                self._register = registers
 
                 if str(d_value) == str(d_w_value):
                     new_value = round(p_value * 10)
@@ -142,12 +141,11 @@ class SungrowDerivedSensor(RestoreSensor, SensorEntity):
 
             if 33135 in self._register and len(self._register) == 3:
                 registers = self._register.copy()
-                self._register = registers[:2]
+                # Use local copy for convert_value to avoid mutating self._register
+                power_registers = registers[:2]
 
-                p_value = self.base_sensor.convert_value([self._received_values[reg] for reg in filtered_registers])
+                p_value = self.base_sensor.convert_value([self._received_values[reg] for reg in power_registers])
                 d_value = self._received_values[registers[2]]
-
-                self._register = registers
 
                 # 0 indicated charging, 1 indicated discharging
                 if str(d_value) == str(0):
@@ -172,16 +170,11 @@ class SungrowDerivedSensor(RestoreSensor, SensorEntity):
                 self.base_sensor.controller._model = model_description
                 new_value = model_description + f"(Protocol {protocol_version})"
 
-            if isinstance(new_value, (numbers.Number, decimal.Decimal, fractions.Fraction)) or isinstance(new_value,
-                                                                                                          str):
+            # Update state if valid value exists
+            if new_value is not None:
                 self._attr_available = True
                 self._attr_native_value = new_value
                 self._state = new_value
-                self.schedule_update_ha_state()
-
-            # Update state if valid value exists
-            if new_value is not None:
-                self._attr_native_value = new_value
                 self.schedule_update_ha_state()
 
             # Clear received values after update

@@ -5,7 +5,7 @@ from homeassistant.helpers.restore_state import RestoreEntity
 
 from custom_components.sungrow_modbus import ModbusController
 from custom_components.sungrow_modbus.const import DOMAIN
-from custom_components.sungrow_modbus.helpers import cache_get, cache_save
+from custom_components.sungrow_modbus.helpers import cache_get
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -108,9 +108,9 @@ class SungrowSelectEntity(RestoreEntity, SelectEntity):
         _LOGGER.debug(
             f"Attempting bit {bit_position} to {True} in register {self._register}. New value for register {new_register_value}")
         # we only want to write when values has changed. After, we read the register again to make sure it applied.
+        # Note: cache_save is handled by ModbusController on successful write
         if current_register_value != new_register_value and controller.connected():
             self._hass.create_task(controller.async_write_holding_register(self._register, new_register_value))
-            cache_save(self._hass, self._register, new_register_value, self._modbus_controller.controller_key)
         self._attr_available = True
 
 

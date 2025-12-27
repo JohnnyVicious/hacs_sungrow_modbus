@@ -279,8 +279,7 @@ class TestConflictsAndRequires:
 
         with patch('custom_components.sungrow_modbus.sensors.sungrow_binary_sensor.cache_get') as mock_get:
             mock_get.return_value = 0b100001000000
-            with patch('custom_components.sungrow_modbus.sensors.sungrow_binary_sensor.cache_save'):
-                entity.turn_on()
+            entity.turn_on()
 
         # Verify bits 6 and 11 are cleared and bit 0 is set
         # Final value should be 0b000000000001 = 1
@@ -306,8 +305,7 @@ class TestConflictsAndRequires:
 
         with patch('custom_components.sungrow_modbus.sensors.sungrow_binary_sensor.cache_get') as mock_get:
             mock_get.return_value = 0
-            with patch('custom_components.sungrow_modbus.sensors.sungrow_binary_sensor.cache_save'):
-                entity.turn_on()
+            entity.turn_on()
 
         # Should set both bit 0 (required) and bit 1 (target)
         # Final value should be 0b11 = 3
@@ -332,8 +330,7 @@ class TestConflictsAndRequires:
 
         with patch('custom_components.sungrow_modbus.sensors.sungrow_binary_sensor.cache_get') as mock_get:
             mock_get.return_value = 0
-            with patch('custom_components.sungrow_modbus.sensors.sungrow_binary_sensor.cache_save'):
-                entity.turn_on()
+            entity.turn_on()
 
         # Should set bit 0 (first in requires_any) and bit 1 (target)
         hass.create_task.assert_called_once()
@@ -358,8 +355,7 @@ class TestConflictsAndRequires:
 
         with patch('custom_components.sungrow_modbus.sensors.sungrow_binary_sensor.cache_get') as mock_get:
             mock_get.return_value = 64
-            with patch('custom_components.sungrow_modbus.sensors.sungrow_binary_sensor.cache_save'):
-                entity.turn_on()
+            entity.turn_on()
 
         # Should only add bit 1, keep bit 6
         # Final value should be 0b1000010 = 66
