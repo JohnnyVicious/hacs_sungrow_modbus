@@ -72,7 +72,6 @@
           "has_pv": "Possui energia solar (PV)",
           "has_battery": "Possui armazenamento de bateria",
           "has_hv_battery": "Armazenamento de bateria HV (100 V+)",
-          "has_generator": "Possui gerador",
           "phases": "Fases",
           "connection": "Tipo de Conexão",
           "inverter_serial": "Inverter Serial"

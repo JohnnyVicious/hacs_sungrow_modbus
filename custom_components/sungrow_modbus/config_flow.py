@@ -48,7 +48,6 @@ BASE_CONFIG_SCHEMA = {
     vol.Required("has_pv", default=True): vol.Coerce(bool),
     vol.Required("has_battery", default=True): vol.Coerce(bool),
     vol.Required("has_hv_battery", default=False): vol.Coerce(bool),
-    vol.Required("has_generator", default=True): vol.Coerce(bool),
 }
 
 # Combined schema that accepts both TCP and Serial fields (all optional except connection_type)
@@ -98,7 +97,6 @@ OPTIONS_SCHEMA = vol.Schema(
         vol.Required("has_pv", default=True): vol.Coerce(bool),
         vol.Required("has_battery", default=True): vol.Coerce(bool),
         vol.Required("has_hv_battery", default=False): vol.Coerce(bool),
-        vol.Required("has_generator", default=True): vol.Coerce(bool),
     }
 )
 
@@ -262,7 +260,6 @@ class ModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             options={
                 "v2": user_input.get("has_v2", True),
                 "pv": user_input.get("has_pv", True),
-                "generator": user_input.get("has_generator", True),
                 "battery": user_input.get("has_battery", True),
                 "hv_battery": user_input.get("has_hv_battery", False),
             },

@@ -53,7 +53,7 @@ Copy `custom_components/sungrow_modbus` to your Home Assistant `custom_component
    - **TCP**: IP address and port (default: 502)
    - **Serial**: Device path, baudrate, parity settings
 4. Select your inverter model
-5. Configure optional features (PV, battery, generator support)
+5. Configure optional features (PV, battery support)
 
 ## Example Dashboards
 

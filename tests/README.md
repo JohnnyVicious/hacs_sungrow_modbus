@@ -17,7 +17,20 @@ pytest tests/ -v --tb=short
 
 ### Virtual Environment Setup
 
-The project uses a Python virtual environment. Activate it before running tests:
+The project uses a Python virtual environment. If it doesn't exist, create it first:
+
+```bash
+# Create virtual environment (one-time setup)
+python3 -m venv .venv
+
+# Activate virtual environment
+source .venv/bin/activate
+
+# Install dependencies (one-time setup)
+pip install pytest pytest-asyncio pytest-homeassistant-custom-component pymodbus python-dotenv
+```
+
+To activate an existing virtual environment:
 
 ```bash
 source .venv/bin/activate

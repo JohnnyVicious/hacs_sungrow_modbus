@@ -48,7 +48,6 @@ async def test_flow_user_success(hass: HomeAssistant):
             "has_pv": True,
             "has_battery": True,
             "has_hv_battery": False,
-            "has_generator": False,
             "inverter_serial": "sn123",
         }
 
@@ -98,7 +97,6 @@ async def test_flow_user_connection_error(hass: HomeAssistant):
             "has_pv": True,
             "has_battery": True,
             "has_hv_battery": False,
-            "has_generator": False,
             "inverter_serial": "sn123",
         }
 
@@ -143,7 +141,6 @@ async def test_flow_user_duplicates(hass: HomeAssistant):
             "slave": 1,
             "model": "SH10RT",
             "connection": "S2_WL_ST",
-            "has_generator": False,
             "inverter_serial": "sn123",
         }
 

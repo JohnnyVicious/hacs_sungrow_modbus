@@ -4,11 +4,10 @@ from custom_components.sungrow_modbus.data.enums import InverterType, InverterFe
 
 
 class InverterOptions:
-    def __init__(self, pv: bool = True, battery: bool = True, hv_battery: bool = False, generator: bool = False, v2: bool = True):
+    def __init__(self, pv: bool = True, battery: bool = True, hv_battery: bool = False, v2: bool = True):
         self.pv = pv
         self.battery = battery
         self.hv_battery = hv_battery
-        self.generator = generator
         self.v2 = v2
 
 
@@ -38,21 +37,17 @@ class InverterConfig:
         # Get options - handle both dict and InverterOptions object
         if isinstance(self.options, dict):
             pv = self.options.get("pv", True)
-            generator = self.options.get("generator", False)
             battery = self.options.get("battery", True)
             hv_battery = self.options.get("hv_battery", False)
             v2 = self.options.get("v2", True)
         else:
             pv = self.options.pv
-            generator = self.options.generator
             battery = self.options.battery
             hv_battery = self.options.hv_battery
             v2 = self.options.v2
 
         if pv:
             self.features.append(InverterFeature.PV)
-        if generator:
-            self.features.append(InverterFeature.GENERATOR)
         if battery:
             self.features.append(InverterFeature.BATTERY)
         if hv_battery:

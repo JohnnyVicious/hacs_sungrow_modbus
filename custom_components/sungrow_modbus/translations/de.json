@@ -72,7 +72,6 @@
           "has_pv": "Hat Photovoltaik (Solarpaneele)",
           "has_battery": "Hat Batteriespeicher",
           "has_hv_battery": "HV-Batteriespeicher (100 V+)",
-          "has_generator": "Hat Generator",
           "phases": "Phasen",
           "connection": "Verbindungstyp",
           "inverter_serial": "Inverter Serial"

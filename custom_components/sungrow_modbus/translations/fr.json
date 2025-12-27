@@ -72,7 +72,6 @@
           "has_pv": "Possède un panneau solaire (PV)",
           "has_battery": "Possède un stockage de batterie",
           "has_hv_battery": "Stockage de batterie HV (100 V+)",
-          "has_generator": "Possède un générateur",
           "phases": "Phases",
           "connection": "Type de connexion",
           "inverter_serial": "Inverter Serial"

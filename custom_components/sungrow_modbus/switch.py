@@ -54,31 +54,6 @@ async def async_setup_entry(hass, config_entry: ConfigEntry, async_add_devices):
                     { "bit_position": 11, "name": "Peak Shaving Mode", "conflicts_with": [0, 4, 6] }
                 ]
             },{
-                "register": 43365,
-                "entities": [
-                    {"bit_position": 0, "name": "Generator connection position"},
-                    {"bit_position": 1, "name": "With Generator"},
-                    {"bit_position": 2, "name": "Generator enable signal"},
-                    {"bit_position": 3, "name": "AC Coupling Position (off = GEN port, on = Backup port)"},
-                    {"bit_position": 4, "name": "Generator access location"},
-                ]
-            },{
-                "register": 43815,
-                "entities": [
-                    {"bit_position": 0, "name": "Generator charging period 1 switch"},
-                    {"bit_position": 1, "name": "Generator charging period 2 switch"},
-                    {"bit_position": 2, "name": "Generator charging period 3 switch"},
-                    {"bit_position": 3, "name": "Generator charging period 4 switch"},
-                    {"bit_position": 4, "name": "Generator charging period 5 switch"},
-                    {"bit_position": 5, "name": "Generator charging period 6 switch"},
-                ]
-            },{
-                "register": 43340,
-                "entities": [
-                    {"bit_position": 0, "name": "Generator Input Mode (off = Manual, on = Auto)"},
-                    {"bit_position": 1, "name": "Generator Charge Enable"},
-                ]
-            },{
                 "register": 43483,
                 "entities": [
                     {"bit_position": 0, "name": "Dual Backup Enable"},
@@ -107,11 +82,6 @@ async def async_setup_entry(hass, config_entry: ConfigEntry, async_add_devices):
                 "entities": [
                     {"name": "RC Force Battery Charge",  "on_value": 1},
                     {"name": "RC Force Battery Discharge", "on_value": 2},
-                ]
-            },{
-                "register": 43363,
-                "entities": [
-                    {"name": "Force Start Generator", "on_value": 1},
                 ]
             },{
                 "register": 43292,
