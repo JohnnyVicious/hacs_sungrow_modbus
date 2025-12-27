@@ -1,20 +1,19 @@
 import asyncio
 import copy
 import logging
+import struct
 
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.config_entries import OptionsFlowWithConfigEntry
 
-from . import ModbusController
 from .const import (
     DOMAIN, CONN_TYPE_TCP, CONN_TYPE_SERIAL, CONF_SERIAL_PORT,
     CONF_BAUDRATE, CONF_BYTESIZE, CONF_PARITY, CONF_STOPBITS,
     CONF_CONNECTION_TYPE, CONF_INVERTER_SERIAL, DEFAULT_BAUDRATE, DEFAULT_BYTESIZE,
     DEFAULT_PARITY, DEFAULT_STOPBITS
 )
-from .data.enums import InverterType
-from .data.sungrow_config import SUNGROW_INVERTERS, InverterConfig, CONNECTION_METHOD
+from .data.sungrow_config import SUNGROW_INVERTERS, CONNECTION_METHOD
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -34,97 +33,79 @@ PARITY_OPTIONS = {
     "O": "Odd"
 }
 
-# Base schema with common fields (for both TCP and Serial)
-BASE_CONFIG_SCHEMA = {
-    vol.Required(CONF_CONNECTION_TYPE, default=CONN_TYPE_TCP): vol.In(CONNECTION_TYPES),
-    vol.Required(CONF_INVERTER_SERIAL): str,
-    vol.Required("slave", default=1): int,
-    vol.Optional("poll_interval_fast", default=10): vol.All(int, vol.Range(min=10)),
-    vol.Optional("poll_interval_normal", default=15): vol.All(int, vol.Range(min=15)),
-    vol.Optional("poll_interval_slow", default=30): vol.All(int, vol.Range(min=30)),
-    vol.Required("model", default=list(SUNGROW_MODELS.keys())[0]): vol.In(SUNGROW_MODELS),
-    # Boolean options (Yes/No toggle)
-    vol.Required("has_v2", default=True): vol.Coerce(bool),
-    vol.Required("has_pv", default=True): vol.Coerce(bool),
-    vol.Required("has_battery", default=True): vol.Coerce(bool),
-    vol.Required("has_hv_battery", default=False): vol.Coerce(bool),
+# Device type code to model mapping (from registers-sungrow.yaml and Sungrow docs)
+DEVICE_TYPE_MAP = {
+    # Hybrid Inverters - SH-RS series (single phase)
+    0x0D0F: "SH5.0RS",
+    0x0D10: "SH3.6RS",
+    0x0D11: "SH4.6RS",
+    0x0D12: "SH6.0RS",
+    0x0D23: "SH8.0RS",
+    0x0D24: "SH10RS",
+    0x0D25: "SH3.0RS",
+    0x0D26: "SH4.0RS",
+    # Hybrid Inverters - SH-RT series (three phase)
+    0x0E03: "SH5.0RT",
+    0x0E04: "SH6.0RT",
+    0x0E05: "SH8.0RT",
+    0x0E06: "SH10RT",
+    0x0E07: "SH5.0RT-20",
+    0x0E08: "SH6.0RT-20",
+    0x0E09: "SH8.0RT-20",
+    0x0E0A: "SH10RT-20",
+    0x0E0B: "SH5.0RT-V112",
+    0x0E0C: "SH6.0RT-V112",
+    0x0E0D: "SH8.0RT-V112",
+    0x0E0E: "SH10RT-V112",
+    0x0E23: "SH5.0RT-V122",
+    0x0E24: "SH6.0RT-V122",
+    0x0E25: "SH8.0RT-V122",
+    0x0E26: "SH10RT-V122",
+    # Hybrid Inverters - SH-T series (three phase, larger)
+    0x0E27: "SH5T",
+    0x0E28: "SH25T",
+    0x0E29: "SH15T",
+    0x0E2A: "SH20T",
+    0x0E2B: "SH10T",
+    # Legacy Hybrid Inverters
+    0x0D09: "SH5K-20",
+    0x0D06: "SH3K6",
+    0x0D07: "SH4K6",
+    0x0D0A: "SH5K-V13",
+    0x0D0B: "SH5K-30",
+    0x0D0C: "SH3K6-30",
+    0x0D0D: "SH4K6-30",
+    # String Inverters
+    0x0233: "SG3.0RS",
+    0x0234: "SG4.0RS",
+    0x0235: "SG5.0RS",
+    0x0236: "SG6.0RS",
 }
-
-# Combined schema that accepts both TCP and Serial fields (all optional except connection_type)
-# This allows the form to accept either type of connection
-COMBINED_CONFIG_SCHEMA = {
-    **BASE_CONFIG_SCHEMA,
-    # TCP fields (optional)
-    vol.Optional("host", default=""): str,
-    vol.Optional("port", default=502): int,
-    vol.Optional("connection", default=list(CONNECTION_METHOD.keys())[0]): vol.In(CONNECTION_METHOD),
-    # Serial fields (optional)
-    vol.Optional(CONF_SERIAL_PORT, default="/dev/ttyUSB0"): str,
-    vol.Optional(CONF_BAUDRATE, default=DEFAULT_BAUDRATE): vol.In([9600, 19200, 38400, 57600, 115200]),
-    vol.Optional(CONF_BYTESIZE, default=DEFAULT_BYTESIZE): vol.In([7, 8]),
-    vol.Optional(CONF_PARITY, default=DEFAULT_PARITY): vol.In(PARITY_OPTIONS),
-    vol.Optional(CONF_STOPBITS, default=DEFAULT_STOPBITS): vol.In([1, 2]),
-}
-
-# TCP-specific fields (includes WiFi dongle type)
-TCP_CONFIG_SCHEMA = {
-    **BASE_CONFIG_SCHEMA,
-    vol.Required("host", default=""): str,
-    vol.Required("port", default=502): int,
-    vol.Required("connection", default=list(CONNECTION_METHOD.keys())[0]): vol.In(CONNECTION_METHOD),
-}
-
-# Serial-specific fields (no WiFi dongle type needed)
-SERIAL_CONFIG_SCHEMA = {
-    **BASE_CONFIG_SCHEMA,
-    vol.Required(CONF_SERIAL_PORT, default="/dev/ttyUSB0"): str,
-    vol.Required(CONF_BAUDRATE, default=DEFAULT_BAUDRATE): vol.In([9600, 19200, 38400, 57600, 115200]),
-    vol.Required(CONF_BYTESIZE, default=DEFAULT_BYTESIZE): vol.In([7, 8]),
-    vol.Required(CONF_PARITY, default=DEFAULT_PARITY): vol.In(PARITY_OPTIONS),
-    vol.Required(CONF_STOPBITS, default=DEFAULT_STOPBITS): vol.In([1, 2]),
-}
-
-OPTIONS_SCHEMA = vol.Schema(
-    {
-        vol.Required("poll_interval_fast"): vol.All(int, vol.Range(min=10)),
-        vol.Required("poll_interval_normal"): vol.All(int, vol.Range(min=15)),
-        vol.Required("poll_interval_slow"): vol.All(int, vol.Range(min=30)),
-        vol.Required("model"): vol.In(SUNGROW_MODELS),
-        vol.Required("connection", default=list(CONNECTION_METHOD.keys())[0]): vol.In(CONNECTION_METHOD),
-
-        # Boolean options (Yes/No toggle)
-        vol.Required("has_v2", default=True): vol.Coerce(bool),
-        vol.Required("has_pv", default=True): vol.Coerce(bool),
-        vol.Required("has_battery", default=True): vol.Coerce(bool),
-        vol.Required("has_hv_battery", default=False): vol.Coerce(bool),
-    }
-)
 
 
 class ModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Modbus configuration flow."""
+    """Modbus configuration flow - simplified to just ask for connection details."""
 
     VERSION = 1
 
     def __init__(self):
         """Initialize the config flow."""
         self._connection_type = None
-        self._config_data = {}
+        self._connection_data = {}
+        self._device_info = {}
 
     async def async_step_user(self, user_input=None):
         """Handle initial step - ask for connection type."""
         errors = {}
 
         if user_input is not None:
-            # Save connection type and proceed to config step
             conn_type = user_input.get(CONF_CONNECTION_TYPE)
             if conn_type:
                 self._connection_type = conn_type
-                return await self.async_step_config()
+                return await self.async_step_connection()
 
-            errors["base"] = "Please select a connection type."
+            errors["base"] = "invalid_connection_type"
 
-        # Show connection type selector only
         return self.async_show_form(
             step_id="user",
             data_schema=vol.Schema({
@@ -133,203 +114,212 @@ class ModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             errors=errors
         )
 
-    async def async_step_config(self, user_input=None):
-        """Handle second step - show connection-specific configuration."""
+    async def async_step_connection(self, user_input=None):
+        """Handle connection details step."""
         errors = {}
 
         if user_input is not None:
-            # Merge connection type with configuration
-            full_config = {CONF_CONNECTION_TYPE: self._connection_type, **user_input}
-            return await self._create_entry_from_input(full_config)
+            self._connection_data = {CONF_CONNECTION_TYPE: self._connection_type, **user_input}
 
-        # Remove connection_type from schema since we already have it
+            # Try to connect and auto-detect device info
+            device_info = await self._detect_device(self._connection_data)
+
+            if device_info:
+                self._device_info = device_info
+                serial = device_info.get("serial_number", "")
+
+                # Use serial number as unique ID
+                if serial:
+                    await self.async_set_unique_id(serial)
+                    self._abort_if_unique_id_configured()
+
+                # Create entry with detected info
+                return await self._create_entry()
+            else:
+                errors["base"] = "cannot_connect"
+
+        # Show connection-specific form
         if self._connection_type == CONN_TYPE_TCP:
-            # Create TCP schema without connection_type field
-            schema_dict = {k: v for k, v in TCP_CONFIG_SCHEMA.items()
-                           if not (hasattr(k, 'schema') and k.schema == CONF_CONNECTION_TYPE)}
-            schema = vol.Schema(schema_dict)
+            schema = vol.Schema({
+                vol.Required("host"): str,
+                vol.Required("port", default=502): int,
+                vol.Required("slave", default=1): int,
+            })
         else:
-            # Create Serial schema without connection_type field
-            schema_dict = {k: v for k, v in SERIAL_CONFIG_SCHEMA.items()
-                           if not (hasattr(k, 'schema') and k.schema == CONF_CONNECTION_TYPE)}
-            schema = vol.Schema(schema_dict)
+            schema = vol.Schema({
+                vol.Required(CONF_SERIAL_PORT, default="/dev/ttyUSB0"): str,
+                vol.Required(CONF_BAUDRATE, default=DEFAULT_BAUDRATE): vol.In([9600, 19200, 38400, 57600, 115200]),
+                vol.Required(CONF_BYTESIZE, default=DEFAULT_BYTESIZE): vol.In([7, 8]),
+                vol.Required(CONF_PARITY, default=DEFAULT_PARITY): vol.In(PARITY_OPTIONS),
+                vol.Required(CONF_STOPBITS, default=DEFAULT_STOPBITS): vol.In([1, 2]),
+                vol.Required("slave", default=1): int,
+            })
 
         return self.async_show_form(
-            step_id="config",
+            step_id="connection",
             data_schema=schema,
             errors=errors
         )
+
+    async def _detect_device(self, config) -> dict | None:
+        """Connect to device and auto-detect serial number and model."""
+        from pymodbus.client import AsyncModbusTcpClient, AsyncModbusSerialClient
+
+        conn_type = config.get(CONF_CONNECTION_TYPE, CONN_TYPE_TCP)
+        slave_id = config.get("slave", 1)
+
+        try:
+            if conn_type == CONN_TYPE_TCP:
+                client = AsyncModbusTcpClient(
+                    host=config["host"],
+                    port=config.get("port", 502),
+                    timeout=10
+                )
+            else:
+                client = AsyncModbusSerialClient(
+                    port=config[CONF_SERIAL_PORT],
+                    baudrate=config.get(CONF_BAUDRATE, DEFAULT_BAUDRATE),
+                    bytesize=config.get(CONF_BYTESIZE, DEFAULT_BYTESIZE),
+                    parity=config.get(CONF_PARITY, DEFAULT_PARITY),
+                    stopbits=config.get(CONF_STOPBITS, DEFAULT_STOPBITS),
+                    timeout=10
+                )
+
+            connected = await client.connect()
+            if not connected:
+                _LOGGER.error("Failed to connect to inverter")
+                return None
+
+            # Read serial number (registers 4989-4998, 10 registers)
+            result = await client.read_input_registers(address=4989, count=10, device_id=slave_id)
+            if result.isError():
+                _LOGGER.error(f"Failed to read serial number: {result}")
+                client.close()
+                return None
+
+            # Decode serial number
+            packed = struct.pack('>' + 'H' * len(result.registers), *result.registers)
+            serial_number = packed.decode('ascii', errors='ignore').strip('\x00\r\n ')
+
+            # Read device type code (register 4999)
+            result = await client.read_input_registers(address=4999, count=1, device_id=slave_id)
+            device_type_code = result.registers[0] if not result.isError() else 0
+
+            # Map to model name
+            model = DEVICE_TYPE_MAP.get(device_type_code, f"Unknown (0x{device_type_code:04X})")
+
+            # Read nominal power (register 5000)
+            result = await client.read_input_registers(address=5000, count=1, device_id=slave_id)
+            nominal_power = result.registers[0] * 0.1 if not result.isError() else 0
+
+            client.close()
+
+            _LOGGER.info(f"Detected inverter: {model}, Serial: {serial_number}, Power: {nominal_power}kW")
+
+            return {
+                "serial_number": serial_number,
+                "device_type_code": device_type_code,
+                "model": model,
+                "nominal_power": nominal_power,
+            }
+
+        except Exception as e:
+            _LOGGER.error(f"Error detecting device: {e}")
+            return None
+
+    async def _create_entry(self):
+        """Create the config entry with detected device info."""
+        serial = self._device_info.get("serial_number", "unknown")
+        model = self._device_info.get("model", "Sungrow")
+        device_type_code = self._device_info.get("device_type_code", 0)
+
+        # Find matching inverter config or use first hybrid as default
+        inverter_config = next(
+            (inv for inv in SUNGROW_INVERTERS if inv.model == model),
+            SUNGROW_INVERTERS[0]  # Default to first inverter if not found
+        )
+
+        # Build entry data
+        data = {
+            **self._connection_data,
+            CONF_INVERTER_SERIAL: serial,
+            "model": inverter_config.model,
+            "device_type_code": device_type_code,
+            # Default settings - can be changed in options
+            "poll_interval_fast": 10,
+            "poll_interval_normal": 15,
+            "poll_interval_slow": 30,
+            "connection": "S2_WL_ST",
+            "has_v2": True,
+            "has_pv": True,
+            "has_battery": True,
+            "has_hv_battery": False,
+        }
+
+        title = f"Sungrow {model} ({serial})"
+
+        return self.async_create_entry(title=title, data=data)
 
     async def async_step_reconfigure(self, user_input=None):
         """Handle reconfiguration."""
         errors = {}
         entry = self.hass.config_entries.async_get_entry(self.context["entry_id"])
+        conn_type = entry.data.get(CONF_CONNECTION_TYPE, CONN_TYPE_TCP)
 
         if user_input is not None:
             data = {**entry.data, **user_input}
 
-            if await self._validate_config(data):
-                return self.async_update_reload_and_abort(
-                    entry, data=data
-                )
+            # Test connection
+            device_info = await self._detect_device(data)
+            if device_info:
+                return self.async_update_reload_and_abort(entry, data=data)
 
-            errors["base"] = "Cannot connect to Modbus device. Please check your configuration."
+            errors["base"] = "cannot_connect"
 
-        # Show config form with existing values pre-filled
-        # Determine schema based on existing connection type
-        conn_type = entry.data.get(CONF_CONNECTION_TYPE, CONN_TYPE_TCP)
-
+        # Show connection form with existing values
         if conn_type == CONN_TYPE_TCP:
-            schema_dict = TCP_CONFIG_SCHEMA.copy()
+            schema = vol.Schema({
+                vol.Required("host", default=entry.data.get("host", "")): str,
+                vol.Required("port", default=entry.data.get("port", 502)): int,
+                vol.Required("slave", default=entry.data.get("slave", 1)): int,
+            })
         else:
-            schema_dict = SERIAL_CONFIG_SCHEMA.copy()
-
-        # Re-create schema with defaults from entry data
-        new_schema = {}
-        for key, value in schema_dict.items():
-            if key in entry.data:
-                # If key exists in data, use it as default
-                new_schema[key] = vol.Required(key, default=entry.data[key]) if isinstance(value,
-                                                                                           vol.Required) else vol.Optional(
-                    key, default=entry.data[key])
-            elif key == CONF_INVERTER_SERIAL and CONF_INVERTER_SERIAL not in entry.data:
-                # If serial is missing (the problem we are solving), make it required without default (or empty string)
-                new_schema[key] = vol.Required(key)
-            else:
-                new_schema[key] = value
+            schema = vol.Schema({
+                vol.Required(CONF_SERIAL_PORT, default=entry.data.get(CONF_SERIAL_PORT, "/dev/ttyUSB0")): str,
+                vol.Required(CONF_BAUDRATE, default=entry.data.get(CONF_BAUDRATE, DEFAULT_BAUDRATE)): vol.In(
+                    [9600, 19200, 38400, 57600, 115200]),
+                vol.Required(CONF_BYTESIZE, default=entry.data.get(CONF_BYTESIZE, DEFAULT_BYTESIZE)): vol.In([7, 8]),
+                vol.Required(CONF_PARITY, default=entry.data.get(CONF_PARITY, DEFAULT_PARITY)): vol.In(PARITY_OPTIONS),
+                vol.Required(CONF_STOPBITS, default=entry.data.get(CONF_STOPBITS, DEFAULT_STOPBITS)): vol.In([1, 2]),
+                vol.Required("slave", default=entry.data.get("slave", 1)): int,
+            })
 
         return self.async_show_form(
             step_id="reconfigure",
-            data_schema=vol.Schema(new_schema),
+            data_schema=schema,
             errors=errors
         )
-
-    async def _create_entry_from_input(self, user_input):
-        """Create config entry from validated input."""
-        conn_type = user_input.get(CONF_CONNECTION_TYPE, CONN_TYPE_SERIAL)
-        slave = user_input["slave"]
-
-        if not await self._validate_config(user_input):
-            # Validation failed - show error
-            errors = {"base": "Cannot connect to Modbus device. Please check your configuration."}
-
-            # Multi-step flow - return to config step without connection_type field
-            if conn_type == CONN_TYPE_TCP:
-                schema_dict = {k: v for k, v in TCP_CONFIG_SCHEMA.items()
-                               if not (hasattr(k, 'schema') and k.schema == CONF_CONNECTION_TYPE)}
-            else:
-                schema_dict = {k: v for k, v in SERIAL_CONFIG_SCHEMA.items()
-                               if not (hasattr(k, 'schema') and k.schema == CONF_CONNECTION_TYPE)}
-
-            return self.async_show_form(
-                step_id="config",
-                data_schema=vol.Schema(schema_dict),
-                errors=errors
-            )
-
-        # Create unique ID based on connection type
-        if conn_type == CONN_TYPE_TCP:
-            host = user_input["host"]
-            unique_id = f"{host}_{slave}"
-            title = f"Sungrow: Host {host}, Modbus Address {slave}"
-        else:  # Serial
-            port = user_input[CONF_SERIAL_PORT]
-            unique_id = f"{port}_{slave}"
-            title = f"Sungrow: {port}, Modbus Address {slave}"
-
-        await self.async_set_unique_id(unique_id)
-        self._abort_if_unique_id_configured()
-        return self.async_create_entry(title=title, data=user_input)
-
-    async def _validate_config(self, user_input):
-        """Validate the configuration by trying to connect to the Modbus device."""
-        inverter_model = user_input.get("model")
-        inverter_config_template: InverterConfig = next(
-            (inv for inv in SUNGROW_INVERTERS if inv.model == inverter_model), None
-        )
-
-        if inverter_config_template is None:
-            _LOGGER.error(f"Unknown inverter model: {inverter_model}")
-            return False
-
-        # Clone to avoid mutating the shared template
-        inverter_config = copy.deepcopy(inverter_config_template)
-
-        # Update options and rebuild features
-        inverter_config.update_options(
-            options={
-                "v2": user_input.get("has_v2", True),
-                "pv": user_input.get("has_pv", True),
-                "battery": user_input.get("has_battery", True),
-                "hv_battery": user_input.get("has_hv_battery", False),
-            },
-            connection=user_input.get("connection", "S2_WL_ST")
-        )
-
-        conn_type = user_input.get(CONF_CONNECTION_TYPE, CONN_TYPE_SERIAL)
-
-        # Build ModbusController parameters based on connection type
-        controller_params = {
-            "hass": self.hass,
-            "device_id": user_input.get("slave", 1),
-            "fast_poll": user_input.get("poll_interval_fast", 10),
-            "normal_poll": user_input.get("poll_interval_normal", 15),
-            "slow_poll": user_input.get("poll_interval_slow", 30),  # Match schema min=30
-            "inverter_config": inverter_config,
-            "connection_type": conn_type
-        }
-
-        if conn_type == CONN_TYPE_TCP:
-            controller_params["host"] = user_input["host"]
-            controller_params["port"] = user_input.get("port", 502)
-        else:  # Serial
-            controller_params["serial_port"] = user_input[CONF_SERIAL_PORT]
-            controller_params["baudrate"] = user_input.get(CONF_BAUDRATE, DEFAULT_BAUDRATE)
-            controller_params["bytesize"] = user_input.get(CONF_BYTESIZE, DEFAULT_BYTESIZE)
-            controller_params["parity"] = user_input.get(CONF_PARITY, DEFAULT_PARITY)
-            controller_params["stopbits"] = user_input.get(CONF_STOPBITS, DEFAULT_STOPBITS)
-
-        modbus_controller = ModbusController(**controller_params)
-
-        for attempt in range(5):
-            try:
-                if not await modbus_controller.connect():
-                    raise ConnectionError("Failed to connect")
-                if inverter_config.type in [InverterType.GRID, InverterType.STRING]:
-                    await modbus_controller.async_read_input_register(3041, 1)
-                else:
-                    await modbus_controller.async_read_input_register(35000, 1)
-
-                return True
-            except Exception as e:
-                _LOGGER.warning(f"Connection failed attempt {attempt + 1}/5: {str(e)}")
-                if attempt < 4:
-                    await asyncio.sleep(1)
-            finally:
-                modbus_controller.close_connection()
-
-        _LOGGER.error(f"Connection failed after 5 attempts: {str(controller_params)}")
-        return False
-
-    def _get_user_schema(self, user_input=None):
-        """Return the appropriate schema based on connection type selection."""
-        # If we have user input with connection_type, show the appropriate schema
-        if user_input and CONF_CONNECTION_TYPE in user_input:
-            conn_type = user_input[CONF_CONNECTION_TYPE]
-            if conn_type == CONN_TYPE_TCP:
-                return vol.Schema(TCP_CONFIG_SCHEMA)
-            else:
-                return vol.Schema(SERIAL_CONFIG_SCHEMA)
-
-        # On first render (no user input), show Serial schema by default
-        # but allow both types during validation (for tests and edge cases)
-        return vol.Schema(SERIAL_CONFIG_SCHEMA)
 
     @staticmethod
     @config_entries.HANDLERS.register(DOMAIN)
     def async_get_options_flow(config_entry):
         """Return the options flow handler."""
         return ModbusOptionsFlowHandler(config_entry)
+
+
+OPTIONS_SCHEMA = vol.Schema(
+    {
+        vol.Required("poll_interval_fast"): vol.All(int, vol.Range(min=5)),
+        vol.Required("poll_interval_normal"): vol.All(int, vol.Range(min=10)),
+        vol.Required("poll_interval_slow"): vol.All(int, vol.Range(min=15)),
+        vol.Required("model"): vol.In(SUNGROW_MODELS),
+        vol.Required("connection", default=list(CONNECTION_METHOD.keys())[0]): vol.In(CONNECTION_METHOD),
+        vol.Required("has_v2", default=True): vol.Coerce(bool),
+        vol.Required("has_pv", default=True): vol.Coerce(bool),
+        vol.Required("has_battery", default=True): vol.Coerce(bool),
+        vol.Required("has_hv_battery", default=False): vol.Coerce(bool),
+    }
+)
 
 
 class ModbusOptionsFlowHandler(OptionsFlowWithConfigEntry):
@@ -342,6 +332,11 @@ class ModbusOptionsFlowHandler(OptionsFlowWithConfigEntry):
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)
 
-        return self.async_show_form(step_id="init", data_schema=self.add_suggested_values_to_schema(
-            OPTIONS_SCHEMA, self.config_entry.options
-        ), errors=errors)
+        # Get current values from config entry data (not options)
+        current_data = {**self.config_entry.data, **self.config_entry.options}
+
+        return self.async_show_form(
+            step_id="init",
+            data_schema=self.add_suggested_values_to_schema(OPTIONS_SCHEMA, current_data),
+            errors=errors
+        )

@@ -130,8 +130,8 @@ class SungrowBaseSensor:
         if None in values:
             return None
 
-        if len(self.registrars) >= 15:
-            values = values
+        # multiplier == 0 indicates string type (serial numbers, firmware versions, etc.)
+        if self.multiplier == 0 and len(self.registrars) > 1:
             n_value = extract_serial_number(values)
         elif len(self.registrars) > 1:
             combined_value = split_s32(values)

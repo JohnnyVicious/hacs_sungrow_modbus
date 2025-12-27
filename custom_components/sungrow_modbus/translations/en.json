@@ -9,9 +9,9 @@
           "connection_type": "Connection Type"
         }
       },
-      "config": {
-        "title": "Inverter Configuration",
-        "description": "Please enter the Modbus settings for your inverter.",
+      "connection": {
+        "title": "Connection Details",
+        "description": "Enter the connection details. The inverter model and serial number will be auto-detected.",
         "data": {
           "host": "IP Address",
           "port": "Port",
@@ -20,18 +20,12 @@
           "baudrate": "Baud Rate",
           "bytesize": "Byte Size",
           "parity": "Parity",
-          "stopbits": "Stop Bits",
-          "model": "Inverter Model",
-          "poll_interval_fast": "Fast Poll Interval (seconds)",
-          "poll_interval_normal": "Normal Poll Interval (seconds)",
-          "poll_interval_slow": "Slow Poll Interval (seconds)",
-          "identification": "Identification Name",
-          "inverter_serial": "Inverter Serial"
+          "stopbits": "Stop Bits"
         }
       },
       "reconfigure": {
-        "title": "Reconfigure Inverter",
-        "description": "Update the configuration for your Sungrow inverter.",
+        "title": "Reconfigure Connection",
+        "description": "Update the connection settings for your Sungrow inverter.",
         "data": {
           "host": "IP Address",
           "port": "Port",
@@ -40,22 +34,17 @@
           "baudrate": "Baud Rate",
           "bytesize": "Byte Size",
           "parity": "Parity",
-          "stopbits": "Stop Bits",
-          "model": "Inverter Model",
-          "poll_interval_fast": "Fast Poll Interval (seconds)",
-          "poll_interval_normal": "Normal Poll Interval (seconds)",
-          "poll_interval_slow": "Slow Poll Interval (seconds)",
-          "identification": "Identification Name",
-          "inverter_serial": "Inverter Serial"
+          "stopbits": "Stop Bits"
         }
       }
     },
     "error": {
-      "cannot_connect": "Failed to connect, please check your settings.",
+      "cannot_connect": "Failed to connect. Please check the IP address and port.",
+      "invalid_connection_type": "Please select a connection type.",
       "unknown": "Unexpected error occurred."
     },
     "abort": {
-      "already_configured": "This device is already configured."
+      "already_configured": "This inverter is already configured (same serial number)."
     }
   },
   "options": {
