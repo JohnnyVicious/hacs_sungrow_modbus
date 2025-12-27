@@ -1,7 +1,14 @@
 name: Release
 
 on:
+  release:
+    types: [published]
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 0.1.0)'
+        required: true
+        type: string
 
 env:
   COMPONENT_NAME: sungrow_modbus
@@ -12,87 +19,53 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      id-token: write
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Install jq
-        run: sudo apt-get install jq
-
-      - name: Install Python semver
-        run: pip install semver
-
-      - name: Get latest tag or fail
-        id: get-latest-tag
+      - name: Determine version
+        id: version
         run: |
-          latest_tag=$(git for-each-ref --sort=version:refname --format '%(refname)' refs/tags/ | grep -v 'latest' | tail -1 | sed 's/^refs\/tags\///; s/^v//')
-          if [ -z "$latest_tag" ]; then
-            echo "No tags found for the commit."
-            exit 1
-          fi
-          echo "latest_tag=$latest_tag" >> $GITHUB_ENV
-
-      - name: Get current version from manifest.json
-        id: get-version
-        run: |
-          current_version=$(cat "${{ github.workspace }}/custom_components/${{ env.COMPONENT_NAME }}/manifest.json" | jq -r '.version')
-          echo "version=$current_version" >> $GITHUB_ENV
-
-      - name: Check if version is higher and bump if needed
-        id: check-version
-        run: |
-          latest="${{ env.latest_tag }}"
-          current="${{ env.version }}"
-
-          echo "Current version: $current"
-          echo "Latest tag: $latest"
-
-          # Check if latest tag is a valid SemVer string
-          if ! python -c "import semver; semver.VersionInfo.parse('$latest')" > /dev/null 2>&1; then
-            echo "Latest tag '$latest' is not a valid SemVer version, treating it as the current version."
-            latest=$current  # Treat invalid tag as current version
-          fi
-
-          # Check if current version is higher than the latest tag (which is now set to current if invalid)
-          is_higher=$(python -c "import semver; print(semver.compare('$current', '$latest') > 0)")
-
-          if [ "$is_higher" != "True" ]; then
-            echo "The version is not higher. Bumping patch version..."
-            bumped=$(python -c "import semver; print(semver.bump_patch('$latest'))")
-            echo "New version: $bumped"
-            jq ".version = \"$bumped\"" "${{ github.workspace }}/custom_components/${{ env.COMPONENT_NAME }}/manifest.json" > package.tmp.json && mv package.tmp.json "${{ github.workspace }}/custom_components/${{ env.COMPONENT_NAME }}/manifest.json"
-            echo "version=$bumped" >> $GITHUB_ENV
+          if [ "${{ github.event_name }}" == "release" ]; then
+            # Extract version from release tag (remove 'v' prefix if present)
+            VERSION="${{ github.event.release.tag_name }}"
+            VERSION="${VERSION#v}"
           else
-            echo "version=$current" >> $GITHUB_ENV
+            # Use manual input version
+            VERSION="${{ github.event.inputs.version }}"
           fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Release version: $VERSION"
 
-          echo "is_higher_version=true" >> $GITHUB_ENV
-
-      - name: Commit and push version bump
-        if: env.is_higher_version == 'true'
+      - name: Update manifest.json version
         run: |
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-          git add custom_components/${{ env.COMPONENT_NAME }}/manifest.json
-          git diff --exit-code || (git commit -m "chore: bump version to v${{ env.version }}" && git push)
+          VERSION="${{ steps.version.outputs.version }}"
+          cd custom_components/${{ env.COMPONENT_NAME }}
+          # Update version in manifest.json
+          jq ".version = \"$VERSION\"" manifest.json > manifest.tmp.json
+          mv manifest.tmp.json manifest.json
+          echo "Updated manifest.json to version $VERSION"
+          cat manifest.json
 
-      - name: Zip ${{ env.COMPONENT_NAME }} dir
+      - name: Create zip package
         run: |
-          cd "${{ github.workspace }}/custom_components/${{ env.COMPONENT_NAME }}"
-          zip ${{ env.COMPONENT_NAME }}.zip -r ./
+          cd custom_components/${{ env.COMPONENT_NAME }}
+          zip -r ${{ env.COMPONENT_NAME }}.zip ./*
+          echo "Created ${{ env.COMPONENT_NAME }}.zip"
+          ls -la *.zip
 
-      - name: Upload zip to release
-        if: env.is_higher_version == 'true'
+      - name: Upload release asset (on release event)
+        if: github.event_name == 'release'
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ github.workspace }}/custom_components/${{ env.COMPONENT_NAME }}/${{ env.COMPONENT_NAME }}.zip
-          tag_name: v${{ env.version }}
-          name: v${{ env.version }}
-          token: ${{ secrets.PAT }}
-          generate_release_notes: true
+          files: custom_components/${{ env.COMPONENT_NAME }}/${{ env.COMPONENT_NAME }}.zip
+          tag_name: ${{ github.event.release.tag_name }}
 
-      - name: 🏷️ Update latest tag
-        if: env.is_higher_version == 'true'
-        uses: EndBug/latest-tag@latest
+      - name: Create release (on workflow_dispatch)
+        if: github.event_name == 'workflow_dispatch'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: custom_components/${{ env.COMPONENT_NAME }}/${{ env.COMPONENT_NAME }}.zip
+          tag_name: v${{ steps.version.outputs.version }}
+          name: v${{ steps.version.outputs.version }}
+          generate_release_notes: true
+          draft: false
