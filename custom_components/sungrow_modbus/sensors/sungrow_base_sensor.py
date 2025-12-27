@@ -250,6 +250,7 @@ class SungrowSensorGroup:
         ), definition.get("entities", [])))
         self.poll_speed: PollSpeed = definition.get("poll_speed",
                                                     PollSpeed.NORMAL if self.start_register < 40000 else PollSpeed.SLOW)
+        self._is_holding: bool = definition.get("holding", False)
 
         _LOGGER.debug(
             f"Sensor group creation. start registrar = {self.start_register}, sensor count = {self.sensors_count}, registrar count = {self.registrar_count}")
@@ -279,3 +280,8 @@ class SungrowSensorGroup:
     @property
     def start_register(self):
         return min(reg for sensor in self._sensors for reg in sensor.registrars)
+
+    @property
+    def is_holding(self) -> bool:
+        """Return True if this group uses holding registers instead of input registers."""
+        return self._is_holding

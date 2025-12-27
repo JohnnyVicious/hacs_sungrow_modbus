@@ -223,9 +223,11 @@ class DataRetrieval:
 
                     _LOGGER.debug(f"Group {start_register} starting for ({self.controller.host}.{self.controller.slave})")
 
+                    # Use holding registers if explicitly marked or if register >= 40000
+                    use_holding = sensor_group.is_holding or start_register >= 40000
                     values = await (
                         self.controller.async_read_holding_register(start_register, count)
-                        if start_register >= 40000
+                        if use_holding
                         else self.controller.async_read_input_register(start_register, count)
                     )
 

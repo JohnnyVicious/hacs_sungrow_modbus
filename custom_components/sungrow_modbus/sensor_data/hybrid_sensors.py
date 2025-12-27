@@ -971,9 +971,9 @@ hybrid_sensors = [
         ]
     },
 
-    # ==================== EMS CONTROL (Holding Registers 13050-13060) ====================
+    # ==================== EMS CONTROL (Holding Registers 13049-13051) ====================
     {
-        "register_start": 13050,
+        "register_start": 13049,
         "poll_speed": PollSpeed.NORMAL,
         "holding": True,
         "entities": [
@@ -981,7 +981,7 @@ hybrid_sensors = [
                 "name": "EMS Mode Selection",
                 "unique": "sungrow_modbus_ems_mode_selection",
                 "category": Category.FUNCTIONAL_INFORMATION,
-                "register": ['13050'],
+                "register": ['13049'],
                 "multiplier": 1,
                 "state_class": SensorStateClass.MEASUREMENT,
                 "editable": True
@@ -990,7 +990,7 @@ hybrid_sensors = [
                 "name": "Battery Forced Charge Discharge Cmd",
                 "unique": "sungrow_modbus_battery_forced_charge_discharge_cmd",
                 "category": Category.FUNCTIONAL_INFORMATION,
-                "register": ['13051'],
+                "register": ['13050'],
                 "multiplier": 1,
                 "state_class": SensorStateClass.MEASUREMENT,
                 "editable": True
@@ -999,7 +999,7 @@ hybrid_sensors = [
                 "name": "Battery Forced Charge Discharge Power",
                 "unique": "sungrow_modbus_battery_forced_charge_discharge_power",
                 "category": Category.FUNCTIONAL_INFORMATION,
-                "register": ['13052'],
+                "register": ['13051'],
                 "multiplier": 1,
                 "device_class": SensorDeviceClass.POWER,
                 "unit_of_measurement": UnitOfPower.WATT,
@@ -1009,7 +1009,7 @@ hybrid_sensors = [
         ]
     },
     {
-        "register_start": 13058,
+        "register_start": 13057,
         "poll_speed": PollSpeed.NORMAL,
         "holding": True,
         "feature_requirement": [InverterFeature.BATTERY],
@@ -1018,7 +1018,7 @@ hybrid_sensors = [
                 "name": "Max SoC",
                 "unique": "sungrow_modbus_max_soc",
                 "category": Category.BATTERY_INFORMATION,
-                "register": ['13058'],
+                "register": ['13057'],
                 "multiplier": 0.1,
                 "device_class": SensorDeviceClass.BATTERY,
                 "unit_of_measurement": PERCENTAGE,
@@ -1029,7 +1029,7 @@ hybrid_sensors = [
                 "name": "Min SoC",
                 "unique": "sungrow_modbus_min_soc",
                 "category": Category.BATTERY_INFORMATION,
-                "register": ['13059'],
+                "register": ['13058'],
                 "multiplier": 0.1,
                 "device_class": SensorDeviceClass.BATTERY,
                 "unit_of_measurement": PERCENTAGE,
@@ -1039,9 +1039,9 @@ hybrid_sensors = [
         ]
     },
 
-    # ==================== EXPORT LIMITS (Holding Registers 13074-13088) ====================
+    # ==================== EXPORT LIMITS (Holding Registers 13073-13086) ====================
     {
-        "register_start": 13074,
+        "register_start": 13073,
         "poll_speed": PollSpeed.NORMAL,
         "holding": True,
         "entities": [
@@ -1049,7 +1049,7 @@ hybrid_sensors = [
                 "name": "Export Power Limit",
                 "unique": "sungrow_modbus_export_power_limit",
                 "category": Category.GRID_CODE_INFORMATION,
-                "register": ['13074'],
+                "register": ['13073'],
                 "multiplier": 1,
                 "device_class": SensorDeviceClass.POWER,
                 "unit_of_measurement": UnitOfPower.WATT,
@@ -1060,7 +1060,7 @@ hybrid_sensors = [
                 "name": "Backup Mode",
                 "unique": "sungrow_modbus_backup_mode",
                 "category": Category.FUNCTIONAL_INFORMATION,
-                "register": ['13075'],
+                "register": ['13074'],
                 "multiplier": 1,
                 "state_class": SensorStateClass.MEASUREMENT,
                 "editable": True
@@ -1068,7 +1068,7 @@ hybrid_sensors = [
         ]
     },
     {
-        "register_start": 13087,
+        "register_start": 13086,
         "poll_speed": PollSpeed.NORMAL,
         "holding": True,
         "entities": [
@@ -1076,7 +1076,7 @@ hybrid_sensors = [
                 "name": "Export Power Limit Mode",
                 "unique": "sungrow_modbus_export_power_limit_mode",
                 "category": Category.GRID_CODE_INFORMATION,
-                "register": ['13087'],
+                "register": ['13086'],
                 "multiplier": 1,
                 "state_class": SensorStateClass.MEASUREMENT,
                 "editable": True
@@ -1084,7 +1084,7 @@ hybrid_sensors = [
         ]
     },
     {
-        "register_start": 13100,
+        "register_start": 13099,
         "poll_speed": PollSpeed.NORMAL,
         "holding": True,
         "feature_requirement": [InverterFeature.BATTERY],
@@ -1093,7 +1093,7 @@ hybrid_sensors = [
                 "name": "Reserved SoC For Backup",
                 "unique": "sungrow_modbus_reserved_soc_for_backup",
                 "category": Category.BATTERY_INFORMATION,
-                "register": ['13100'],
+                "register": ['13099'],
                 "multiplier": 1,
                 "device_class": SensorDeviceClass.BATTERY,
                 "unit_of_measurement": PERCENTAGE,
