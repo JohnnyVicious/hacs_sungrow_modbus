@@ -146,7 +146,7 @@ async def async_setup(hass: HomeAssistant, entry: ConfigEntry):
             except ValueError:
                 new_time = datetime.strptime(time_str, "%H:%M").time()
         except Exception as e:
-            _LOGGER.error("❌ Failed to parse time string '%s': %s", time_str, e)
+            _LOGGER.error("Failed to parse time string '%s': %s", time_str, e)
             return
 
         # Look through the registered time entities for one that matches the given entity_id
@@ -159,7 +159,7 @@ async def async_setup(hass: HomeAssistant, entry: ConfigEntry):
                     _LOGGER.debug("Set time for %s to %s", entity_id, new_time)
                     return
 
-        _LOGGER.error("⚠️ Entity with id %s not found in sungrow_modbus TIME_ENTITIES", entity_id)
+        _LOGGER.error("Entity with id %s not found in sungrow_modbus TIME_ENTITIES", entity_id)
 
     hass.services.async_register(
         DOMAIN, "sungrow_write_holding_register", service_write_holding_register, schema=SCHEME_HOLDING_REGISTER

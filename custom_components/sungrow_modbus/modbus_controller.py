@@ -424,7 +424,7 @@ class ModbusController:
         try:
             await self.client.connect()
             if self.connected():
-                _LOGGER.info(f"✅ ({self.host}.{self.device_id}) Connected to Modbus device")
+                _LOGGER.info(f"({self.host}.{self.device_id}) Connected to Modbus device")
                 self.connect_failures = 0
 
                 if self.serial_number is None:
@@ -436,13 +436,13 @@ class ModbusController:
             else:
                 self.connect_failures += 1
                 _LOGGER.debug(
-                    f"⚠️ ({self.connection_id}.{self.device_id}) Connection attempt {self.connect_failures} failed"
+                    f"({self.connection_id}.{self.device_id}) Connection attempt {self.connect_failures} failed"
                 )
                 return False
         except Exception as e:
             self.connect_failures += 1
             _LOGGER.debug(
-                f"❌ ({self.connection_id}.{self.device_id}) Connection error (attempt {self.connect_failures}): {e}"
+                f"({self.connection_id}.{self.device_id}) Connection error (attempt {self.connect_failures}): {e}"
             )
             return False
 

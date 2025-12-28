@@ -45,6 +45,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Unhelpful unknown device type message** (`config_flow.py:307`) - Users with unrecognized device type codes saw only "Unknown (0x...)" without guidance. Root cause: fallback message didn't explain what to do. Fixed by logging a WARNING with the GitHub issues URL and updating the display message to prompt users to report the device type.
 
+- **Inconsistent emoji usage in log messages** (multiple files) - Log messages used emojis inconsistently (✅, ❌, ⚠️) which may not render correctly in all environments. Root cause: no consistent logging style guide. Fixed by removing all emojis from log messages in `sungrow_base_sensor.py`, `modbus_controller.py`, `sungrow_sensor.py`, `__init__.py`, `time.py`, and `data_retrieval.py`.
+
 ## [0.1.15] - 2024-12-XX
 
 ### Fixed

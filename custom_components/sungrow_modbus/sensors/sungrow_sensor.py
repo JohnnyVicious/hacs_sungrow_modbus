@@ -115,7 +115,7 @@ class SungrowSensor(RestoreSensor, SensorEntity):
                     if self._received_values.get(reg) is None
                 }
                 if problematic_regs:
-                    _LOGGER.debug(f"⚠️ Problematic values received in registrars: {problematic_regs}, skipping update")
+                    _LOGGER.debug(f"Problematic values received in registrars: {problematic_regs}, skipping update")
                     return
 
             new_value = self.base_sensor.convert_value(values)
@@ -134,7 +134,7 @@ class SungrowSensor(RestoreSensor, SensorEntity):
         now = datetime.now(UTC).astimezone()
         if (now - self._last_update > self._update_timeout) and self.poll_speed != PollSpeed.ONCE:
             _LOGGER.warning(
-                f"⚠️ No Modbus update for sensor {self._attr_name} in over {_WATCHDOG_TIMEOUT_MIN} minutes. Setting to 0."
+                f"No Modbus update for sensor {self._attr_name} in over {_WATCHDOG_TIMEOUT_MIN} minutes. Setting to 0."
             )
             # self._attr_native_value = 0
             self._attr_available = False  # Set attribute unavailable (if desired)

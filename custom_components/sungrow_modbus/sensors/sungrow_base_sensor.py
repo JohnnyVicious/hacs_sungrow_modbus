@@ -132,7 +132,7 @@ class SungrowBaseSensor:
             self.max_value = new_max
         except Exception as e:
             _LOGGER.error(
-                "❌ Dynamic UOM set failed, wanted = %s : %s", self.controller.inverter_config.wattage_chosen, e
+                "Dynamic UOM set failed, wanted = %s : %s", self.controller.inverter_config.wattage_chosen, e
             )
 
     def get_step(self, wanted_step):

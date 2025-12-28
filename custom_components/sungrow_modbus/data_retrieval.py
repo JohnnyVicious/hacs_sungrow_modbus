@@ -272,7 +272,7 @@ class DataRetrieval:
 
         if group_hash in self.poll_updating[speed]:
             _LOGGER.debug(
-                f"⚠️({self.controller.host}.{self.controller.slave}) Skipping {speed.name} update: A previous instance is still running"
+                f"({self.controller.host}.{self.controller.slave}) Skipping {speed.name} update: A previous instance is still running"
             )
             return
 
@@ -304,12 +304,12 @@ class DataRetrieval:
 
                     if values is None:
                         _LOGGER.debug(
-                            f"⚠️ Received None for register {start_register} - {start_register + count - 1}, fro ({self.controller.host}.{self.controller.slave}), skipping."
+                            f"Received None for register {start_register} - {start_register + count - 1}, from ({self.controller.host}.{self.controller.slave}), skipping."
                         )
                         continue
                     if len(values) != count:
                         _LOGGER.debug(
-                            f"⚠️ Modbus read mismatch: Received {len(values)} values, expected {count} from ({self.controller.host}.{self.controller.slave}) "
+                            f"Modbus read mismatch: Received {len(values)} values, expected {count} from ({self.controller.host}.{self.controller.slave}) "
                             f"for register {start_register} - {start_register + count - 1}. Skipping because linking them is uncertain."
                         )
                         continue
@@ -339,11 +339,11 @@ class DataRetrieval:
                     self.controller.remove_sensor_groups(marked_for_removal)
 
                 total_duration = time.perf_counter() - total_start_time
-                _LOGGER.debug(f"✅ {speed.name} update completed in {total_duration:.4f}s")
+                _LOGGER.debug(f"{speed.name} update completed in {total_duration:.4f}s")
         except Exception as e:
             _LOGGER.warning("Error during Modbus polling: %s", e, exc_info=True)
         finally:
-            del self.poll_updating[speed][group_hash]  # ✅ Reset only this group set
+            del self.poll_updating[speed][group_hash]  # Reset only this group set
 
     # Spike filtering for battery SOC sensor readings
     def spike_filtering(self, register: int, value: int):

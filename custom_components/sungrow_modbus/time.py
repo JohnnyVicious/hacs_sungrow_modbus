@@ -148,20 +148,18 @@ class SungrowTimeEntity(RestoreEntity, TimeEntity):
                     hour, minute = int(hour), int(minute)
 
                     if 0 <= minute <= 59 and 0 <= hour <= 23:
-                        _LOGGER.debug(
-                            f"✅ Time updated to {hour}:{minute}, regs = {self._register}:{self._register + 1}"
-                        )
+                        _LOGGER.debug(f"Time updated to {hour}:{minute}, regs = {self._register}:{self._register + 1}")
                         self._attr_native_value = time(hour=hour, minute=minute)
                         self._attr_available = True
                     else:
                         self._attr_available = False
                         _LOGGER.debug(
-                            f"⚠️ Time disabled due to invalid values {hour}:{minute}, regs = {self._register}:{self._register + 1}"
+                            f"Time disabled due to invalid values {hour}:{minute}, regs = {self._register}:{self._register + 1}"
                         )
                 else:
                     self._attr_available = False
                     _LOGGER.debug(
-                        f"⚠️ Time disabled because hour or minute is None, regs = {self._register}:{self._register + 1}"
+                        f"Time disabled because hour or minute is None, regs = {self._register}:{self._register + 1}"
                     )
 
                 self.schedule_update_ha_state()
