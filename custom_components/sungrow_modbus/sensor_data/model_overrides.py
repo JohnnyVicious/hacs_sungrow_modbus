@@ -161,12 +161,11 @@ def _match_model(model: str, pattern: str) -> bool:
     # Simple wildcard matching
     parts = pattern.split("*")
     if len(parts) == 2:
+        # Single wildcard: "SH*T" or "SH*" or "*T"
         prefix, suffix = parts
         return model.startswith(prefix) and model.endswith(suffix)
-    elif len(parts) == 1:
-        return model.startswith(parts[0])
     else:
-        # Multiple wildcards - use more complex matching
+        # Multiple wildcards (len >= 3) - use fnmatch for complex patterns
         import fnmatch
 
         return fnmatch.fnmatch(model, pattern)

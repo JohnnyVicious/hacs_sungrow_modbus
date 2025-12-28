@@ -1,6 +1,6 @@
 import logging
 import struct
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -45,6 +45,16 @@ def clock_drift_test(hass, controller, hours, minutes, seconds):
         current_time.year, current_time.month, current_time.day, hours, minutes, seconds, tzinfo=current_time.tzinfo
     )
     total_drift = (current_time - device_time).total_seconds()
+
+    # Handle midnight edge case: if drift exceeds 12 hours, adjust date
+    # Example: Device shows 23:59:50, current is 00:00:10 (next day)
+    # Raw drift would be -23:59:40, but actual drift is +20 seconds
+    if total_drift > 43200:  # More than 12 hours ahead - device is probably yesterday
+        device_time = device_time - timedelta(days=1)
+        total_drift = (current_time - device_time).total_seconds()
+    elif total_drift < -43200:  # More than 12 hours behind - device is probably tomorrow
+        device_time = device_time + timedelta(days=1)
+        total_drift = (current_time - device_time).total_seconds()
 
     # Ensure structure
     if DOMAIN not in hass.data:

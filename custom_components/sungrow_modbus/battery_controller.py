@@ -286,6 +286,8 @@ async def detect_battery_stacks(
     """
     detected = []
 
+    # Probe all possible stack positions (0-3) instead of stopping on first failure
+    # This handles cases where stacks may be temporarily unavailable or non-sequential
     for stack_idx in range(MAX_BATTERY_STACKS):
         controller = BatteryController(
             hass=hass,
@@ -306,7 +308,6 @@ async def detect_battery_stacks(
                 len(controller.battery.modules),
             )
         else:
-            # Stop probing after first failure (stacks must be sequential)
-            break
+            _LOGGER.debug("Battery stack %d not detected, continuing to probe remaining slots", stack_idx)
 
     return detected

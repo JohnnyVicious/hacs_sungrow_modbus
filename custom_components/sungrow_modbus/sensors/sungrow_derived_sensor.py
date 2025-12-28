@@ -120,10 +120,15 @@ class SungrowDerivedSensor(RestoreSensor, SensorEntity):
                     [self._received_values[self._register[2]], self._received_values[self._register[3]]]
                 )
 
-                if active_power == 0 or reactive_power == 0:
-                    new_value = 1
+                # Power factor = P / sqrt(P² + Q²)
+                # When both are zero, PF is undefined - use 1 (unity) as default
+                # When active = 0 but reactive ≠ 0, PF = 0
+                # When reactive = 0 but active ≠ 0, PF = ±1
+                apparent_power = (active_power**2 + reactive_power**2) ** 0.5
+                if apparent_power == 0:
+                    new_value = 1  # No power flowing, unity power factor as default
                 else:
-                    new_value = round(active_power / ((active_power**2 + reactive_power**2) ** 0.5), 3)
+                    new_value = round(active_power / apparent_power, 3)
 
             if 33135 in self._register and len(self._register) == 4:
                 registers = self._register.copy()

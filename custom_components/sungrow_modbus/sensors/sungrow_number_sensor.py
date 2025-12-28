@@ -77,11 +77,9 @@ class SungrowNumberEntity(RestoreNumber, NumberEntity):
             installed_battery = cache_get(self.hass, 43009, self.base_sensor.controller.controller_key)
 
             if is_number(installed_battery):
-                # only supported with a user defined battery
-                if installed_battery != 2 and not self.registry_entry.disabled:
-                    self.registry_entry.disabled = True
-                else:
-                    self.registry_entry.disabled = False
+                # only supported with a user defined battery (type 2)
+                # Use _attr_available instead of direct registry_entry mutation
+                self._attr_available = installed_battery == 2
 
         if self._attr_native_min_value != min_wanted and min_wanted is not None:
             self._attr_native_min_value = min_wanted

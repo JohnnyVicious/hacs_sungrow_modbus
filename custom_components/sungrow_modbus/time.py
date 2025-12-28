@@ -1,10 +1,11 @@
 import logging
 from datetime import UTC, datetime, time
 
-from homeassistant.components.sensor import RestoreSensor, SensorDeviceClass
+from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.components.time import TimeEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import callback
+from homeassistant.helpers.restore_state import RestoreEntity
 
 from custom_components.sungrow_modbus import ModbusController
 from custom_components.sungrow_modbus.const import (
@@ -66,7 +67,7 @@ async def async_setup_entry(hass, config_entry: ConfigEntry, async_add_devices):
     async_add_devices(timeEntities, True)
 
 
-class SungrowTimeEntity(RestoreSensor, TimeEntity):
+class SungrowTimeEntity(RestoreEntity, TimeEntity):
     """Representation of a Time entity."""
 
     def __init__(self, hass, modbus_controller, entity_definition):
@@ -76,6 +77,7 @@ class SungrowTimeEntity(RestoreSensor, TimeEntity):
         self._hass = hass
         self._modbus_controller = modbus_controller
         self._register: int = entity_definition["register"]
+        self._unsub_listener = None
 
         # Hidden Inherited Instance Attributes
         self._attr_unique_id = f"{DOMAIN}_{modbus_controller.device_serial_number if modbus_controller.device_serial_number is not None else modbus_controller.host}_{self._register}"
@@ -90,9 +92,21 @@ class SungrowTimeEntity(RestoreSensor, TimeEntity):
     async def async_added_to_hass(self) -> None:
         """Called when entity is added to HA."""
         await super().async_added_to_hass()
-        state = await self.async_get_last_sensor_data()
-        if state:
-            self._attr_native_value = state.native_value
+        # Restore previous state if available
+        last_state = await self.async_get_last_state()
+        if last_state and last_state.state not in (None, "unknown", "unavailable"):
+            try:
+                # Parse time string back to time object
+                parts = last_state.state.split(":")
+                if len(parts) >= 2:
+                    self._attr_native_value = time(hour=int(parts[0]), minute=int(parts[1]))
+            except (ValueError, TypeError):
+                pass
+
+        # Unsubscribe existing listener if present (prevents accumulation on reload)
+        if self._unsub_listener:
+            self._unsub_listener()
+            self._unsub_listener = None
 
         # Register event listener for real-time updates and store unsubscribe callback
         self._unsub_listener = self._hass.bus.async_listen(DOMAIN, self.handle_modbus_update)

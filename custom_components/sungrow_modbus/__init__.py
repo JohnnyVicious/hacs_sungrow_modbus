@@ -61,7 +61,7 @@ SCHEME_TIME_SET = vol.Schema({vol.Required("entity_id"): vol.Coerce(str), vol.Re
 async def async_setup(hass: HomeAssistant, entry: ConfigEntry):
     """Set up the Modbus integration."""
 
-    def service_write_holding_register(call: ServiceCall):
+    async def service_write_holding_register(call: ServiceCall):
         address = call.data.get("address")
         value = call.data.get("value")
         host = call.data.get("host")
@@ -77,19 +77,32 @@ async def async_setup(hass: HomeAssistant, entry: ConfigEntry):
             _LOGGER.error("Invalid register value %s: must be 0-65535", value)
             return
 
+        async def write_with_logging(ctrl, addr, val):
+            """Write to register with error logging."""
+            try:
+                result = await ctrl.async_write_holding_register(int(addr), int(val))
+                if result:
+                    _LOGGER.debug("Successfully wrote value %s to register %s", val, addr)
+                else:
+                    _LOGGER.warning("Failed to write value %s to register %s on %s", val, addr, ctrl.connection_id)
+                return result
+            except Exception as e:
+                _LOGGER.warning("Error writing to register %s: %s", addr, e)
+                return False
+
         if host:
             controller = get_controller(hass, host, slave)
             if controller is None:
                 _LOGGER.error("No controller found for host %s, slave %s", host, slave)
                 return
-            hass.create_task(controller.async_write_holding_register(int(address), int(value)))
+            await write_with_logging(controller, address, value)
         else:
             controllers = hass.data.get(DOMAIN, {}).get(CONTROLLER, {})
             if not controllers:
                 _LOGGER.error("No controllers available for write operation")
                 return
             for controller in controllers.values():
-                hass.create_task(controller.async_write_holding_register(int(address), int(value)))
+                await write_with_logging(controller, address, value)
 
     # @Ian-Johnston
     async def service_set_time(call: ServiceCall) -> None:

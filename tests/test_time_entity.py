@@ -352,7 +352,7 @@ class TestSungrowTimeEntity:
         entity_def = {"name": "Test", "register": 13003, "enabled": True}
         entity = SungrowTimeEntity(hass, controller, entity_def)
 
-        with patch.object(entity, "async_get_last_sensor_data", new_callable=AsyncMock) as mock_restore:
+        with patch.object(entity, "async_get_last_state", new_callable=AsyncMock) as mock_restore:
             mock_restore.return_value = None
             await entity.async_added_to_hass()
 
@@ -370,7 +370,7 @@ class TestSungrowTimeEntity:
         entity_def = {"name": "Test", "register": 13003, "enabled": True}
         entity = SungrowTimeEntity(hass, controller, entity_def)
 
-        with patch.object(entity, "async_get_last_sensor_data", new_callable=AsyncMock) as mock_restore:
+        with patch.object(entity, "async_get_last_state", new_callable=AsyncMock) as mock_restore:
             mock_restore.return_value = None
             await entity.async_added_to_hass()
 
@@ -389,10 +389,11 @@ class TestSungrowTimeEntity:
         entity_def = {"name": "Test", "register": 13003, "enabled": True}
         entity = SungrowTimeEntity(hass, controller, entity_def)
 
+        # RestoreEntity uses async_get_last_state which returns a State object
         mock_state = MagicMock()
-        mock_state.native_value = time(hour=8, minute=30)
+        mock_state.state = "08:30:00"  # Time is stored as string in State
 
-        with patch.object(entity, "async_get_last_sensor_data", new_callable=AsyncMock) as mock_restore:
+        with patch.object(entity, "async_get_last_state", new_callable=AsyncMock) as mock_restore:
             mock_restore.return_value = mock_state
             await entity.async_added_to_hass()
 

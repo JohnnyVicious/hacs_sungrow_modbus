@@ -25,6 +25,13 @@ from .sensors.sungrow_base_sensor import SungrowSensorGroup
 
 _LOGGER = logging.getLogger(__name__)
 
+# Registers that should have spike filtering applied (SOC-type values that read 0-100)
+# These sensors may report brief 0 or 100 spikes that should be filtered
+SPIKE_FILTERED_REGISTERS = {
+    33139,  # Battery SOC (hybrid inverters)
+    # Add other SOC registers here if needed for different inverter types
+}
+
 
 class DataRetrieval:
     def __init__(self, hass: HomeAssistant, controller: ModbusController, entry_id: str | None = None):
@@ -337,8 +344,8 @@ class DataRetrieval:
         Readings between 0 and 100 (exclusive) are considered normal.
         Only values that are exactly 0 or exactly 100 are treated as potential spikes.
         """
-        if register != 33139:
-            return value  # Only filter for register 33139
+        if register not in SPIKE_FILTERED_REGISTERS:
+            return value  # Only filter for configured registers
 
         cached_value = cache_get(self.hass, register, self.controller.controller_key)
 

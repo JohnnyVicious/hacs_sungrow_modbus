@@ -85,11 +85,14 @@ class SungrowSensor(RestoreSensor, SensorEntity):
             return  # meant for a different sensor/inverter combo
 
         if updated_register in self._register:
-            # Causes issues with grid inverters going offline, and messing up energy dashboard
+            # Grid inverter offline handling: When inverter is in shutdown state,
+            # report 0 to prevent stale values from affecting energy dashboard
+            # Register 3014: Daily energy generation
+            # Register 3043: Running state (2 = Shutdown)
             if (
                 self.base_sensor.controller.inverter_config.type == InverterType.GRID
-                and updated_register == 3014
-                and cache_get(self.hass, 3043, self.base_sensor.controller.controller_key) == 2
+                and updated_register == 3014  # Daily energy generation register
+                and cache_get(self.hass, 3043, self.base_sensor.controller.controller_key) == 2  # Shutdown state
             ):
                 self._attr_native_value = 0
                 self.schedule_update_ha_state()

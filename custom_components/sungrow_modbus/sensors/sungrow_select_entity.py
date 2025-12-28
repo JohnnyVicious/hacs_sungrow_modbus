@@ -1,11 +1,12 @@
 import logging
 
 from homeassistant.components.select import SelectEntity
+from homeassistant.core import callback
 from homeassistant.helpers.restore_state import RestoreEntity
 
 from custom_components.sungrow_modbus import ModbusController
-from custom_components.sungrow_modbus.const import DOMAIN
-from custom_components.sungrow_modbus.helpers import cache_get, get_bit_bool, set_bit
+from custom_components.sungrow_modbus.const import CONTROLLER, DOMAIN, REGISTER, SLAVE
+from custom_components.sungrow_modbus.helpers import cache_get, get_bit_bool, is_correct_controller, set_bit
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -23,6 +24,39 @@ class SungrowSelectEntity(RestoreEntity, SelectEntity):
         self._attr_options = [e["name"] for e in entity_definition["entities"]]
         self._attr_options_raw = entity_definition["entities"]
         self._current_option = None
+        self._unsub_listener = None
+
+    async def async_added_to_hass(self) -> None:
+        """Called when entity is added to HA."""
+        await super().async_added_to_hass()
+        # Restore previous state if available
+        last_state = await self.async_get_last_state()
+        if last_state and last_state.state not in (None, "unknown", "unavailable"):
+            self._current_option = last_state.state
+
+        # Register event listener for real-time updates
+        self._unsub_listener = self._hass.bus.async_listen(DOMAIN, self.handle_modbus_update)
+
+    async def async_will_remove_from_hass(self) -> None:
+        """Cleanup when entity is removed."""
+        if self._unsub_listener:
+            self._unsub_listener()
+            self._unsub_listener = None
+        await super().async_will_remove_from_hass()
+
+    @callback
+    def handle_modbus_update(self, event):
+        """Callback function that updates entity when new register data is available."""
+        updated_register = int(event.data.get(REGISTER))
+        updated_controller = str(event.data.get(CONTROLLER))
+        updated_controller_slave = int(event.data.get(SLAVE))
+
+        if not is_correct_controller(self._modbus_controller, updated_controller, updated_controller_slave):
+            return  # meant for a different sensor/inverter combo
+
+        if updated_register == self._register:
+            # The current_option property will read from cache, so just trigger a state update
+            self.async_write_ha_state()
 
     @property
     def current_option(self) -> str | None:
