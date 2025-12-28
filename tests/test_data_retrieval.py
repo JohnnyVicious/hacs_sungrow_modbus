@@ -134,7 +134,7 @@ class TestDataRetrieval:
         # Verify get_modbus_updates was called with fast groups
         self.data_retrieval.get_modbus_updates.assert_called_once()
         args, kwargs = self.data_retrieval.get_modbus_updates.call_args
-        assert PollSpeed.FAST == args[1]
+        assert args[1] == PollSpeed.FAST
 
         # Verify event was fired
         self.hass.bus.async_fire.assert_called_once()
@@ -151,7 +151,7 @@ class TestDataRetrieval:
         # Verify get_modbus_updates was called with normal groups
         self.data_retrieval.get_modbus_updates.assert_called_once()
         args, kwargs = self.data_retrieval.get_modbus_updates.call_args
-        assert PollSpeed.NORMAL == args[1]
+        assert args[1] == PollSpeed.NORMAL
 
     @pytest.mark.asyncio
     async def test_modbus_update_slow(self):
@@ -165,7 +165,7 @@ class TestDataRetrieval:
         # Verify get_modbus_updates was called with slow groups
         self.data_retrieval.get_modbus_updates.assert_called_once()
         args, kwargs = self.data_retrieval.get_modbus_updates.call_args
-        assert PollSpeed.SLOW == args[1]
+        assert args[1] == PollSpeed.SLOW
 
     @pytest.mark.asyncio
     async def test_get_modbus_updates_controller_disabled(self):
@@ -212,22 +212,22 @@ class TestDataRetrieval:
     def test_spike_filtering(self):
         """Test spike filtering logic."""
         # Non-target register
-        assert 50 == self.data_retrieval.spike_filtering(12345, 50)
+        assert self.data_retrieval.spike_filtering(12345, 50) == 50
 
         # Target register 33139
         reg = 33139
 
         # Initial non-spike
-        assert 50 == self.data_retrieval.spike_filtering(reg, 50)
+        assert self.data_retrieval.spike_filtering(reg, 50) == 50
 
         # Spike check: value 0 should be ignored initially
         with patch("custom_components.sungrow_modbus.data_retrieval.cache_get", return_value=50):
             # 1st spike
-            assert 50 == self.data_retrieval.spike_filtering(reg, 0)
+            assert self.data_retrieval.spike_filtering(reg, 0) == 50
             # 2nd spike
-            assert 50 == self.data_retrieval.spike_filtering(reg, 0)
+            assert self.data_retrieval.spike_filtering(reg, 0) == 50
             # 3rd spike (accepted)
-            assert 0 == self.data_retrieval.spike_filtering(reg, 0)
+            assert self.data_retrieval.spike_filtering(reg, 0) == 0
 
     @pytest.mark.asyncio
     async def test_concurrency_lock(self):
