@@ -31,7 +31,7 @@ This is a Home Assistant custom integration for Sungrow SHx hybrid inverters. It
 **NEVER delete ISSUES.md.** This file tracks known issues and technical debt. When issues are resolved, remove them from the file but keep the scaffolding structure intact for future issues.
 
 When discovering new issues during code review:
-1. Add them to the appropriate section (Critical, Important, or Minor)
+1. Add them to the appropriate section (Critical, Important, Minor, or Ignored/Deferred)
 2. Use the template format provided in the file
 3. Include: severity, file, line, symptom, current code, root cause, suggested fix, and impact
 
@@ -39,6 +39,26 @@ When fixing issues:
 1. Remove the resolved issue from ISSUES.md
 2. Add the fix to CHANGELOG.md
 3. Keep one issue per commit
+
+**Ignored/Deferred Issues:** If you find an issue but decide NOT to fix it, add it to the "Ignored/Deferred Issues" section with a clear reason. This prevents future reviewers from re-discovering and re-evaluating the same issues.
+
+### Code Review Guidelines
+
+**ALWAYS consult CHANGELOG.md before proposing fixes.** The changelog documents all historical fixes with root causes and solutions. This prevents:
+- Re-introducing bugs that were already fixed
+- Proposing fixes that were already implemented
+- Going in circles on the same issues
+
+Before fixing any issue:
+1. Search CHANGELOG.md for related keywords (file names, symptom descriptions)
+2. Check if a similar fix was already applied
+3. If so, understand why the original fix was needed and whether your change might conflict
+
+Common patterns to watch for (from historical fixes):
+- **Multi-inverter**: Namespace by `entry_id`, use `connection_id` for events
+- **pymodbus 3.x**: Use `device_id=` not `slave=`, check holding vs input registers
+- **Async/threading**: Create asyncio.Lock lazily, unsubscribe event listeners on unload
+- **Edge cases**: Handle division by zero, midnight wraparound, empty lists, None values
 
 ### Changelog Maintenance (REQUIRED)
 
