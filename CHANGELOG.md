@@ -11,35 +11,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### Critical Fixes
 
-- **Signed integer handling for single registers** - Previously, the `signed` attribute in sensor definitions was ignored for single-register (S16) values. Negative values like temperatures below 0°C were incorrectly displayed as large positive numbers (e.g., -5°C showed as 6553.1°C). Now properly converts U16 to S16 when `signed: true` is set. Affects 30+ sensors including battery and internal temperatures.
+- **Signed integer handling for single registers** (`sensors/sungrow_base_sensor.py`) - Single-register values with `signed: true` were displayed as large positive numbers instead of negative values (e.g., -5°C showed as 6553.1°C). Root cause: `SungrowBaseSensor.__init__()` never accepted or stored the `signed` parameter from sensor definitions. Fixed by adding `signed` parameter, storing it as an attribute, and applying U16→S16 conversion in `_convert_raw_value()` when the flag is set. Affects 30+ sensors including battery temperatures, internal temperatures, and signed power readings.
 
-- **asyncio.Lock event loop binding** - Fixed potential `RuntimeError` during Home Assistant startup by creating asyncio locks lazily on first access instead of during client registration. This ensures locks are bound to the correct event loop when used from async context.
+- **asyncio.Lock event loop binding** (`client_manager.py`) - Potential `RuntimeError` during Home Assistant startup when asyncio.Lock was bound to the wrong event loop. Root cause: locks were created immediately in `get_tcp_client()`/`get_serial_client()` which could be called from sync context or a different event loop during HA startup. Fixed by storing `None` initially and creating locks lazily in `get_client_lock()` on first access from the correct async context.
 
 #### Important Fixes
 
-- **Connection retry loop now has max limit** - Added maximum retry count (20 attempts, ~10 minutes with exponential backoff) to prevent infinite retry loops when a device is permanently offline. Connection will be reattempted on the next scheduled check_connection cycle.
+- **Connection retry loop infinite loop** (`data_retrieval.py:110-134`) - Connection retry loop would run indefinitely if device was permanently offline, causing resource consumption and log spam. Root cause: `while not self.controller.connected()` loop had no exit condition. Fixed by adding `max_retries=20` limit (~10 minutes with exponential backoff) and logging a warning when exceeded. Connection reattempted on next `check_connection` cycle (2 min).
 
-- **Exception logging upgraded to WARNING level** - Exceptions during Modbus polling are now logged at WARNING level with full stack traces instead of DEBUG level, making troubleshooting easier.
+- **Exception logging at DEBUG level** (`data_retrieval.py:344-345`) - Exceptions during Modbus polling were logged at DEBUG level, hiding errors from users. Root cause: overly defensive `except Exception` block used `_LOGGER.debug()`. Fixed by upgrading to `_LOGGER.warning()` with `exc_info=True` for full stack traces.
 
-- **Write queue graceful shutdown** - The write queue processor now handles `CancelledError` properly, draining any pending write requests before exiting during integration unload.
+- **Write queue no graceful shutdown** (`modbus_controller.py:132-179`) - Write queue processor ran `while True` without handling `CancelledError`, potentially leaving writes incomplete on shutdown. Root cause: no exception handling for task cancellation. Fixed by wrapping loop in try/except, catching `CancelledError`, draining pending writes, and re-raising for proper cleanup.
 
-- **Warning for unvalidated register writes** - The `sungrow_write_holding_register` service now warns when writing to registers outside known safe ranges, helping prevent accidental writes to read-only or critical system registers.
+- **No validation for register writes** (`__init__.py:61-103`) - `sungrow_write_holding_register` service allowed writing to any register without warning about potentially dangerous addresses. Root cause: only basic 0-65535 range check existed. Fixed by adding `SAFE_HOLDING_REGISTER_RANGES` list and `_is_safe_register()` helper that logs a warning for writes outside known safe ranges (writes still proceed).
 
-- **Controller state encapsulation** - Added proper methods (`mark_data_received()`, `remove_sensor_groups()`) to ModbusController instead of directly manipulating private attributes from DataRetrieval.
+- **Direct controller state manipulation** (`data_retrieval.py:335-339`, `modbus_controller.py:518-533`) - `DataRetrieval` directly modified `controller._data_received` and `controller._sensor_groups` private attributes, violating encapsulation. Root cause: no public API existed. Fixed by adding `data_received` property, `mark_data_received()` method, and `remove_sensor_groups()` method to `ModbusController`, then updating `DataRetrieval` to use them.
 
-- **Clock drift correction rate limiting** - Added 1-hour cooldown between clock corrections to prevent spam if the inverter's RTC is faulty and immediately drifts after correction.
+- **Clock drift correction spam** (`helpers.py:46-96`) - Clock correction could spam writes if inverter RTC immediately drifted after correction. Root cause: no cooldown between corrections, only a drift counter that reset after each write. Fixed by adding `CLOCK_CORRECTION_COOLDOWN = 3600` (1 hour), tracking `LAST_CLOCK_CORRECTION` timestamp, and skipping corrections during cooldown.
 
 ### Changed
 
-- **Removed duplicate TCP/Serial code** - Eliminated redundant branching in 4 Modbus methods where TCP and Serial code paths were identical (pymodbus 3.x uses the same API for both).
+- **Removed duplicate TCP/Serial code** (`modbus_controller.py`) - Eliminated redundant if/else branching in 4 methods where TCP and Serial code paths were identical. Root cause: historical code from pymodbus 2.x migration where APIs differed. In pymodbus 3.x, both use the same `device_id` parameter. Affected methods: `_execute_write_holding_register`, `_execute_write_holding_registers`, `_async_read_input_register_raw`, `async_read_holding_register`.
 
 ## [0.1.15] - 2024-12-XX
 
 ### Fixed
 
-- Controller namespacing: Events now emit the full `connection_id` and `is_correct_controller` matches on that key, preventing cross-talk between controllers on the same host but different ports/paths.
-- Config flow cleanup: Modbus clients are closed via `finally` in `_detect_device`, avoiding dangling transports on connection failure.
-- AsyncMock warnings: Test helpers close coroutines created by mocked `hass.create_task`, eliminating unawaited coroutine warnings.
+- **Controller namespacing** (`helpers.py`, `__init__.py`) - Events now emit the full `connection_id` and `is_correct_controller` matches on that key, preventing cross-talk between controllers on the same host but different ports/paths.
+- **Config flow cleanup** (`config_flow.py`) - Modbus clients are closed via `finally` in `_detect_device`, avoiding dangling transports on connection failure.
+- **AsyncMock warnings** (`tests/`) - Test helpers close coroutines created by mocked `hass.create_task`, eliminating unawaited coroutine warnings.
 
 ## [0.1.12] - 2024-12-XX
 
