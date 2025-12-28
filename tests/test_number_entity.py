@@ -1,5 +1,6 @@
 """Tests for number entity platform."""
 
+import inspect
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -8,6 +9,15 @@ from custom_components.sungrow_modbus.const import CONTROLLER, DOMAIN, REGISTER,
 from custom_components.sungrow_modbus.data.enums import InverterType, PollSpeed
 from custom_components.sungrow_modbus.number import async_setup_entry
 from custom_components.sungrow_modbus.sensors.sungrow_number_sensor import SungrowNumberEntity
+
+
+def close_create_task_coroutine(hass_mock):
+    """Close any coroutine passed to hass.create_task to prevent 'never awaited' warnings."""
+    if hass_mock.create_task.called:
+        for call in hass_mock.create_task.call_args_list:
+            task = call[0][0]
+            if inspect.iscoroutine(task):
+                task.close()
 
 
 def create_mock_controller(host="10.0.0.1", slave=1, inverter_type=InverterType.HYBRID):
@@ -223,6 +233,7 @@ class TestSungrowNumberEntity:
 
         hass.create_task.assert_called_once()
         assert entity._attr_native_value == 100
+        close_create_task_coroutine(hass)
 
     def test_set_native_value_applies_multiplier(self):
         """Test set_native_value divides by multiplier before writing."""
@@ -244,6 +255,7 @@ class TestSungrowNumberEntity:
         entity.set_native_value(100.0)
 
         hass.create_task.assert_called_once()
+        close_create_task_coroutine(hass)
 
     def test_set_native_value_no_write_when_unchanged(self):
         """Test set_native_value does nothing when value is unchanged."""
@@ -453,3 +465,4 @@ class TestNumberEntityLimits:
         entity.set_native_value(50.7)
 
         hass.create_task.assert_called_once()
+        close_create_task_coroutine(hass)

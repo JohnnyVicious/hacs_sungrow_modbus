@@ -281,7 +281,7 @@ class TestModbusControllerSerial(IsolatedAsyncioTestCase):
 
         self.assertFalse(result)
         self.mock_client.connect.assert_called_once()
-        self.assertEqual(2, self.controller.connect_failures)
+        self.assertEqual(1, self.controller.connect_failures)
 
     async def test_connect_already_connected(self):
         """Test connection when already connected."""

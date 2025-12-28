@@ -436,12 +436,14 @@ class ModbusController:
             else:
                 self.connect_failures += 1
                 _LOGGER.debug(
-                    f"⚠️ ({self.host}:{self.port}.{self.device_id}) Connection attempt {self.connect_failures} failed"
+                    f"⚠️ ({self.connection_id}.{self.device_id}) Connection attempt {self.connect_failures} failed"
                 )
                 return False
         except Exception as e:
             self.connect_failures += 1
-            _LOGGER.debug(f"❌ ({self.host}.{self.device_id}) Connection error (attempt {self.connect_failures}): {e}")
+            _LOGGER.debug(
+                f"❌ ({self.connection_id}.{self.device_id}) Connection error (attempt {self.connect_failures}): {e}"
+            )
             return False
 
     def connected(self):

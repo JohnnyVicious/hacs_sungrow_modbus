@@ -269,6 +269,7 @@ class ModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         conn_type = config.get(CONF_CONNECTION_TYPE, CONN_TYPE_TCP)
         slave_id = config.get("slave", 1)
+        client = None
 
         try:
             if conn_type == CONN_TYPE_TCP:
@@ -292,7 +293,6 @@ class ModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             result = await client.read_input_registers(address=4989, count=10, device_id=slave_id)
             if result.isError():
                 _LOGGER.error(f"Failed to read serial number: {result}")
-                client.close()
                 return None
 
             # Decode serial number
@@ -317,8 +317,6 @@ class ModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 packed = struct.pack(">" + "H" * len(result.registers), *result.registers)
                 firmware_version = packed.decode("ascii", errors="ignore").strip("\x00\r\n ")
 
-            client.close()
-
             _LOGGER.info(
                 f"Detected inverter: {model}, Serial: {serial_number}, Power: {nominal_power}kW, Firmware: {firmware_version}"
             )
@@ -334,6 +332,9 @@ class ModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         except Exception as e:
             _LOGGER.error(f"Error detecting device: {e}")
             return None
+        finally:
+            if client is not None:
+                client.close()
 
     async def _create_entry(self):
         """Create the config entry with detected device info."""

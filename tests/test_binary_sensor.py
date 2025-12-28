@@ -1,11 +1,22 @@
 """Tests for SungrowBinaryEntity (switch) bit operations and conflicts."""
 
+import inspect
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from custom_components.sungrow_modbus.const import CONTROLLER, DOMAIN, REGISTER, SLAVE, VALUE, VALUES
-from custom_components.sungrow_modbus.sensors.sungrow_binary_sensor import SungrowBinaryEntity, get_bit_bool, set_bit
+from custom_components.sungrow_modbus.helpers import get_bit_bool, set_bit
+from custom_components.sungrow_modbus.sensors.sungrow_binary_sensor import SungrowBinaryEntity
+
+
+def close_create_task_coroutine(hass_mock):
+    """Close any coroutine passed to hass.create_task to prevent 'never awaited' warnings."""
+    if hass_mock.create_task.called:
+        for call in hass_mock.create_task.call_args_list:
+            task = call[0][0]
+            if inspect.iscoroutine(task):
+                task.close()
 
 
 def create_mock_controller(host="10.0.0.1", slave=1):
@@ -157,6 +168,7 @@ class TestSungrowBinaryEntityTurnOnOff:
         # Should write 1 (bit 0 set)
         hass.create_task.assert_called_once()
         assert entity._attr_is_on is True
+        close_create_task_coroutine(hass)
 
     def test_turn_off_bit_position(self):
         """Test turning off a switch with bit_position."""
@@ -176,6 +188,7 @@ class TestSungrowBinaryEntityTurnOnOff:
 
         hass.create_task.assert_called_once()
         assert entity._attr_is_on is False
+        close_create_task_coroutine(hass)
 
     def test_turn_on_with_on_value(self):
         """Test turning on with on_value style switch."""
@@ -195,6 +208,7 @@ class TestSungrowBinaryEntityTurnOnOff:
 
         # Should write 190
         hass.create_task.assert_called_once()
+        close_create_task_coroutine(hass)
 
     def test_turn_off_with_off_value(self):
         """Test turning off with off_value style switch."""
@@ -214,6 +228,7 @@ class TestSungrowBinaryEntityTurnOnOff:
 
         # Should write 222
         hass.create_task.assert_called_once()
+        close_create_task_coroutine(hass)
 
 
 class TestConflictsAndRequires:
@@ -240,6 +255,7 @@ class TestConflictsAndRequires:
         # Final value should be 0b000000000001 = 1
         call_args = hass.create_task.call_args
         assert call_args is not None
+        close_create_task_coroutine(hass)
 
     def test_turn_on_sets_required_bits(self):
         """Test that turning on sets required bits."""
@@ -265,6 +281,7 @@ class TestConflictsAndRequires:
         # Should set both bit 0 (required) and bit 1 (target)
         # Final value should be 0b11 = 3
         hass.create_task.assert_called_once()
+        close_create_task_coroutine(hass)
 
     def test_turn_on_with_requires_any_none_set(self):
         """Test requires_any sets first option when none are set."""
@@ -289,6 +306,7 @@ class TestConflictsAndRequires:
 
         # Should set bit 0 (first in requires_any) and bit 1 (target)
         hass.create_task.assert_called_once()
+        close_create_task_coroutine(hass)
 
     def test_turn_on_with_requires_any_one_already_set(self):
         """Test requires_any doesn't add more when one is already set."""
@@ -310,6 +328,7 @@ class TestConflictsAndRequires:
         # Should only add bit 1, keep bit 6
         # Final value should be 0b1000010 = 66
         hass.create_task.assert_called_once()
+        close_create_task_coroutine(hass)
 
 
 class TestSungrowBinaryEntityUpdate:

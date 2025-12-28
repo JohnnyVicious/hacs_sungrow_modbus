@@ -106,6 +106,7 @@ async def test_flow_user_connection_error(hass: HomeAssistant):
     """Test user initialized flow with connection error."""
     mock_client = AsyncMock()
     mock_client.connect = AsyncMock(return_value=False)
+    mock_client.close = MagicMock()  # close() is synchronous in pymodbus
 
     with patch(
         "pymodbus.client.AsyncModbusTcpClient",
