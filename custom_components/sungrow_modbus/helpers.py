@@ -19,6 +19,10 @@ from custom_components.sungrow_modbus.const import (
 
 _LOGGER = logging.getLogger(__name__)
 
+# Clock correction cooldown (seconds) - prevents spam if RTC is faulty
+CLOCK_CORRECTION_COOLDOWN = 3600  # 1 hour
+LAST_CLOCK_CORRECTION = "last_clock_correction"
+
 
 def hex_to_ascii(hex_value):
     # Convert hexadecimal to decimal
@@ -40,6 +44,8 @@ def extract_serial_number(values):
 
 
 def clock_drift_test(hass, controller, hours, minutes, seconds):
+    import time
+
     current_time = dt_utils.now()
     device_time = datetime(
         current_time.year, current_time.month, current_time.day, hours, minutes, seconds, tzinfo=current_time.tzinfo
@@ -60,17 +66,27 @@ def clock_drift_test(hass, controller, hours, minutes, seconds):
     if DOMAIN not in hass.data:
         hass.data[DOMAIN] = {}
     drift_counter = hass.data[DOMAIN].get(DRIFT_COUNTER, 0)
+    last_correction = hass.data[DOMAIN].get(LAST_CLOCK_CORRECTION, 0)
     clock_adjusted = False
 
     if abs(total_drift) > 60:
         if drift_counter > 5:
-            if controller.connected():
-                hass.create_task(
-                    controller.async_write_holding_registers(
-                        43003, [current_time.hour, current_time.minute, current_time.second]
+            # Check cooldown to prevent spam if RTC is faulty
+            time_since_correction = time.time() - last_correction
+            if time_since_correction >= CLOCK_CORRECTION_COOLDOWN:
+                if controller.connected():
+                    hass.create_task(
+                        controller.async_write_holding_registers(
+                            43003, [current_time.hour, current_time.minute, current_time.second]
+                        )
                     )
+                    hass.data[DOMAIN][LAST_CLOCK_CORRECTION] = time.time()
+                    hass.data[DOMAIN][DRIFT_COUNTER] = 0  # Reset counter after correction
+                    clock_adjusted = True
+            else:
+                _LOGGER.debug(
+                    f"Clock correction skipped: cooldown active ({CLOCK_CORRECTION_COOLDOWN - time_since_correction:.0f}s remaining)"
                 )
-                clock_adjusted = True
         else:
             hass.data[DOMAIN][DRIFT_COUNTER] = drift_counter + 1
     else:
