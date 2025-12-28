@@ -47,31 +47,79 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Inconsistent emoji usage in log messages** (multiple files) - Log messages used emojis inconsistently (✅, ❌, ⚠️) which may not render correctly in all environments. Root cause: no consistent logging style guide. Fixed by removing all emojis from log messages in `sungrow_base_sensor.py`, `modbus_controller.py`, `sungrow_sensor.py`, `__init__.py`, `time.py`, and `data_retrieval.py`.
 
-## [0.1.15] - 2024-12-XX
+## [0.1.15] - 2025-12-XX
 
 ### Fixed
 
-- **Controller namespacing** (`helpers.py`, `__init__.py`) - Events now emit the full `connection_id` and `is_correct_controller` matches on that key, preventing cross-talk between controllers on the same host but different ports/paths.
-- **Config flow cleanup** (`config_flow.py`) - Modbus clients are closed via `finally` in `_detect_device`, avoiding dangling transports on connection failure.
-- **AsyncMock warnings** (`tests/`) - Test helpers close coroutines created by mocked `hass.create_task`, eliminating unawaited coroutine warnings.
+- **Controller namespacing for multi-inverter** (`helpers.py`, `__init__.py`) - Events now emit the full `connection_id` and `is_correct_controller` matches on that key, preventing cross-talk between controllers on the same host but different ports/paths.
 
-## [0.1.12] - 2024-12-XX
+- **Config flow client leak** (`config_flow.py`) - Modbus clients were not closed when `_detect_device` failed, causing socket/handle leaks. Fixed by adding try/finally to ensure client.close() is always called.
 
-### Fixed
+- **Serial connection logging AttributeError** (`modbus_controller.py`) - Serial Modbus connections crashed when logging failures due to accessing non-existent `port` attribute. Fixed by using `connection_id` instead.
 
-- Formatted modbus_controller.py with ruff
-- Use connection_id in events to prevent multi-inverter cross-talk
-- Address 11 issues from code review
+- **AsyncMock coroutine warnings** (`tests/`) - Test helpers created unawaited coroutines from mocked `hass.create_task`. Fixed by properly closing coroutines after inspection in test assertions.
 
-## [0.1.8] - 2024-12-XX
+## [0.1.12] - 2025-12-XX
 
 ### Fixed
 
-- Service schema and switch entity namespacing for multi-inverter support
-- Test suite pollution from live script and async warnings
-- Critical pymodbus 3.x compatibility and entity cleanup bugs
+#### Critical
 
-## [0.1.6] - 2024-12-XX
+- **asyncio.Lock inside threading.Lock** (`client_manager.py`) - Creating asyncio.Lock while holding a threading.Lock could cause deadlocks. Fixed by moving asyncio.Lock creation outside the threading.Lock context.
+
+#### High Priority
+
+- **Direct registry_entry mutation** (`sensors/sungrow_number_sensor.py`) - Code directly mutated `registry_entry` instead of using `_attr_available`. Fixed to use proper Home Assistant patterns.
+
+- **Power factor division by zero** (`sensors/sungrow_derived_sensor.py`) - Power factor calculation crashed when both active and reactive power were zero. Fixed by returning unity (1.0) as default when apparent power is zero.
+
+- **Sync service handler blocking** (`__init__.py`) - `service_write_holding_register` was synchronous, blocking the event loop during Modbus writes. Fixed by making it async with proper error handling.
+
+- **Clock drift midnight edge case** (`helpers.py`) - Clock drift calculation failed around midnight when hour wrapped from 23 to 0. Fixed by handling the wrap-around case properly.
+
+#### Medium Priority
+
+- **Event listener accumulation on reload** (`time.py`) - SungrowTimeEntity accumulated event listeners on each config reload, causing duplicate updates. Fixed by properly unsubscribing in `async_will_remove_from_hass`.
+
+- **TimeEntity wrong base class** (`time.py`) - SungrowTimeEntity inherited from RestoreSensor instead of RestoreEntity. Fixed base class inheritance.
+
+- **SelectEntity missing event listener** (`sensors/sungrow_select_entity.py`) - SungrowSelectEntity didn't register for Modbus update events. Added event listener registration matching other entity types.
+
+- **Battery stack probe early exit** (`battery_controller.py`) - Battery stack probing stopped at first failure instead of continuing to check all stacks. Fixed to probe all stacks regardless of individual failures.
+
+- **Hardcoded spike filter registers** (`data_retrieval.py`) - Spike-filtered registers were hardcoded. Made configurable via `SPIKE_FILTERED_REGISTERS` constant.
+
+#### Low Priority
+
+- **Unreachable dead code** (`sensor_data/model_overrides.py`) - `_match_model` contained unreachable code after return statement. Removed dead code.
+
+- **Yoda conditions** (multiple files) - Fixed `CONSTANT == value` patterns to `value == CONSTANT` per Ruff SIM300.
+
+## [0.1.8] - 2025-12-XX
+
+### Fixed
+
+#### Critical
+
+- **pymodbus 3.x Serial incompatibility** (`modbus_controller.py`) - Serial Modbus read/write calls failed because pymodbus 3.x requires explicit `device_id=` parameter (ignores `client.slave` attribute). Fixed by passing `device_id=` on all Serial read/write calls.
+
+- **pymodbus 3.x slave parameter rename** (`battery_controller.py`) - Battery controller used obsolete `slave=` parameter. Fixed to use `device_id=` per pymodbus 3.x API.
+
+- **Binary sensor wrong register** (`sensors/sungrow_binary_sensor.py`) - Internal enable/disable switch checked register 5 instead of 90005 (matching switch.py definition). Fixed register address.
+
+- **Entity cleanup on unload** (`__init__.py`) - Config entry unload didn't clean up `SENSOR_ENTITIES`, `SENSOR_DERIVED_ENTITIES`, `BATTERY_SENSORS`, `TIME_ENTITIES`, and `VALUES` caches, causing stale entities on reload. Added cleanup for all caches.
+
+#### Important
+
+- **Service schema missing slave field** (`__init__.py`) - `SCHEME_HOLDING_REGISTER` lacked `slave` field, preventing targeting of non-default slave IDs in multi-inverter setups. Added slave field to schema.
+
+- **Switch entity namespace collision** (`switch.py`) - `SWITCH_ENTITIES` wasn't namespaced by `entry_id`, causing collisions in multi-inverter setups. Fixed by namespacing like other entity types.
+
+- **Test suite pollution** (`pytest.ini`, `scripts/`) - pytest collected test functions from `scripts/test_live_connection.py`. Fixed by configuring `testpaths` in pytest.ini and renaming script to `live_connection_check.py`.
+
+- **Async test warnings** (`tests/test_data_retrieval.py`) - Tests used `unittest.TestCase` with `async def` methods, causing coroutines to never be awaited. Converted to pytest style with `@pytest.mark.asyncio`.
+
+## [0.1.6] - 2025-12-XX
 
 ### Added
 
@@ -80,6 +128,93 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Low priority fixes and README update
-- Moderate priority bugs for robustness
-- High priority bugs in derived sensors and entity writes
+#### High Priority
+
+- **Derived sensor mutating _register** (`sensors/sungrow_derived_sensor.py`) - Battery power calculation mutated `self._register` list during update, corrupting future calculations. Fixed by using local variable copy.
+
+- **Duplicate schedule_update_ha_state** (`sensors/sungrow_derived_sensor.py`) - Derived sensor called `schedule_update_ha_state()` twice per update. Removed duplicate call.
+
+- **Premature cache_save before write** (`sensors/sungrow_binary_sensor.py`, `sensors/sungrow_select_entity.py`) - Code called `cache_save` before write completed, potentially caching uncommitted values. Removed premature cache_save (controller handles it).
+
+#### Medium Priority
+
+- **Service handler missing validation** (`__init__.py`) - `service_write_holding_register` lacked register/value range validation and null checks. Added validation for register (0-65535), value (0-65535), and required fields.
+
+- **Battery sensor race condition** (`data_retrieval.py`) - Iterating over battery sensor list while it could be modified caused race conditions. Fixed by iterating over a list copy.
+
+- **Derived sensor index out of bounds** (`sensors/sungrow_derived_sensor.py`) - Accessing `self._register[0]`, `self._register[1]` etc. without length checks could crash. Added length guards before index access.
+
+#### Low Priority
+
+- **Number sensor ignoring register values** (`sensors/sungrow_number_sensor.py`) - Number sensor only used last received register value, ignoring multi-register values. Fixed to use all received values.
+
+- **split_s32 signed overflow** (`helpers.py`) - `split_s32` helper didn't properly handle negative 32-bit integers. Fixed signed integer conversion.
+
+- **split_s32 empty input crash** (`helpers.py`) - `split_s32` crashed on empty input list. Added length guard.
+
+## [0.1.5] - 2025-12-XX
+
+### Fixed
+
+- **Thread-safe ClientManager** (`client_manager.py`) - `ClientManager` singleton and `_clients` dictionary had race conditions in multi-threaded access. Added `threading.Lock` for instance creation and all dictionary operations.
+
+- **Cache None crash** (`sensors/sungrow_binary_sensor.py`, `sensors/sungrow_select_entity.py`) - Entity updates crashed when cache returned `None`. Added null checks before processing cached values.
+
+- **Missing async_write_ha_state** (`sensors/sungrow_binary_sensor.py`, `sensors/sungrow_select_entity.py`) - State changes weren't pushed to Home Assistant immediately. Added `async_write_ha_state()` calls after state updates.
+
+- **Sensor namespace collision** (`sensor.py`) - `SENSOR_ENTITIES` and `SENSOR_DERIVED_ENTITIES` weren't namespaced by `entry_id`, causing collisions with multiple inverters. Fixed by namespacing all sensor tracking.
+
+## [0.1.4] - 2025-12-XX
+
+### Fixed
+
+- **Holding register flag ignored** (`data_retrieval.py`) - Data retrieval used address threshold `>= 40000` to determine holding vs input registers, causing 13xxx and 33xxx holding registers (EMS settings, SoC limits, battery power) to be read as input registers. Fixed by checking `sensor_group.is_holding` flag instead.
+
+- **Off-by-one register addressing** (`sensor_data/hybrid_sensors.py`) - 9 holding registers used 0-indexed addresses instead of 1-indexed register numbers. The reference YAML uses `address: X # reg Y` format where address is 0-indexed. Fixed: EMS Mode Selection, Battery Forced Charge/Discharge, Max/Min SoC, Export Power Limit, Backup Mode, Export Power Limit Mode, Reserved SoC For Backup.
+
+## [0.1.3] - 2025-12-XX
+
+### Fixed
+
+- **Entity ID collision in multi-inverter** (`modbus_controller.py`) - Multiple inverters of the same model had identical entity IDs. Fixed by including serial number in device name for unique entity IDs.
+
+- **Switch/Select missing has_entity_name** (`sensors/sungrow_binary_sensor.py`, `sensors/sungrow_select_entity.py`) - Switch and select entities didn't set `_attr_has_entity_name = True`, causing entity naming issues. Added attribute.
+
+### Changed
+
+- **BREAKING: Entity ID format change** - Entity IDs now follow pattern `{platform}.sungrow_{model}_{serial}_{name}`. Users may need to update automations and dashboards after upgrading.
+
+## [0.1.2] - 2025-12-XX
+
+### Fixed
+
+- **_attr_is_on not initialized** (`sensors/sungrow_binary_sensor.py`) - Binary sensor didn't initialize `_attr_is_on`, causing AttributeError on first access. Added initialization.
+
+## [0.1.1] - 2025-12-XX
+
+### Added
+
+- MPPT3 and three-phase sensor filtering based on inverter model
+- Human-readable alarm code mapping for fault/state sensors
+- Device type code mapping expanded from 40 to 95 models
+- Multi-battery stack monitoring scaffolding
+- Firmware version support in inverter configuration
+
+### Fixed
+
+- Time entity setup for hybrid inverters
+
+## [0.1.0] - 2025-12-XX
+
+### Added
+
+- Initial release
+- Modbus TCP and Serial (RS485) communication
+- Support for Sungrow SHx hybrid inverters
+- Sensor entities for PV, battery, grid, and system data
+- Number entities for writable settings
+- Switch entities for binary controls
+- Select entities for multi-value settings
+- Time entities for inverter clock
+- Multi-inverter support
+- Config flow for easy setup
