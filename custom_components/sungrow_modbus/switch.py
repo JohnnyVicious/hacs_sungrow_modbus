@@ -101,7 +101,9 @@ async def async_setup_entry(hass, config_entry: ConfigEntry, async_add_devices):
             child_entity["write_register"] = main_entity.get("write_register", None)
             switchEntities.append(SungrowBinaryEntity(hass, modbus_controller, child_entity))
 
-    hass.data[DOMAIN][SWITCH_ENTITIES] = switchEntities
+    # Namespace by entry_id to support multi-inverter setups
+    hass.data[DOMAIN].setdefault(SWITCH_ENTITIES, {})
+    hass.data[DOMAIN][SWITCH_ENTITIES][config_entry.entry_id] = switchEntities
     async_add_devices(switchEntities, True)
 
     return True

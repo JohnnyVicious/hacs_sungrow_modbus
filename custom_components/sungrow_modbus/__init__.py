@@ -32,6 +32,7 @@ from .const import (
     DOMAIN,
     SENSOR_DERIVED_ENTITIES,
     SENSOR_ENTITIES,
+    SWITCH_ENTITIES,
     TIME_ENTITIES,
     VALUES,
 )
@@ -51,6 +52,7 @@ SCHEME_HOLDING_REGISTER = vol.Schema(
         vol.Required("address"): vol.Coerce(int),
         vol.Required("value"): vol.Coerce(int),
         vol.Optional("host"): vol.Coerce(str),
+        vol.Optional("slave"): vol.All(vol.Coerce(int), vol.Range(min=1, max=247)),
     }
 )
 SCHEME_TIME_SET = vol.Schema({vol.Required("entity_id"): vol.Coerce(str), vol.Required("time"): vol.Coerce(str)})
@@ -379,6 +381,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
             hass.data[DOMAIN][SENSOR_DERIVED_ENTITIES].pop(entry.entry_id, None)
         if BATTERY_SENSORS in hass.data[DOMAIN]:
             hass.data[DOMAIN][BATTERY_SENSORS].pop(entry.entry_id, None)
+        if SWITCH_ENTITIES in hass.data[DOMAIN]:
+            hass.data[DOMAIN][SWITCH_ENTITIES].pop(entry.entry_id, None)
         if TIME_ENTITIES in hass.data[DOMAIN] and controller_key:
             hass.data[DOMAIN][TIME_ENTITIES].pop(controller_key, None)
 
