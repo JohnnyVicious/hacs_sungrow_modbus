@@ -59,10 +59,12 @@ class SungrowBaseSensor:
         max_value: int | None = None,
         poll_speed=PollSpeed.NORMAL,
         value_mapping: str | dict[int, str] | None = None,
+        signed: bool = False,
     ):
         """
         :param name: Sensor name
         :param registrars: First register address
+        :param signed: If True, treat single register values as signed 16-bit integers (S16)
         :param value_mapping: Optional mapping for value lookup. Can be:
             - A string: "alarm", "running_state", "system_state" to use predefined mappings
             - A dict: Custom {int: str} mapping for this specific sensor
@@ -89,6 +91,7 @@ class SungrowBaseSensor:
         self.poll_speed = poll_speed
         self.category = category
         self.value_mapping = value_mapping
+        self.signed = signed
         self._last_raw_value = None  # Store raw value for attributes
 
         self.dynamic_adjustments()
@@ -169,10 +172,14 @@ class SungrowBaseSensor:
                 n_value = combined_value * self.multiplier
         else:
             # Treat it as a single register (U16/S16)
+            raw_value = values[0]
+            # Convert from unsigned to signed 16-bit if needed
+            if self.signed and raw_value >= 32768:
+                raw_value = raw_value - 65536
             if self.multiplier == 0 or self.multiplier == 1:
-                n_value = round(values[0])
+                n_value = round(raw_value)
             else:
-                n_value = values[0] * self.multiplier
+                n_value = raw_value * self.multiplier
 
         # Store raw value for attribute access
         self._last_raw_value = n_value
@@ -250,6 +257,7 @@ class SungrowSensorGroup:
                     default=entity.get("default", 0),
                     multiplier=entity.get("multiplier", 1),
                     value_mapping=entity.get("value_mapping", None),
+                    signed=entity.get("signed", False),
                     unique_id="{}_{}_{}".format(
                         DOMAIN, controller.device_serial_number, entity.get("unique", "reserve")
                     ),
