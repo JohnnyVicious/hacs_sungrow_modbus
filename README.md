@@ -131,7 +131,7 @@ Register definitions are based on the [SunGather register map](https://raw.githu
 
 ## Recent Changes
 
-### v0.1.4 (December 2024)
+### v0.1.4 (December 2025)
 
 **Stability & Robustness Improvements**
 
