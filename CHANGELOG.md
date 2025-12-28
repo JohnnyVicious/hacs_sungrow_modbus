@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Emoji in error log message** (`sensors/sungrow_base_sensor.py:286`) - Removed emoji character from registrar sequence error log message. Emojis may not render correctly in all logging environments (journald, Docker logs, syslog).
 
+- **Magic numbers in grid inverter offline handling** (`sensors/sungrow_sensor.py:92-100`) - Extracted hardcoded register values (3014, 3043) and shutdown state (2) into named constants `REGISTER_DAILY_ENERGY_GENERATION`, `REGISTER_GRID_RUNNING_STATE`, and `GRID_STATE_SHUTDOWN` for improved readability.
+
+- **Magic numbers in battery power calculations** (`sensors/sungrow_derived_sensor.py:173-193`) - Extracted power scaling factor (10) and battery direction value (0) into named constants `POWER_SCALE_FACTOR` and `BATTERY_DIRECTION_CHARGING` for improved readability.
+
 ## [0.2.0] - 2025-12-28
 
 ### Fixed

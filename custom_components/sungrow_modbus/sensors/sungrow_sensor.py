@@ -12,6 +12,11 @@ from custom_components.sungrow_modbus.sensors.sungrow_base_sensor import Sungrow
 _LOGGER = logging.getLogger(__name__)
 _WATCHDOG_TIMEOUT_MIN = 10
 
+# Grid inverter registers and states
+REGISTER_DAILY_ENERGY_GENERATION = 3014
+REGISTER_GRID_RUNNING_STATE = 3043
+GRID_STATE_SHUTDOWN = 2
+
 
 class SungrowSensor(RestoreSensor, SensorEntity):
     """Representation of a Modbus sensor."""
@@ -87,12 +92,11 @@ class SungrowSensor(RestoreSensor, SensorEntity):
         if updated_register in self._register:
             # Grid inverter offline handling: When inverter is in shutdown state,
             # report 0 to prevent stale values from affecting energy dashboard
-            # Register 3014: Daily energy generation
-            # Register 3043: Running state (2 = Shutdown)
             if (
                 self.base_sensor.controller.inverter_config.type == InverterType.GRID
-                and updated_register == 3014  # Daily energy generation register
-                and cache_get(self.hass, 3043, self.base_sensor.controller.controller_key) == 2  # Shutdown state
+                and updated_register == REGISTER_DAILY_ENERGY_GENERATION
+                and cache_get(self.hass, REGISTER_GRID_RUNNING_STATE, self.base_sensor.controller.controller_key)
+                == GRID_STATE_SHUTDOWN
             ):
                 self._attr_native_value = 0
                 self.schedule_update_ha_state()

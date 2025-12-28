@@ -37,6 +37,10 @@ REGISTER_POWER_FROM_GRID = 33171
 # Sign inversion register
 REGISTER_SIGN_INVERSION = 33263
 
+# Battery power calculation constants
+POWER_SCALE_FACTOR = 10
+BATTERY_DIRECTION_CHARGING = 0
+
 
 class SungrowDerivedSensor(RestoreSensor, SensorEntity):
     """Representation of a Modbus derived/calculated sensor."""
@@ -170,7 +174,7 @@ class SungrowDerivedSensor(RestoreSensor, SensorEntity):
                 d_value = self._received_values[registers[2]]
 
                 if str(d_value) == str(d_w_value):
-                    new_value = round(p_value * 10)
+                    new_value = round(p_value * POWER_SCALE_FACTOR)
                 else:
                     new_value = 0
 
@@ -182,11 +186,11 @@ class SungrowDerivedSensor(RestoreSensor, SensorEntity):
                 p_value = self.base_sensor.convert_value([self._received_values[reg] for reg in power_registers])
                 d_value = self._received_values[registers[2]]
 
-                # 0 indicated charging, 1 indicated discharging
-                if str(d_value) == str(0):
-                    new_value = round(p_value * 10) * -1
+                # BATTERY_DIRECTION_CHARGING (0) = charging, 1 = discharging
+                if str(d_value) == str(BATTERY_DIRECTION_CHARGING):
+                    new_value = round(p_value * POWER_SCALE_FACTOR) * -1
                 else:
-                    new_value = round(p_value * 10)
+                    new_value = round(p_value * POWER_SCALE_FACTOR)
 
             if REGISTER_SIGN_INVERSION in self._register and len(self._register) == 2:
                 new_value = new_value * -1

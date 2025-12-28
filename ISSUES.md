@@ -20,90 +20,7 @@ _No important issues at this time._
 
 ## Minor Issues
 
-### 1. Hardcoded Register Values for Grid Inverter Offline Handling
-
-**Severity:** Minor
-**File:** `custom_components/sungrow_modbus/sensors/sungrow_sensor.py`
-**Lines:** 92-95
-
-**Symptom:** Magic numbers used for register addresses instead of named constants.
-
-**Current Code:**
-```python
-if (
-    self.base_sensor.controller.inverter_config.type == InverterType.GRID
-    and updated_register == 3014  # Daily energy generation register
-    and cache_get(self.hass, 3043, self.base_sensor.controller.controller_key) == 2  # Shutdown state
-):
-```
-
-**Root Cause:** These register constants were not extracted when other registers were moved to named constants.
-
-**Suggested Fix:**
-Add constants at the top of the file (or in a shared constants module):
-```python
-# Grid inverter registers
-REGISTER_DAILY_ENERGY_GENERATION = 3014
-REGISTER_GRID_RUNNING_STATE = 3043
-GRID_STATE_SHUTDOWN = 2
-```
-
-Then use:
-```python
-if (
-    self.base_sensor.controller.inverter_config.type == InverterType.GRID
-    and updated_register == REGISTER_DAILY_ENERGY_GENERATION
-    and cache_get(self.hass, REGISTER_GRID_RUNNING_STATE, self.base_sensor.controller.controller_key) == GRID_STATE_SHUTDOWN
-):
-```
-
-**Impact:** Low - Code readability and maintainability. The existing comments document the purpose well.
-
----
-
-### 2. Magic Numbers in Battery Power Calculations
-
-**Severity:** Minor
-**File:** `custom_components/sungrow_modbus/sensors/sungrow_derived_sensor.py`
-**Lines:** 173, 186-189
-
-**Symptom:** Magic numbers for power scaling factor and battery direction values.
-
-**Current Code:**
-```python
-# Line 173:
-new_value = round(p_value * 10)
-
-# Lines 186-189:
-if str(d_value) == str(0):
-    new_value = round(p_value * 10) * -1
-else:
-    new_value = round(p_value * 10)
-```
-
-**Root Cause:** These calculation constants were not extracted when other constants were defined.
-
-**Suggested Fix:**
-Add constants:
-```python
-POWER_SCALE_FACTOR = 10
-BATTERY_DIRECTION_CHARGING = 0
-BATTERY_DIRECTION_DISCHARGING = 1
-```
-
-Then use:
-```python
-# Line 173:
-new_value = round(p_value * POWER_SCALE_FACTOR)
-
-# Lines 186-189:
-if d_value == BATTERY_DIRECTION_CHARGING:
-    new_value = round(p_value * POWER_SCALE_FACTOR) * -1
-else:
-    new_value = round(p_value * POWER_SCALE_FACTOR)
-```
-
-**Impact:** Low - Code readability. Also note: `str(d_value) == str(0)` could be simplified to `d_value == 0` since both values are integers.
+_No minor issues at this time._
 
 ---
 
@@ -196,7 +113,6 @@ When adding new issues, use this format:
 
 | Issue | Severity | Effort | Priority |
 |-------|----------|--------|----------|
-| Hardcoded grid register values | Minor | Low | Low |
-| Magic numbers in battery calculations | Minor | Low | Low |
+| _None_ | - | - | - |
 
-**Recommendation:** Minor issues can be addressed opportunistically when working in those files. Always check CHANGELOG.md for related historical fixes before implementing.
+**Recommendation:** No active issues. Always check CHANGELOG.md for related historical fixes before implementing new changes.
