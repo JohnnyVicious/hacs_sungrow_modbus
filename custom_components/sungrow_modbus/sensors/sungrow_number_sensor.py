@@ -2,6 +2,7 @@ import logging
 
 from homeassistant.components.number import NumberEntity, NumberMode, RestoreNumber
 from homeassistant.core import callback
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.template import is_number
 
 from custom_components.sungrow_modbus.const import CONTROLLER, DOMAIN, REGISTER, SLAVE, VALUE
@@ -123,7 +124,29 @@ class SungrowNumberEntity(RestoreNumber, NumberEntity):
         if self._attr_native_value == value:
             return
 
-        # 🔹 Handle multi-register writing
+        # Validate value against bounds before writing
+        min_val = self.base_sensor.min_value
+        max_val = self.base_sensor.max_value
+
+        if min_val is not None and value < min_val:
+            _LOGGER.error(
+                "Rejecting write to '%s': value %s below minimum %s",
+                self.base_sensor.name,
+                value,
+                min_val,
+            )
+            raise HomeAssistantError(f"Value {value} is below minimum {min_val}")
+
+        if max_val is not None and value > max_val:
+            _LOGGER.error(
+                "Rejecting write to '%s': value %s above maximum %s",
+                self.base_sensor.name,
+                value,
+                max_val,
+            )
+            raise HomeAssistantError(f"Value {value} is above maximum {max_val}")
+
+        # Handle multi-register writing
         if self._write_register is None:
             return
 

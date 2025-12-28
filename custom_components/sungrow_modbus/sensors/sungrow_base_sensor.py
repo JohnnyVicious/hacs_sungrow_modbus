@@ -8,7 +8,10 @@ from homeassistant.const import (
     UnitOfApparentPower,
     UnitOfElectricCurrent,
     UnitOfElectricPotential,
+    UnitOfEnergy,
+    UnitOfFrequency,
     UnitOfPower,
+    UnitOfTemperature,
 )
 from homeassistant.core import HomeAssistant
 
@@ -28,6 +31,19 @@ VALUE_MAPPING_FUNCTIONS = {
     "alarm": get_alarm_description,
     "running_state": get_running_state,
     "system_state": get_system_state,
+}
+
+# Default validation bounds by unit of measurement
+# Used when sensor definitions don't specify explicit min/max values
+DEFAULT_BOUNDS_BY_UNIT = {
+    PERCENTAGE: (0, 100),
+    UnitOfTemperature.CELSIUS: (-40, 100),
+    UnitOfElectricPotential.VOLT: (0, 1000),
+    UnitOfElectricCurrent.AMPERE: (-100, 100),
+    UnitOfPower.WATT: (-50000, 50000),
+    UnitOfPower.KILO_WATT: (-50, 50),
+    UnitOfEnergy.KILO_WATT_HOUR: (0, 1000000),
+    UnitOfFrequency.HERTZ: (45, 65),
 }
 
 
@@ -88,6 +104,7 @@ class SungrowBaseSensor:
         self.step = self.get_step(step)
         self.enabled = enabled
         self.min_value = min_value
+        self._apply_default_bounds()
         self.poll_speed = poll_speed
         self.category = category
         self.value_mapping = value_mapping
@@ -184,6 +201,9 @@ class SungrowBaseSensor:
         # Store raw value for attribute access
         self._last_raw_value = n_value
 
+        # Validate converted value against bounds
+        self._validate_read_value(n_value)
+
         # Apply value mapping if configured
         if self.value_mapping is not None:
             n_value = self._apply_value_mapping(n_value)
@@ -232,6 +252,65 @@ class SungrowBaseSensor:
         """Return basic sensor information."""
         return {"name": self.name, "registrars": self.registrars}
 
+    @staticmethod
+    def _get_default_bounds(unit_of_measurement) -> tuple[int | None, int | None]:
+        """
+        Get default validation bounds based on unit of measurement.
+
+        Returns:
+            Tuple of (min_value, max_value) or (None, None) if no defaults defined
+        """
+        return DEFAULT_BOUNDS_BY_UNIT.get(unit_of_measurement, (None, None))
+
+    def _apply_default_bounds(self) -> None:
+        """
+        Apply default validation bounds based on unit of measurement.
+
+        Only applies defaults when min_value or max_value is None (not explicitly set).
+        Explicit values in sensor definitions always take precedence.
+        """
+        default_min, default_max = self._get_default_bounds(self.unit_of_measurement)
+
+        if self.min_value is None and default_min is not None:
+            self.min_value = default_min
+        if self.max_value is None and default_max is not None:
+            self.max_value = default_max
+
+    def _validate_read_value(self, value) -> None:
+        """
+        Log warning if converted value is outside expected bounds.
+
+        This validation runs in debug mode - values are still returned but
+        out-of-range readings are logged for investigation.
+        """
+        if value is None:
+            return
+
+        # Skip validation for value-mapped sensors (enums like running_state)
+        if self.value_mapping is not None:
+            return
+
+        # Skip validation for string values (serial numbers, firmware versions)
+        if isinstance(value, str):
+            return
+
+        if self.min_value is not None and value < self.min_value:
+            _LOGGER.warning(
+                "Sensor '%s' (register %s) value %s below minimum %s",
+                self.name,
+                self.registrars,
+                value,
+                self.min_value,
+            )
+        elif self.max_value is not None and value > self.max_value:
+            _LOGGER.warning(
+                "Sensor '%s' (register %s) value %s above maximum %s",
+                self.name,
+                self.registrars,
+                value,
+                self.max_value,
+            )
+
 
 class SungrowSensorGroup:
     sensors: list[SungrowBaseSensor]
@@ -250,8 +329,8 @@ class SungrowSensorGroup:
                     unit_of_measurement=entity.get("unit_of_measurement", None),
                     hidden=entity.get("hidden", False),
                     editable=entity.get("editable", False),
-                    max_value=entity.get("max", 3000),
-                    min_value=entity.get("min", 0),
+                    max_value=entity.get("max"),
+                    min_value=entity.get("min"),
                     step=entity.get("step", None),
                     category=entity.get("category", None),
                     default=entity.get("default", 0),

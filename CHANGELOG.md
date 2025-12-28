@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Data validation for sensor values** (`sensors/sungrow_base_sensor.py`, `sensors/sungrow_number_sensor.py`, `sensors/sungrow_select_entity.py`) - Added comprehensive validation for both read and write operations:
+  - **Read validation**: Logs warnings when sensor values exceed expected bounds (e.g., temperature reading of 999°C is clearly wrong). Values are still displayed for debugging purposes.
+  - **Write validation**: Blocks writes that exceed min/max bounds with `HomeAssistantError`, preventing invalid values from being sent to the inverter.
+  - **Default bounds by unit type**: Automatic sensible defaults based on unit of measurement (e.g., percentages: 0-100, temperatures: -40 to 100°C, frequencies: 45-65Hz). Explicit min/max in sensor definitions override these defaults.
+  - **Select entity validation**: Validates that selected options are valid and that on_values are within u16 register range (0-65535).
+
 ## [0.2.1] - 2025-12-28
 
 ### Fixed

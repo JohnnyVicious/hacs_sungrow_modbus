@@ -2,6 +2,7 @@ import logging
 
 from homeassistant.components.select import SelectEntity
 from homeassistant.core import callback
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.restore_state import RestoreEntity
 
 from custom_components.sungrow_modbus import ModbusController
@@ -85,6 +86,16 @@ class SungrowSelectEntity(RestoreEntity, SelectEntity):
 
     async def async_select_option(self, option: str) -> None:
         """Change the selected option."""
+        # Validate option is in the allowed list
+        if option not in self._attr_options:
+            _LOGGER.error(
+                "Rejecting select for '%s': option '%s' not in allowed options %s",
+                self._attr_name,
+                option,
+                self._attr_options,
+            )
+            raise HomeAssistantError(f"Option '{option}' is not valid for {self._attr_name}")
+
         for e in self._attr_options_raw:
             on_value = e.get("on_value", None)
             bit_position = e.get("bit_position", None)
@@ -93,6 +104,15 @@ class SungrowSelectEntity(RestoreEntity, SelectEntity):
 
             if e["name"] == option:
                 if on_value is not None:
+                    # Validate on_value is within u16 register range
+                    if not (0 <= on_value <= 65535):
+                        _LOGGER.error(
+                            "Invalid on_value %s for option '%s' - must be 0-65535",
+                            on_value,
+                            option,
+                        )
+                        raise HomeAssistantError(f"Invalid register value {on_value} for option '{option}'")
+
                     await self._modbus_controller.async_write_holding_register(self._register, on_value)
                     self._attr_current_option = option
                     self.async_write_ha_state()
