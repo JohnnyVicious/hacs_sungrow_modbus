@@ -229,3 +229,26 @@ def _any_in(target: list[int], collection: set[int]) -> bool:
 
 def is_correct_controller(controller, host: str, slave: int):
     return controller.host == host and controller.device_id == slave
+
+
+def get_bit_bool(modbus_value: int, bit_position: int) -> bool:
+    """
+    Decode Modbus value to boolean state for the specified bit position.
+
+    Parameters:
+    - modbus_value: The Modbus value to decode.
+    - bit_position: The position of the bit to extract (0-based).
+
+    Returns:
+    - True if the bit is ON, False if the bit is OFF.
+    """
+    return (modbus_value >> bit_position) & 1 == 1
+
+
+def set_bit(value: int, bit_position: int, new_bit_value: bool) -> int:
+    """Set or clear a specific bit in an integer value."""
+    mask = 1 << bit_position
+    value &= ~mask  # Clear the bit
+    if new_bit_value:
+        value |= mask  # Set the bit
+    return round(value)

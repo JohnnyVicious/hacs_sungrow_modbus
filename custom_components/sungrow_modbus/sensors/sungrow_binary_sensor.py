@@ -7,7 +7,7 @@ from homeassistant.helpers.restore_state import RestoreEntity
 
 from custom_components.sungrow_modbus import ModbusController
 from custom_components.sungrow_modbus.const import CONTROLLER, DOMAIN, REGISTER, SLAVE, VALUE
-from custom_components.sungrow_modbus.helpers import cache_get, is_correct_controller
+from custom_components.sungrow_modbus.helpers import cache_get, get_bit_bool, is_correct_controller, set_bit
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -166,27 +166,3 @@ class SungrowBinaryEntity(RestoreEntity, SwitchEntity):
     def device_info(self):
         """Return device info."""
         return self._modbus_controller.device_info
-
-
-def set_bit(value, bit_position, new_bit_value):
-    """Set or clear a specific bit in an integer value."""
-    mask = 1 << bit_position
-    value &= ~mask  # Clear the bit
-    if new_bit_value:
-        value |= mask  # Set the bit
-    return round(value)
-
-
-def get_bit_bool(modbus_value, bit_position):
-    """
-    Decode Modbus value to boolean state for the specified bit position.
-
-    Parameters:
-    - modbus_value: The Modbus value to decode.
-    - bit_position: The position of the bit to extract (0-based).
-
-    Returns:
-    - True if the bit is ON, False if the bit is OFF.
-    """
-    # Check if the bit is ON by shifting 1 to the specified position and performing bitwise AND
-    return (modbus_value >> bit_position) & 1 == 1
