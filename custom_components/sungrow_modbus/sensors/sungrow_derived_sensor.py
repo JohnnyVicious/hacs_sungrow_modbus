@@ -11,6 +11,32 @@ from custom_components.sungrow_modbus.sensors.sungrow_base_sensor import Sungrow
 
 _LOGGER = logging.getLogger(__name__)
 
+# Virtual registers (not real Modbus addresses, used for derived sensor logic)
+REGISTER_PLACEHOLDER_0 = 0  # Placeholder for derived sensors
+REGISTER_PLACEHOLDER_1 = 1  # Placeholder for derived sensors
+REGISTER_CLOCK_DRIFT = 90007  # Triggers clock drift check
+REGISTER_LAST_SUCCESS = 90006  # Last successful Modbus timestamp
+
+# Real register addresses
+REGISTER_RUNNING_STATUS = 33095  # System running status code
+REGISTER_PROTOCOL_VERSION = 35000  # Protocol/model version
+
+# Phase voltage/current registers for power calculation
+REGISTERS_PHASE_POWER = (33049, 33051, 33053, 33055)
+
+# Active/reactive power registers for power factor calculation
+REGISTERS_POWER_FACTOR = (33079, 33080, 33081, 33082)
+
+# Battery power calculation registers
+REGISTER_BATTERY_POWER = 33135
+
+# Grid power direction registers
+REGISTER_POWER_TO_GRID = 33175
+REGISTER_POWER_FROM_GRID = 33171
+
+# Sign inversion register
+REGISTER_SIGN_INVERSION = 33263
+
 
 class SungrowDerivedSensor(RestoreSensor, SensorEntity):
     """Representation of a Modbus derived/calculated sensor."""
@@ -71,13 +97,17 @@ class SungrowDerivedSensor(RestoreSensor, SensorEntity):
             self._received_values[updated_register] = event.data.get(VALUE)
 
             # If we haven't received all registers yet, wait
-            filtered_registers = {reg for reg in self._register if reg not in (0, 1, 90007)}
+            filtered_registers = {
+                reg
+                for reg in self._register
+                if reg not in (REGISTER_PLACEHOLDER_0, REGISTER_PLACEHOLDER_1, REGISTER_CLOCK_DRIFT)
+            }
             if not all(reg in self._received_values for reg in filtered_registers):
                 _LOGGER.debug(f"not all values received yet = {self._received_values}")
                 return  # Wait until all registers are received
 
             ## start
-            if 90007 in self._register:
+            if REGISTER_CLOCK_DRIFT in self._register:
                 is_adjusted = clock_drift_test(
                     self.hass,
                     self.base_sensor.controller,
@@ -91,7 +121,7 @@ class SungrowDerivedSensor(RestoreSensor, SensorEntity):
                     self.schedule_update_ha_state()
                     self._received_values.clear()
 
-            if 90006 in self._register:
+            if REGISTER_LAST_SUCCESS in self._register:
                 new_value = self.base_sensor.controller.last_modbus_success
                 if new_value == 0 or new_value is None:
                     return
@@ -103,16 +133,16 @@ class SungrowDerivedSensor(RestoreSensor, SensorEntity):
 
             new_value = self.base_sensor.get_value
 
-            if 33095 in self._register:
+            if REGISTER_RUNNING_STATUS in self._register:
                 new_value = round(self.base_sensor.get_value)
                 new_value = STATUS_MAPPING.get(new_value, "Unknown")
 
-            if any(r in self._register for r in [33049, 33051, 33053, 33055]) and len(self._register) >= 2:
+            if any(r in self._register for r in REGISTERS_PHASE_POWER) and len(self._register) >= 2:
                 r1_value = self._received_values[self._register[0]] * self.base_sensor.multiplier
                 r2_value = self._received_values[self._register[1]] * self.base_sensor.multiplier
                 new_value = round(r1_value * r2_value)
 
-            if any(r in self._register for r in [33079, 33080, 33081, 33082]) and len(self._register) >= 4:
+            if any(r in self._register for r in REGISTERS_POWER_FACTOR) and len(self._register) >= 4:
                 active_power = self.base_sensor.convert_value(
                     [self._received_values[self._register[0]], self._received_values[self._register[1]]]
                 )
@@ -130,7 +160,7 @@ class SungrowDerivedSensor(RestoreSensor, SensorEntity):
                 else:
                     new_value = round(active_power / apparent_power, 3)
 
-            if 33135 in self._register and len(self._register) == 4:
+            if REGISTER_BATTERY_POWER in self._register and len(self._register) == 4:
                 registers = self._register.copy()
                 # Use local copy for convert_value to avoid mutating self._register
                 power_registers = registers[:2]
@@ -144,7 +174,7 @@ class SungrowDerivedSensor(RestoreSensor, SensorEntity):
                 else:
                     new_value = 0
 
-            if 33135 in self._register and len(self._register) == 3:
+            if REGISTER_BATTERY_POWER in self._register and len(self._register) == 3:
                 registers = self._register.copy()
                 # Use local copy for convert_value to avoid mutating self._register
                 power_registers = registers[:2]
@@ -158,18 +188,16 @@ class SungrowDerivedSensor(RestoreSensor, SensorEntity):
                 else:
                     new_value = round(p_value * 10)
 
-            if 33263 in self._register and len(self._register) == 2:
+            if REGISTER_SIGN_INVERSION in self._register and len(self._register) == 2:
                 new_value = new_value * -1
 
-            if 33175 in self._register or 33171 in self._register:
-                # 33175 - to grid
-                # 33171 - from grid
+            if REGISTER_POWER_TO_GRID in self._register or REGISTER_POWER_FROM_GRID in self._register:
                 to_grid = self._received_values[self._register[0]] * self.base_sensor.multiplier
                 from_grid = self._received_values[self._register[1]] * self.base_sensor.multiplier
                 new_value = from_grid - to_grid
 
             # set after
-            if 35000 in self._register:
+            if REGISTER_PROTOCOL_VERSION in self._register:
                 protocol_version, model_description = decode_inverter_model(new_value)
                 self.base_sensor.controller._sw_version = protocol_version
                 self.base_sensor.controller._model = model_description
