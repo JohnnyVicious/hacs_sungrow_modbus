@@ -4,18 +4,16 @@ Creates sensor entities for battery stacks connected via slave IDs 200-203.
 """
 
 import logging
-from typing import Optional, Any
 
-from homeassistant.components.sensor import SensorEntity, SensorStateClass
+from homeassistant.components.sensor import SensorEntity
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant, callback
 
-from ..battery_controller import BatteryController
-from ..const import DOMAIN
-from ..sensor_data.battery_sensors import (
+from custom_components.sungrow_modbus.battery_controller import BatteryController
+from custom_components.sungrow_modbus.sensor_data.battery_sensors import (
     battery_stack_sensors,
-    get_battery_sensor_unique_id,
     get_battery_sensor_name,
+    get_battery_sensor_unique_id,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -45,9 +43,7 @@ class SungrowBatterySensor(SensorEntity):
 
         # Entity attributes
         self._attr_name = get_battery_sensor_name(sensor_def, self._stack_index)
-        self._attr_unique_id = get_battery_sensor_unique_id(
-            sensor_def, self._stack_index, self._inverter_serial
-        )
+        self._attr_unique_id = get_battery_sensor_unique_id(sensor_def, self._stack_index, self._inverter_serial)
         self._attr_has_entity_name = True
 
         # Sensor configuration
@@ -135,9 +131,7 @@ class SungrowBatteryDiagnosticSensor(SensorEntity):
 
         # Entity attributes
         self._attr_name = get_battery_sensor_name(sensor_def, self._stack_index)
-        self._attr_unique_id = get_battery_sensor_unique_id(
-            sensor_def, self._stack_index, self._inverter_serial
-        )
+        self._attr_unique_id = get_battery_sensor_unique_id(sensor_def, self._stack_index, self._inverter_serial)
         self._attr_has_entity_name = True
         self._attr_entity_category = EntityCategory.DIAGNOSTIC
 
@@ -171,8 +165,7 @@ def create_battery_sensors(
     Returns:
         Tuple of (status_sensors, diagnostic_sensors)
     """
-    from ..sensor_data.battery_sensors import (
-        battery_stack_sensors,
+    from custom_components.sungrow_modbus.sensor_data.battery_sensors import (
         battery_stack_diagnostic_sensors,
     )
 

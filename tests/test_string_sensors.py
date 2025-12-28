@@ -1,9 +1,11 @@
 """Tests for string inverter sensor definitions."""
 
 import unittest
-from custom_components.sungrow_modbus.sensor_data.string_sensors import string_sensors, string_sensors_derived
-from custom_components.sungrow_modbus.data.enums import PollSpeed, InverterFeature, Category
+
 from homeassistant.components.sensor.const import SensorDeviceClass
+
+from custom_components.sungrow_modbus.data.enums import Category, InverterFeature, PollSpeed
+from custom_components.sungrow_modbus.sensor_data.string_sensors import string_sensors, string_sensors_derived
 
 
 def find_entity_by_unique(unique_id):
@@ -134,10 +136,7 @@ class TestStringSensorFeatureRequirements(unittest.TestCase):
             group, entity = find_entity_by_unique(unique)
             self.assertIsNotNone(group, f"Sensor '{unique}' not found")
             feature_req = group.get("feature_requirement", [])
-            self.assertIn(
-                InverterFeature.PV, feature_req,
-                f"Sensor '{unique}' should require PV feature"
-            )
+            self.assertIn(InverterFeature.PV, feature_req, f"Sensor '{unique}' should require PV feature")
 
     def test_three_phase_sensors_require_three_phase(self):
         """Test that three-phase sensors have THREE_PHASE feature requirement."""
@@ -153,8 +152,7 @@ class TestStringSensorFeatureRequirements(unittest.TestCase):
             self.assertIsNotNone(group, f"Sensor '{unique}' not found")
             feature_req = group.get("feature_requirement", [])
             self.assertIn(
-                InverterFeature.THREE_PHASE, feature_req,
-                f"Sensor '{unique}' should require THREE_PHASE feature"
+                InverterFeature.THREE_PHASE, feature_req, f"Sensor '{unique}' should require THREE_PHASE feature"
             )
 
     def test_mppt3_sensors_require_mppt3_feature(self):
@@ -168,10 +166,7 @@ class TestStringSensorFeatureRequirements(unittest.TestCase):
             group, entity = find_entity_by_unique(unique)
             self.assertIsNotNone(group, f"Sensor '{unique}' not found")
             feature_req = group.get("feature_requirement", [])
-            self.assertIn(
-                InverterFeature.MPPT3, feature_req,
-                f"Sensor '{unique}' should require MPPT3 feature"
-            )
+            self.assertIn(InverterFeature.MPPT3, feature_req, f"Sensor '{unique}' should require MPPT3 feature")
 
     def test_phase_a_sensors_no_three_phase_requirement(self):
         """Test that Phase A sensors don't require THREE_PHASE (available on all)."""
@@ -185,8 +180,7 @@ class TestStringSensorFeatureRequirements(unittest.TestCase):
             self.assertIsNotNone(group, f"Sensor '{unique}' not found")
             feature_req = group.get("feature_requirement", [])
             self.assertNotIn(
-                InverterFeature.THREE_PHASE, feature_req,
-                f"Sensor '{unique}' should NOT require THREE_PHASE feature"
+                InverterFeature.THREE_PHASE, feature_req, f"Sensor '{unique}' should NOT require THREE_PHASE feature"
             )
 
 
@@ -215,10 +209,7 @@ class TestStringSensorPollSpeeds(unittest.TestCase):
         for reg_start in once_register_starts:
             group = find_group_by_register_start(reg_start)
             self.assertIsNotNone(group, f"Group starting at {reg_start} not found")
-            self.assertEqual(
-                group.get("poll_speed"), PollSpeed.ONCE,
-                f"Group at {reg_start} should poll ONCE"
-            )
+            self.assertEqual(group.get("poll_speed"), PollSpeed.ONCE, f"Group at {reg_start} should poll ONCE")
 
     def test_mppt_sensors_poll_fast(self):
         """Test MPPT sensors poll fast."""
@@ -226,10 +217,7 @@ class TestStringSensorPollSpeeds(unittest.TestCase):
         for reg_start in mppt_register_starts:
             group = find_group_by_register_start(reg_start)
             self.assertIsNotNone(group, f"Group starting at {reg_start} not found")
-            self.assertEqual(
-                group.get("poll_speed"), PollSpeed.FAST,
-                f"Group at {reg_start} should poll FAST"
-            )
+            self.assertEqual(group.get("poll_speed"), PollSpeed.FAST, f"Group at {reg_start} should poll FAST")
 
     def test_ac_output_sensors_poll_fast(self):
         """Test AC output sensors poll fast."""
@@ -237,10 +225,7 @@ class TestStringSensorPollSpeeds(unittest.TestCase):
         for reg_start in ac_register_starts:
             group = find_group_by_register_start(reg_start)
             self.assertIsNotNone(group, f"Group starting at {reg_start} not found")
-            self.assertEqual(
-                group.get("poll_speed"), PollSpeed.FAST,
-                f"Group at {reg_start} should poll FAST"
-            )
+            self.assertEqual(group.get("poll_speed"), PollSpeed.FAST, f"Group at {reg_start} should poll FAST")
 
     def test_status_sensors_poll_normal(self):
         """Test status sensors poll at normal speed."""
@@ -248,10 +233,7 @@ class TestStringSensorPollSpeeds(unittest.TestCase):
         for reg_start in status_register_starts:
             group = find_group_by_register_start(reg_start)
             self.assertIsNotNone(group, f"Group starting at {reg_start} not found")
-            self.assertEqual(
-                group.get("poll_speed"), PollSpeed.NORMAL,
-                f"Group at {reg_start} should poll NORMAL"
-            )
+            self.assertEqual(group.get("poll_speed"), PollSpeed.NORMAL, f"Group at {reg_start} should poll NORMAL")
 
     def test_generation_summary_polls_slow(self):
         """Test generation summary polls slowly."""
@@ -277,8 +259,9 @@ class TestStringSensorCategories(unittest.TestCase):
             group, entity = find_entity_by_unique(unique)
             self.assertIsNotNone(entity, f"Sensor '{unique}' not found")
             self.assertEqual(
-                entity.get("category"), Category.PV_INFORMATION,
-                f"Sensor '{unique}' should have PV_INFORMATION category"
+                entity.get("category"),
+                Category.PV_INFORMATION,
+                f"Sensor '{unique}' should have PV_INFORMATION category",
             )
 
     def test_ac_sensors_have_ac_category(self):
@@ -295,8 +278,9 @@ class TestStringSensorCategories(unittest.TestCase):
             group, entity = find_entity_by_unique(unique)
             self.assertIsNotNone(entity, f"Sensor '{unique}' not found")
             self.assertEqual(
-                entity.get("category"), Category.AC_INFORMATION,
-                f"Sensor '{unique}' should have AC_INFORMATION category"
+                entity.get("category"),
+                Category.AC_INFORMATION,
+                f"Sensor '{unique}' should have AC_INFORMATION category",
             )
 
     def test_status_sensors_have_status_category(self):
@@ -310,8 +294,9 @@ class TestStringSensorCategories(unittest.TestCase):
             group, entity = find_entity_by_unique(unique)
             self.assertIsNotNone(entity, f"Sensor '{unique}' not found")
             self.assertEqual(
-                entity.get("category"), Category.STATUS_INFORMATION,
-                f"Sensor '{unique}' should have STATUS_INFORMATION category"
+                entity.get("category"),
+                Category.STATUS_INFORMATION,
+                f"Sensor '{unique}' should have STATUS_INFORMATION category",
             )
 
 
@@ -330,8 +315,9 @@ class TestStringSensorDeviceClasses(unittest.TestCase):
             group, entity = find_entity_by_unique(unique)
             self.assertIsNotNone(entity, f"Sensor '{unique}' not found")
             self.assertEqual(
-                entity.get("device_class"), SensorDeviceClass.VOLTAGE,
-                f"Sensor '{unique}' should have VOLTAGE device class"
+                entity.get("device_class"),
+                SensorDeviceClass.VOLTAGE,
+                f"Sensor '{unique}' should have VOLTAGE device class",
             )
 
     def test_current_sensors_have_current_class(self):
@@ -346,8 +332,9 @@ class TestStringSensorDeviceClasses(unittest.TestCase):
             group, entity = find_entity_by_unique(unique)
             self.assertIsNotNone(entity, f"Sensor '{unique}' not found")
             self.assertEqual(
-                entity.get("device_class"), SensorDeviceClass.CURRENT,
-                f"Sensor '{unique}' should have CURRENT device class"
+                entity.get("device_class"),
+                SensorDeviceClass.CURRENT,
+                f"Sensor '{unique}' should have CURRENT device class",
             )
 
     def test_power_sensors_have_power_class(self):
@@ -362,8 +349,9 @@ class TestStringSensorDeviceClasses(unittest.TestCase):
             group, entity = find_entity_by_unique(unique)
             self.assertIsNotNone(entity, f"Sensor '{unique}' not found")
             self.assertEqual(
-                entity.get("device_class"), SensorDeviceClass.POWER,
-                f"Sensor '{unique}' should have POWER device class"
+                entity.get("device_class"),
+                SensorDeviceClass.POWER,
+                f"Sensor '{unique}' should have POWER device class",
             )
 
     def test_energy_sensors_have_energy_class(self):
@@ -377,8 +365,9 @@ class TestStringSensorDeviceClasses(unittest.TestCase):
             group, entity = find_entity_by_unique(unique)
             self.assertIsNotNone(entity, f"Sensor '{unique}' not found")
             self.assertEqual(
-                entity.get("device_class"), SensorDeviceClass.ENERGY,
-                f"Sensor '{unique}' should have ENERGY device class"
+                entity.get("device_class"),
+                SensorDeviceClass.ENERGY,
+                f"Sensor '{unique}' should have ENERGY device class",
             )
 
 
@@ -402,10 +391,7 @@ class TestStringSensorSignedValues(unittest.TestCase):
         for unique in current_uniques:
             group, entity = find_entity_by_unique(unique)
             self.assertIsNotNone(entity, f"Sensor '{unique}' not found")
-            self.assertTrue(
-                entity.get("signed", False),
-                f"Sensor '{unique}' should be signed"
-            )
+            self.assertTrue(entity.get("signed", False), f"Sensor '{unique}' should be signed")
 
     def test_reactive_power_is_signed(self):
         """Test reactive power is signed."""

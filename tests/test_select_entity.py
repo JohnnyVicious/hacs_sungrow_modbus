@@ -1,13 +1,13 @@
 """Tests for select entity platform."""
-import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
 
-from custom_components.sungrow_modbus.const import DOMAIN, CONTROLLER, VALUES
-from custom_components.sungrow_modbus.data.enums import InverterType, InverterFeature, PollSpeed
+from unittest.mock import AsyncMock, MagicMock
+
+import pytest
+
+from custom_components.sungrow_modbus.const import CONTROLLER, DOMAIN, VALUES
+from custom_components.sungrow_modbus.data.enums import InverterFeature, InverterType, PollSpeed
 from custom_components.sungrow_modbus.select import async_setup_entry
-from custom_components.sungrow_modbus.sensors.sungrow_select_entity import (
-    SungrowSelectEntity, get_bit_bool, set_bit
-)
+from custom_components.sungrow_modbus.sensors.sungrow_select_entity import SungrowSelectEntity, get_bit_bool, set_bit
 
 
 def create_mock_controller(host="10.0.0.1", slave=1, inverter_type=InverterType.HYBRID, features=None):
@@ -99,13 +99,7 @@ class TestSelectPlatformSetup:
         controller = create_mock_controller(inverter_type=InverterType.HYBRID)
 
         hass = MagicMock()
-        hass.data = {
-            DOMAIN: {
-                CONTROLLER: {
-                    "10.0.0.1:502_1": controller
-                }
-            }
-        }
+        hass.data = {DOMAIN: {CONTROLLER: {"10.0.0.1:502_1": controller}}}
 
         config_entry = MagicMock()
         config_entry.data = {"host": "10.0.0.1", "port": 502, "slave": 1}
@@ -127,13 +121,7 @@ class TestSelectPlatformSetup:
         controller = create_mock_controller(inverter_type=InverterType.HYBRID)
 
         hass = MagicMock()
-        hass.data = {
-            DOMAIN: {
-                CONTROLLER: {
-                    "10.0.0.1:502_1": controller
-                }
-            }
-        }
+        hass.data = {DOMAIN: {CONTROLLER: {"10.0.0.1:502_1": controller}}}
 
         config_entry = MagicMock()
         config_entry.data = {"host": "10.0.0.1", "port": 502, "slave": 1}
@@ -161,13 +149,7 @@ class TestSelectPlatformSetup:
         controller = create_mock_controller(inverter_type=InverterType.HYBRID)
 
         hass = MagicMock()
-        hass.data = {
-            DOMAIN: {
-                CONTROLLER: {
-                    "10.0.0.1:502_1": controller
-                }
-            }
-        }
+        hass.data = {DOMAIN: {CONTROLLER: {"10.0.0.1:502_1": controller}}}
 
         config_entry = MagicMock()
         config_entry.data = {"host": "10.0.0.1", "port": 502, "slave": 1}
@@ -192,19 +174,10 @@ class TestSelectPlatformSetup:
     @pytest.mark.asyncio
     async def test_hybrid_with_battery_creates_load_adjustment_select(self):
         """Test HYBRID with battery feature creates Load Adjustment Mode select."""
-        controller = create_mock_controller(
-            inverter_type=InverterType.HYBRID,
-            features={InverterFeature.BATTERY}
-        )
+        controller = create_mock_controller(inverter_type=InverterType.HYBRID, features={InverterFeature.BATTERY})
 
         hass = MagicMock()
-        hass.data = {
-            DOMAIN: {
-                CONTROLLER: {
-                    "10.0.0.1:502_1": controller
-                }
-            }
-        }
+        hass.data = {DOMAIN: {CONTROLLER: {"10.0.0.1:502_1": controller}}}
 
         config_entry = MagicMock()
         config_entry.data = {"host": "10.0.0.1", "port": 502, "slave": 1}
@@ -232,13 +205,7 @@ class TestSelectPlatformSetup:
         controller = create_mock_controller(inverter_type=InverterType.STRING)
 
         hass = MagicMock()
-        hass.data = {
-            DOMAIN: {
-                CONTROLLER: {
-                    "10.0.0.1:502_1": controller
-                }
-            }
-        }
+        hass.data = {DOMAIN: {CONTROLLER: {"10.0.0.1:502_1": controller}}}
 
         config_entry = MagicMock()
         config_entry.data = {"host": "10.0.0.1", "port": 502, "slave": 1}
@@ -272,7 +239,7 @@ class TestSungrowSelectEntity:
                 {"name": "Stop", "on_value": 0xCC},
                 {"name": "Force Charge", "on_value": 0xAA},
                 {"name": "Force Discharge", "on_value": 0xBB},
-            ]
+            ],
         }
 
         entity = SungrowSelectEntity(hass, controller, entity_def)
@@ -299,7 +266,7 @@ class TestSungrowSelectEntity:
                 {"name": "Stop", "on_value": 0xCC},
                 {"name": "Force Charge", "on_value": 0xAA},
                 {"name": "Force Discharge", "on_value": 0xBB},
-            ]
+            ],
         }
 
         entity = SungrowSelectEntity(hass, controller, entity_def)
@@ -324,7 +291,7 @@ class TestSungrowSelectEntity:
                 {"name": "External EMS", "on_value": 3},
                 {"name": "VPP", "on_value": 4},
                 {"name": "MicroGrid", "on_value": 8},
-            ]
+            ],
         }
 
         entity = SungrowSelectEntity(hass, controller, entity_def)
@@ -342,7 +309,7 @@ class TestSungrowSelectEntity:
             "name": "Battery Forced Charge/Discharge",
             "entities": [
                 {"name": "Stop", "on_value": 0xCC},
-            ]
+            ],
         }
 
         entity = SungrowSelectEntity(hass, controller, entity_def)
@@ -362,7 +329,7 @@ class TestSungrowSelectEntity:
             "entities": [
                 {"name": "Stop", "on_value": 0xCC},
                 {"name": "Force Charge", "on_value": 0xAA},
-            ]
+            ],
         }
 
         entity = SungrowSelectEntity(hass, controller, entity_def)
@@ -386,7 +353,7 @@ class TestSungrowSelectEntity:
                 {"name": "Self-consumption", "on_value": 0},
                 {"name": "Forced mode", "on_value": 2},
                 {"name": "VPP", "on_value": 4},
-            ]
+            ],
         }
 
         entity = SungrowSelectEntity(hass, controller, entity_def)
@@ -402,11 +369,7 @@ class TestSungrowSelectEntity:
         hass.data = {DOMAIN: {VALUES: {}}}
         controller = create_mock_controller()
 
-        entity_def = {
-            "register": 13050,
-            "name": "Battery Forced Charge/Discharge",
-            "entities": []
-        }
+        entity_def = {"register": 13050, "name": "Battery Forced Charge/Discharge", "entities": []}
 
         entity = SungrowSelectEntity(hass, controller, entity_def)
 

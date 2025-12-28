@@ -1,33 +1,35 @@
 import logging
 from typing import Any
 
+from homeassistant.components.switch import SwitchEntity
+from homeassistant.core import callback
 from homeassistant.helpers.restore_state import RestoreEntity
 
-from custom_components.sungrow_modbus.helpers import cache_get, is_correct_controller
-from homeassistant.core import callback
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.components.switch import SwitchEntity
-from custom_components.sungrow_modbus.const import DOMAIN, CONTROLLER, MANUFACTURER, REGISTER, VALUE, SLAVE
 from custom_components.sungrow_modbus import ModbusController
+from custom_components.sungrow_modbus.const import CONTROLLER, DOMAIN, REGISTER, SLAVE, VALUE
+from custom_components.sungrow_modbus.helpers import cache_get, is_correct_controller
 
 _LOGGER = logging.getLogger(__name__)
 
-class SungrowBinaryEntity(RestoreEntity, SwitchEntity):
 
+class SungrowBinaryEntity(RestoreEntity, SwitchEntity):
     def __init__(self, hass, modbus_controller, entity_definition):
         self._hass = hass
         self._modbus_controller: ModbusController = modbus_controller
-        self._register: int = entity_definition.get("register", entity_definition.get("read_register")) + entity_definition.get("offset", 0)
+        self._register: int = entity_definition.get(
+            "register", entity_definition.get("read_register")
+        ) + entity_definition.get("offset", 0)
         write_register = entity_definition.get("write_register", None)
-        self._write_register: int = self._register if write_register is None else write_register + entity_definition.get("offset", 0)
+        self._write_register: int = (
+            self._register if write_register is None else write_register + entity_definition.get("offset", 0)
+        )
         self._bit_position = entity_definition.get("bit_position", None)
         self._conflicts_with = entity_definition.get("conflicts_with", None)
         self._requires = entity_definition.get("requires", None)
         self._requires_any = entity_definition.get("requires_any", None)
         self._on_value = entity_definition.get("on_value", None)
         self._off_value = entity_definition.get("off_value", None)
-        self._attr_unique_id = "{}_{}_{}_{}".format(DOMAIN, modbus_controller.device_serial_number, self._register,
-                                                    self._on_value if self._on_value is not None else self._bit_position)
+        self._attr_unique_id = f"{DOMAIN}_{modbus_controller.device_serial_number}_{self._register}_{self._on_value if self._on_value is not None else self._bit_position}"
         self._attr_name = entity_definition["name"]
         self._attr_has_entity_name = True
         self._attr_is_on = False
@@ -42,7 +44,7 @@ class SungrowBinaryEntity(RestoreEntity, SwitchEntity):
 
     async def async_will_remove_from_hass(self) -> None:
         """Cleanup when entity is removed."""
-        if hasattr(self, '_unsub_listener') and self._unsub_listener:
+        if hasattr(self, "_unsub_listener") and self._unsub_listener:
             self._unsub_listener()
             self._unsub_listener = None
         await super().async_will_remove_from_hass()
@@ -55,15 +57,19 @@ class SungrowBinaryEntity(RestoreEntity, SwitchEntity):
         updated_controller_slave = int(event.data.get(SLAVE))
 
         if not is_correct_controller(self._modbus_controller, updated_controller, updated_controller_slave):
-            return # meant for a different sensor/inverter combo
+            return  # meant for a different sensor/inverter combo
 
         if updated_register == self._register:
             updated_value = int(event.data.get(VALUE))
 
             if self._bit_position is not None:
-                _LOGGER.debug(f"Sensor update received, register = {updated_register}, value = {updated_value}, get_bit_bool = {get_bit_bool(updated_value, self._bit_position)}")
+                _LOGGER.debug(
+                    f"Sensor update received, register = {updated_register}, value = {updated_value}, get_bit_bool = {get_bit_bool(updated_value, self._bit_position)}"
+                )
             else:
-                _LOGGER.debug(f"Sensor update received, register = {updated_register}, value = {updated_value}, on_value = {self._on_value}, is_on = {self._on_value == updated_value}, ")
+                _LOGGER.debug(
+                    f"Sensor update received, register = {updated_register}, value = {updated_value}, on_value = {self._on_value}, is_on = {self._on_value == updated_value}, "
+                )
 
             if self._register == 5:
                 self._attr_is_on = self._modbus_controller.enabled
@@ -128,10 +134,9 @@ class SungrowBinaryEntity(RestoreEntity, SwitchEntity):
                         new_register_value = set_bit(new_register_value, rbit, True)
 
                 # Set any of the allowed parents if needed (custom logic)
-                if self._requires_any:
-                    if not any(get_bit_bool(current_register_value, r) for r in self._requires_any):
-                        # fallback to enabling the first one
-                        new_register_value = set_bit(new_register_value, self._requires_any[0], True)
+                # Fallback to enabling the first one if none are set
+                if self._requires_any and not any(get_bit_bool(current_register_value, r) for r in self._requires_any):
+                    new_register_value = set_bit(new_register_value, self._requires_any[0], True)
 
             # Set or clear target bit
             new_register_value = set_bit(new_register_value, self._bit_position, value)

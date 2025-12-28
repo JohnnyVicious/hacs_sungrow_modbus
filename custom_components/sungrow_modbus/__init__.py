@@ -1,4 +1,5 @@
 """The Modbus Integration."""
+
 import asyncio
 import copy
 import logging
@@ -11,19 +12,31 @@ from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import ConfigEntryError
 
 from .const import (
-    DOMAIN, CONTROLLER, TIME_ENTITIES, BATTERY_CONTROLLER,
-    CONN_TYPE_TCP, CONN_TYPE_SERIAL, CONF_SERIAL_PORT,
-    CONF_BAUDRATE, CONF_BYTESIZE, CONF_PARITY, CONF_STOPBITS,
-    CONF_CONNECTION_TYPE, CONF_INVERTER_SERIAL, CONF_MULTI_BATTERY,
-    DEFAULT_BAUDRATE, DEFAULT_BYTESIZE, DEFAULT_PARITY, DEFAULT_STOPBITS
+    BATTERY_CONTROLLER,
+    CONF_BAUDRATE,
+    CONF_BYTESIZE,
+    CONF_CONNECTION_TYPE,
+    CONF_INVERTER_SERIAL,
+    CONF_MULTI_BATTERY,
+    CONF_PARITY,
+    CONF_SERIAL_PORT,
+    CONF_STOPBITS,
+    CONN_TYPE_SERIAL,
+    CONN_TYPE_TCP,
+    CONTROLLER,
+    DEFAULT_BAUDRATE,
+    DEFAULT_BYTESIZE,
+    DEFAULT_PARITY,
+    DEFAULT_STOPBITS,
+    DOMAIN,
+    TIME_ENTITIES,
 )
 from .data.enums import InverterFeature
 from .data.sungrow_config import SUNGROW_INVERTERS, InverterConfig, InverterType
 from .data_retrieval import DataRetrieval
 from .helpers import get_controller, get_controller_from_entry, get_controller_key, set_controller
 from .modbus_controller import ModbusController
-from .sensors.sungrow_base_sensor import SungrowSensorGroup, SungrowBaseSensor
-from .sensors.sungrow_derived_sensor import SungrowDerivedSensor
+from .sensors.sungrow_base_sensor import SungrowBaseSensor, SungrowSensorGroup
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -36,20 +49,15 @@ SCHEME_HOLDING_REGISTER = vol.Schema(
         vol.Optional("host"): vol.Coerce(str),
     }
 )
-SCHEME_TIME_SET = vol.Schema(
-    {
-        vol.Required("entity_id"): vol.Coerce(str),
-        vol.Required("time"): vol.Coerce(str)
-    }
-)
+SCHEME_TIME_SET = vol.Schema({vol.Required("entity_id"): vol.Coerce(str), vol.Required("time"): vol.Coerce(str)})
 
 
 async def async_setup(hass: HomeAssistant, entry: ConfigEntry):
     """Set up the Modbus integration."""
 
     def service_write_holding_register(call: ServiceCall):
-        address = call.data.get('address')
-        value = call.data.get('value')
+        address = call.data.get("address")
+        value = call.data.get("value")
         host = call.data.get("host")
         slave = call.data.get("slave", 1)
 
@@ -100,7 +108,7 @@ async def async_setup(hass: HomeAssistant, entry: ConfigEntry):
         # Look through the registered time entities for one that matches the given entity_id
         # TIME_ENTITIES is now a dict keyed by controller_key for multi-inverter support
         time_entities_dict = call.hass.data.get(DOMAIN, {}).get(TIME_ENTITIES, {})
-        for controller_key, entities in time_entities_dict.items():
+        for _controller_key, entities in time_entities_dict.items():
             for entity in entities:
                 if entity.entity_id == entity_id:
                     await entity.async_set_value(new_time)
@@ -112,9 +120,7 @@ async def async_setup(hass: HomeAssistant, entry: ConfigEntry):
     hass.services.async_register(
         DOMAIN, "sungrow_write_holding_register", service_write_holding_register, schema=SCHEME_HOLDING_REGISTER
     )
-    hass.services.async_register(
-        DOMAIN, "sungrow_write_time", service_set_time, schema=SCHEME_TIME_SET
-    )
+    hass.services.async_register(DOMAIN, "sungrow_write_time", service_set_time, schema=SCHEME_TIME_SET)
 
     return True
 
@@ -182,8 +188,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
 
     if inverter_model is None:
         old_type = config.get("type", "hybrid")
-        inverter_model = "S6-EH3P" if old_type == "hybrid" else (
-            "WAVESHARE" if old_type == "hybrid-waveshare" else "S6-GR1P")
+        inverter_model = (
+            "S6-EH3P" if old_type == "hybrid" else ("WAVESHARE" if old_type == "hybrid-waveshare" else "S6-GR1P")
+        )
 
     inverter_config_template: InverterConfig = next(
         (inv for inv in SUNGROW_INVERTERS if inv.model == inverter_model), None
@@ -192,7 +199,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     # defaulting
     if inverter_config_template is None:
         hass.components.persistent_notification.async_create(
-            f"Your Sungrow Modbus configuration is invalid. Please reconfigure the integration.",
+            "Your Sungrow Modbus configuration is invalid. Please reconfigure the integration.",
             title="Sungrow Modbus Configuration Issue",
             notification_id="sungrow_modbus_invalid_config",
         )
@@ -205,24 +212,24 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     inverter_config.update_options(
         options={
             "v2": config.get("has_v2", True),
-            "pv": config.get("has_pv",
-                             inverter_config.type in [InverterType.HYBRID, InverterType.GRID, InverterType.WAVESHARE]),
+            "pv": config.get(
+                "has_pv", inverter_config.type in [InverterType.HYBRID, InverterType.GRID, InverterType.WAVESHARE]
+            ),
             "battery": config.get("has_battery", True),
             "hv_battery": config.get("has_hv_battery", False),
         },
-        connection=config.get("connection", "S2_WL_ST")
+        connection=config.get("connection", "S2_WL_ST"),
     )
 
     # Load correct sensor data based on inverter type
     if inverter_config.type in [InverterType.STRING, InverterType.GRID]:
-        from .sensor_data.string_sensors import string_sensors as sensors
-        from .sensor_data.string_sensors import string_sensors_derived as sensors_derived
+        from .sensor_data.string_sensors import string_sensors as sensors, string_sensors_derived as sensors_derived
     else:
-        from .sensor_data.hybrid_sensors import hybrid_sensors as sensors
-        from .sensor_data.hybrid_sensors import hybrid_sensors_derived as sensors_derived
+        from .sensor_data.hybrid_sensors import hybrid_sensors as sensors, hybrid_sensors_derived as sensors_derived
 
     # Apply model-specific register overrides
-    from .sensor_data.model_overrides import apply_model_overrides, apply_derived_overrides
+    from .sensor_data.model_overrides import apply_derived_overrides, apply_model_overrides
+
     sensors = apply_model_overrides(sensors, inverter_config.model)
     sensors_derived = apply_derived_overrides(sensors_derived, inverter_config.model)
 
@@ -280,7 +287,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
             hidden=entity.get("hidden", False),
             multiplier=entity.get("multiplier", 1),
             category=entity.get("category", None),
-            unique_id=f"{DOMAIN}_{controller.serial_number}_{entity['unique']}" if controller.serial_number else f"{DOMAIN}_{connection_id.replace(':', '_').replace('/', '_')}{f'_{slave}' if slave != 1 else ''}_{entity['unique']}"
+            unique_id=f"{DOMAIN}_{controller.serial_number}_{entity['unique']}"
+            if controller.serial_number
+            else f"{DOMAIN}_{connection_id.replace(':', '_').replace('/', '_')}{f'_{slave}' if slave != 1 else ''}_{entity['unique']}",
         )
         for entity in sensors_derived
     ]
@@ -304,9 +313,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
                 if battery_controllers:
                     hass.data[DOMAIN][BATTERY_CONTROLLER][entry.entry_id] = battery_controllers
                     _LOGGER.info(
-                        "Detected %d battery stack(s) for inverter %s",
-                        len(battery_controllers),
-                        inverter_serial
+                        "Detected %d battery stack(s) for inverter %s", len(battery_controllers), inverter_serial
                     )
                     # Add MULTI_BATTERY feature if stacks detected
                     if InverterFeature.MULTI_BATTERY not in inverter_config.features:
@@ -333,7 +340,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
     """Unload a Modbus config entry."""
-    _LOGGER.debug('init async_unload_entry')
+    _LOGGER.debug("init async_unload_entry")
     # Unload platforms associated with this integration
     unload_ok = all(
         await asyncio.gather(

@@ -1,17 +1,16 @@
 """Tests for the BatteryController class."""
 
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
 
 from custom_components.sungrow_modbus.battery_controller import (
     BatteryController,
-    BatteryStack,
     BatteryModule,
+    BatteryStack,
     detect_battery_stacks,
 )
-from custom_components.sungrow_modbus.const import (
-    DOMAIN, BATTERY_SLAVE_BASE, MAX_BATTERY_STACKS, MANUFACTURER
-)
+from custom_components.sungrow_modbus.const import BATTERY_SLAVE_BASE, DOMAIN, MANUFACTURER, MAX_BATTERY_STACKS
 
 
 class TestBatteryModule:
@@ -29,11 +28,7 @@ class TestBatteryModule:
     def test_with_values(self):
         """Test BatteryModule with values."""
         module = BatteryModule(
-            index=1,
-            serial_number="MOD001",
-            cell_voltage_max=3.45,
-            cell_voltage_min=3.30,
-            temperature=25.5
+            index=1, serial_number="MOD001", cell_voltage_max=3.45, cell_voltage_min=3.30, temperature=25.5
         )
         assert module.index == 1
         assert module.serial_number == "MOD001"
@@ -70,7 +65,7 @@ class TestBatteryStack:
             current=-5.5,
             soc=85.5,
             soh=98,
-            available=True
+            available=True,
         )
         assert stack.stack_index == 1
         assert stack.slave_id == 201
@@ -93,11 +88,7 @@ class TestBatteryControllerInit:
 
     def test_init_stack_0(self):
         """Test initialization for first battery stack."""
-        controller = BatteryController(
-            hass=self.hass,
-            inverter_controller=self.inverter_controller,
-            stack_index=0
-        )
+        controller = BatteryController(hass=self.hass, inverter_controller=self.inverter_controller, stack_index=0)
         assert controller.stack_index == 0
         assert controller.slave_id == 200
         assert controller.battery.stack_index == 0
@@ -106,40 +97,24 @@ class TestBatteryControllerInit:
 
     def test_init_stack_1(self):
         """Test initialization for second battery stack."""
-        controller = BatteryController(
-            hass=self.hass,
-            inverter_controller=self.inverter_controller,
-            stack_index=1
-        )
+        controller = BatteryController(hass=self.hass, inverter_controller=self.inverter_controller, stack_index=1)
         assert controller.stack_index == 1
         assert controller.slave_id == 201
 
     def test_init_stack_3(self):
         """Test initialization for fourth battery stack."""
-        controller = BatteryController(
-            hass=self.hass,
-            inverter_controller=self.inverter_controller,
-            stack_index=3
-        )
+        controller = BatteryController(hass=self.hass, inverter_controller=self.inverter_controller, stack_index=3)
         assert controller.stack_index == 3
         assert controller.slave_id == 203
 
     def test_connection_id(self):
         """Test connection_id property."""
-        controller = BatteryController(
-            hass=self.hass,
-            inverter_controller=self.inverter_controller,
-            stack_index=0
-        )
+        controller = BatteryController(hass=self.hass, inverter_controller=self.inverter_controller, stack_index=0)
         assert controller.connection_id == "192.168.1.100:502_battery_0"
 
     def test_device_info(self):
         """Test device_info property."""
-        controller = BatteryController(
-            hass=self.hass,
-            inverter_controller=self.inverter_controller,
-            stack_index=0
-        )
+        controller = BatteryController(hass=self.hass, inverter_controller=self.inverter_controller, stack_index=0)
         controller.battery.serial_number = "BAT123"
         controller.battery.firmware_version = "1.0.0"
 
@@ -230,22 +205,14 @@ class TestBatteryControllerProbe:
         mock_result.registers = [512]  # 51.2V
         self.mock_client.read_input_registers = AsyncMock(return_value=mock_result)
 
-        controller = BatteryController(
-            hass=self.hass,
-            inverter_controller=self.inverter_controller,
-            stack_index=0
-        )
+        controller = BatteryController(hass=self.hass, inverter_controller=self.inverter_controller, stack_index=0)
 
         result = await controller.probe()
 
         assert result is True
         assert controller._available is True
         assert controller.battery.available is True
-        self.mock_client.read_input_registers.assert_called_once_with(
-            address=10740,
-            count=1,
-            slave=200
-        )
+        self.mock_client.read_input_registers.assert_called_once_with(address=10740, count=1, slave=200)
 
     @pytest.mark.asyncio
     async def test_probe_error_response(self):
@@ -254,11 +221,7 @@ class TestBatteryControllerProbe:
         mock_result.isError.return_value = True
         self.mock_client.read_input_registers = AsyncMock(return_value=mock_result)
 
-        controller = BatteryController(
-            hass=self.hass,
-            inverter_controller=self.inverter_controller,
-            stack_index=0
-        )
+        controller = BatteryController(hass=self.hass, inverter_controller=self.inverter_controller, stack_index=0)
 
         result = await controller.probe()
 
@@ -269,15 +232,9 @@ class TestBatteryControllerProbe:
     @pytest.mark.asyncio
     async def test_probe_exception(self):
         """Test probe with exception."""
-        self.mock_client.read_input_registers = AsyncMock(
-            side_effect=Exception("Connection failed")
-        )
+        self.mock_client.read_input_registers = AsyncMock(side_effect=Exception("Connection failed"))
 
-        controller = BatteryController(
-            hass=self.hass,
-            inverter_controller=self.inverter_controller,
-            stack_index=0
-        )
+        controller = BatteryController(hass=self.hass, inverter_controller=self.inverter_controller, stack_index=0)
 
         result = await controller.probe()
 
@@ -295,11 +252,7 @@ class TestBatteryControllerProbe:
         mock_result.registers = [512]
         self.mock_client.read_input_registers = AsyncMock(return_value=mock_result)
 
-        controller = BatteryController(
-            hass=self.hass,
-            inverter_controller=self.inverter_controller,
-            stack_index=0
-        )
+        controller = BatteryController(hass=self.hass, inverter_controller=self.inverter_controller, stack_index=0)
 
         await controller.probe()
 
@@ -330,11 +283,7 @@ class TestBatteryControllerReadStatus:
     @pytest.mark.asyncio
     async def test_read_status_not_available(self):
         """Test read_status when battery is not available."""
-        controller = BatteryController(
-            hass=self.hass,
-            inverter_controller=self.inverter_controller,
-            stack_index=0
-        )
+        controller = BatteryController(hass=self.hass, inverter_controller=self.inverter_controller, stack_index=0)
         # Battery not available by default
 
         result = await controller.read_status()
@@ -348,18 +297,26 @@ class TestBatteryControllerReadStatus:
         # [voltage, current, temp, soc, soh, charge_hi, charge_lo, discharge_hi, discharge_lo,
         #  reserved(7), cell_max, cell_max_pos, cell_min, cell_min_pos]
         registers = [
-            512,    # voltage: 51.2V
+            512,  # voltage: 51.2V
             65436,  # current: -10.0A (negative = discharging)
-            250,    # temperature: 25.0C
-            855,    # soc: 85.5%
-            98,     # soh: 98%
-            0, 10000,  # total_charge: 1000.0 kWh
-            0, 8000,   # total_discharge: 800.0 kWh
-            0, 0, 0, 0, 0, 0, 0,  # reserved
+            250,  # temperature: 25.0C
+            855,  # soc: 85.5%
+            98,  # soh: 98%
+            0,
+            10000,  # total_charge: 1000.0 kWh
+            0,
+            8000,  # total_discharge: 800.0 kWh
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,  # reserved
             34500,  # cell_voltage_max: 3.45V
-            5,      # cell_max_position
+            5,  # cell_max_position
             33000,  # cell_voltage_min: 3.30V
-            12,     # cell_min_position
+            12,  # cell_min_position
         ]
 
         mock_result = MagicMock()
@@ -367,11 +324,7 @@ class TestBatteryControllerReadStatus:
         mock_result.registers = registers
         self.mock_client.read_input_registers = AsyncMock(return_value=mock_result)
 
-        controller = BatteryController(
-            hass=self.hass,
-            inverter_controller=self.inverter_controller,
-            stack_index=0
-        )
+        controller = BatteryController(hass=self.hass, inverter_controller=self.inverter_controller, stack_index=0)
         controller._available = True
 
         result = await controller.read_status()
@@ -434,11 +387,7 @@ class TestBatteryControllerReadSerial:
 
         self.mock_client.read_input_registers = mock_read
 
-        controller = BatteryController(
-            hass=self.hass,
-            inverter_controller=self.inverter_controller,
-            stack_index=0
-        )
+        controller = BatteryController(hass=self.hass, inverter_controller=self.inverter_controller, stack_index=0)
 
         result = await controller.read_serial_and_firmware()
 
@@ -492,11 +441,7 @@ class TestBatteryControllerReadModules:
 
         self.mock_client.read_input_registers = mock_read
 
-        controller = BatteryController(
-            hass=self.hass,
-            inverter_controller=self.inverter_controller,
-            stack_index=0
-        )
+        controller = BatteryController(hass=self.hass, inverter_controller=self.inverter_controller, stack_index=0)
 
         serials = await controller.read_module_serials()
 
@@ -563,9 +508,13 @@ class TestDetectBatteryStacks:
                 if address == 10740:  # voltage probe
                     return create_success_result([512])
                 elif address == 10710:  # serial
-                    return create_success_result([0x4241, 0x5431, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000])
+                    return create_success_result(
+                        [0x4241, 0x5431, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000]
+                    )
                 elif address == 10720:  # firmware
-                    return create_success_result([0x312E, 0x3000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000])
+                    return create_success_result(
+                        [0x312E, 0x3000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000]
+                    )
                 elif address >= 10821:  # modules (all empty)
                     return create_success_result([0x0000] * count)
                 return create_success_result([0] * count)
@@ -604,9 +553,24 @@ class TestDetectBatteryStacks:
                     return create_success_result([512])
                 elif address == 10710:
                     serial_num = str(slave - 199)  # "1" or "2"
-                    return create_success_result([0x4241, 0x5400 | ord(serial_num), 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000])
+                    return create_success_result(
+                        [
+                            0x4241,
+                            0x5400 | ord(serial_num),
+                            0x0000,
+                            0x0000,
+                            0x0000,
+                            0x0000,
+                            0x0000,
+                            0x0000,
+                            0x0000,
+                            0x0000,
+                        ]
+                    )
                 elif address == 10720:
-                    return create_success_result([0x312E, 0x3000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000])
+                    return create_success_result(
+                        [0x312E, 0x3000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000]
+                    )
                 elif address >= 10821:
                     return create_success_result([0x0000] * count)
                 return create_success_result([0] * count)

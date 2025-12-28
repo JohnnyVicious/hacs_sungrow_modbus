@@ -1,10 +1,15 @@
 from homeassistant.components.sensor.const import SensorDeviceClass, SensorStateClass
 from homeassistant.const import (
-    UnitOfElectricPotential, UnitOfElectricCurrent, UnitOfPower, UnitOfEnergy,
-    UnitOfFrequency, UnitOfTemperature, PERCENTAGE
+    PERCENTAGE,
+    UnitOfElectricCurrent,
+    UnitOfElectricPotential,
+    UnitOfEnergy,
+    UnitOfFrequency,
+    UnitOfPower,
+    UnitOfTemperature,
 )
 
-from custom_components.sungrow_modbus.data.enums import PollSpeed, InverterFeature, Category
+from custom_components.sungrow_modbus.data.enums import Category, InverterFeature, PollSpeed
 
 # Sungrow SHx Hybrid Inverter Modbus Registers
 # Based on: TI_20240924_Communication Protocol of Residential Hybrid Inverter-V1.1.5
@@ -20,10 +25,10 @@ hybrid_sensors = [
                 "name": "Inverter Serial",
                 "unique": "sungrow_modbus_inverter_serial",
                 "category": Category.BASIC_INFORMATION,
-                "register": ['4989', '4990', '4991', '4992', '4993', '4994', '4995', '4996', '4997', '4998'],
-                "multiplier": 0  # String type
+                "register": ["4989", "4990", "4991", "4992", "4993", "4994", "4995", "4996", "4997", "4998"],
+                "multiplier": 0,  # String type
             },
-        ]
+        ],
     },
     {
         "register_start": 4999,
@@ -33,12 +38,11 @@ hybrid_sensors = [
                 "name": "Device Type Code",
                 "unique": "sungrow_modbus_device_type_code",
                 "category": Category.BASIC_INFORMATION,
-                "register": ['4999'],
-                "multiplier": 1
+                "register": ["4999"],
+                "multiplier": 1,
             },
-        ]
+        ],
     },
-
     # ==================== NOMINAL POWER (Input Registers 5000-5001) ====================
     {
         "register_start": 5000,
@@ -48,16 +52,15 @@ hybrid_sensors = [
                 "name": "Nominal Active Power",
                 "unique": "sungrow_modbus_nominal_active_power",
                 "category": Category.BASIC_INFORMATION,
-                "register": ['5000'],
+                "register": ["5000"],
                 "multiplier": 0.1,
                 "device_class": SensorDeviceClass.POWER,
                 "unit_of_measurement": UnitOfPower.KILO_WATT,
-                "state_class": SensorStateClass.MEASUREMENT
+                "state_class": SensorStateClass.MEASUREMENT,
             },
-            {"type": "reserve", "register": ['5001']},
-        ]
+            {"type": "reserve", "register": ["5001"]},
+        ],
     },
-
     # ==================== PV GENERATION SUMMARY (Input Registers 5002-5008) ====================
     {
         "register_start": 5002,
@@ -68,37 +71,36 @@ hybrid_sensors = [
                 "name": "Daily PV Generation",
                 "unique": "sungrow_modbus_daily_pv_generation",
                 "category": Category.PV_INFORMATION,
-                "register": ['5002'],
+                "register": ["5002"],
                 "multiplier": 0.1,
                 "device_class": SensorDeviceClass.ENERGY,
                 "unit_of_measurement": UnitOfEnergy.KILO_WATT_HOUR,
-                "state_class": SensorStateClass.TOTAL_INCREASING
+                "state_class": SensorStateClass.TOTAL_INCREASING,
             },
             {
                 "name": "Total PV Generation",
                 "unique": "sungrow_modbus_total_pv_generation",
                 "category": Category.PV_INFORMATION,
-                "register": ['5003', '5004'],
+                "register": ["5003", "5004"],
                 "multiplier": 0.1,
                 "device_class": SensorDeviceClass.ENERGY,
                 "unit_of_measurement": UnitOfEnergy.KILO_WATT_HOUR,
-                "state_class": SensorStateClass.TOTAL
+                "state_class": SensorStateClass.TOTAL,
             },
-            {"type": "reserve", "register": ['5005', '5006']},
+            {"type": "reserve", "register": ["5005", "5006"]},
             {
                 "name": "Inverter Temperature",
                 "unique": "sungrow_modbus_inverter_temperature",
                 "category": Category.BASIC_INFORMATION,
-                "register": ['5007'],
+                "register": ["5007"],
                 "multiplier": 0.1,
                 "device_class": SensorDeviceClass.TEMPERATURE,
                 "unit_of_measurement": UnitOfTemperature.CELSIUS,
                 "state_class": SensorStateClass.MEASUREMENT,
-                "signed": True
+                "signed": True,
             },
-        ]
+        ],
     },
-
     # ==================== MPPT DATA (Input Registers 5011-5018) ====================
     # MPPT1 and MPPT2 - All PV inverters have at least 2 MPPTs
     {
@@ -110,43 +112,43 @@ hybrid_sensors = [
                 "name": "MPPT1 Voltage",
                 "unique": "sungrow_modbus_mppt1_voltage",
                 "category": Category.PV_INFORMATION,
-                "register": ['5011'],
+                "register": ["5011"],
                 "multiplier": 0.1,
                 "device_class": SensorDeviceClass.VOLTAGE,
                 "unit_of_measurement": UnitOfElectricPotential.VOLT,
-                "state_class": SensorStateClass.MEASUREMENT
+                "state_class": SensorStateClass.MEASUREMENT,
             },
             {
                 "name": "MPPT1 Current",
                 "unique": "sungrow_modbus_mppt1_current",
                 "category": Category.PV_INFORMATION,
-                "register": ['5012'],
+                "register": ["5012"],
                 "multiplier": 0.1,
                 "device_class": SensorDeviceClass.CURRENT,
                 "unit_of_measurement": UnitOfElectricCurrent.AMPERE,
-                "state_class": SensorStateClass.MEASUREMENT
+                "state_class": SensorStateClass.MEASUREMENT,
             },
             {
                 "name": "MPPT2 Voltage",
                 "unique": "sungrow_modbus_mppt2_voltage",
                 "category": Category.PV_INFORMATION,
-                "register": ['5013'],
+                "register": ["5013"],
                 "multiplier": 0.1,
                 "device_class": SensorDeviceClass.VOLTAGE,
                 "unit_of_measurement": UnitOfElectricPotential.VOLT,
-                "state_class": SensorStateClass.MEASUREMENT
+                "state_class": SensorStateClass.MEASUREMENT,
             },
             {
                 "name": "MPPT2 Current",
                 "unique": "sungrow_modbus_mppt2_current",
                 "category": Category.PV_INFORMATION,
-                "register": ['5014'],
+                "register": ["5014"],
                 "multiplier": 0.1,
                 "device_class": SensorDeviceClass.CURRENT,
                 "unit_of_measurement": UnitOfElectricCurrent.AMPERE,
-                "state_class": SensorStateClass.MEASUREMENT
+                "state_class": SensorStateClass.MEASUREMENT,
             },
-        ]
+        ],
     },
     # MPPT3 - Only for larger inverters (15kW+ T-series, 25kW+, or 30kW+ commercial)
     {
@@ -158,23 +160,23 @@ hybrid_sensors = [
                 "name": "MPPT3 Voltage",
                 "unique": "sungrow_modbus_mppt3_voltage",
                 "category": Category.PV_INFORMATION,
-                "register": ['5015'],
+                "register": ["5015"],
                 "multiplier": 0.1,
                 "device_class": SensorDeviceClass.VOLTAGE,
                 "unit_of_measurement": UnitOfElectricPotential.VOLT,
-                "state_class": SensorStateClass.MEASUREMENT
+                "state_class": SensorStateClass.MEASUREMENT,
             },
             {
                 "name": "MPPT3 Current",
                 "unique": "sungrow_modbus_mppt3_current",
                 "category": Category.PV_INFORMATION,
-                "register": ['5016'],
+                "register": ["5016"],
                 "multiplier": 0.1,
                 "device_class": SensorDeviceClass.CURRENT,
                 "unit_of_measurement": UnitOfElectricCurrent.AMPERE,
-                "state_class": SensorStateClass.MEASUREMENT
+                "state_class": SensorStateClass.MEASUREMENT,
             },
-        ]
+        ],
     },
     # Total DC Power - All PV inverters
     {
@@ -186,15 +188,14 @@ hybrid_sensors = [
                 "name": "Total DC Power",
                 "unique": "sungrow_modbus_total_dc_power",
                 "category": Category.PV_INFORMATION,
-                "register": ['5017', '5018'],
+                "register": ["5017", "5018"],
                 "multiplier": 1,
                 "device_class": SensorDeviceClass.POWER,
                 "unit_of_measurement": UnitOfPower.WATT,
-                "state_class": SensorStateClass.MEASUREMENT
+                "state_class": SensorStateClass.MEASUREMENT,
             },
-        ]
+        ],
     },
-
     # ==================== AC OUTPUT (Input Registers 5018-5035) ====================
     # Phase A - All inverters
     {
@@ -205,13 +206,13 @@ hybrid_sensors = [
                 "name": "Phase A Voltage",
                 "unique": "sungrow_modbus_phase_a_voltage",
                 "category": Category.AC_INFORMATION,
-                "register": ['5018'],
+                "register": ["5018"],
                 "multiplier": 0.1,
                 "device_class": SensorDeviceClass.VOLTAGE,
                 "unit_of_measurement": UnitOfElectricPotential.VOLT,
-                "state_class": SensorStateClass.MEASUREMENT
+                "state_class": SensorStateClass.MEASUREMENT,
             },
-        ]
+        ],
     },
     # Phase B and C - Only three-phase inverters
     {
@@ -223,23 +224,23 @@ hybrid_sensors = [
                 "name": "Phase B Voltage",
                 "unique": "sungrow_modbus_phase_b_voltage",
                 "category": Category.AC_INFORMATION,
-                "register": ['5019'],
+                "register": ["5019"],
                 "multiplier": 0.1,
                 "device_class": SensorDeviceClass.VOLTAGE,
                 "unit_of_measurement": UnitOfElectricPotential.VOLT,
-                "state_class": SensorStateClass.MEASUREMENT
+                "state_class": SensorStateClass.MEASUREMENT,
             },
             {
                 "name": "Phase C Voltage",
                 "unique": "sungrow_modbus_phase_c_voltage",
                 "category": Category.AC_INFORMATION,
-                "register": ['5020'],
+                "register": ["5020"],
                 "multiplier": 0.1,
                 "device_class": SensorDeviceClass.VOLTAGE,
                 "unit_of_measurement": UnitOfElectricPotential.VOLT,
-                "state_class": SensorStateClass.MEASUREMENT
+                "state_class": SensorStateClass.MEASUREMENT,
             },
-        ]
+        ],
     },
     {
         "register_start": 5032,
@@ -249,27 +250,26 @@ hybrid_sensors = [
                 "name": "Reactive Power",
                 "unique": "sungrow_modbus_reactive_power",
                 "category": Category.AC_INFORMATION,
-                "register": ['5032', '5033'],
+                "register": ["5032", "5033"],
                 "multiplier": 1,
                 "device_class": SensorDeviceClass.REACTIVE_POWER,
                 "unit_of_measurement": "var",
                 "state_class": SensorStateClass.MEASUREMENT,
-                "signed": True
+                "signed": True,
             },
             {
                 "name": "Power Factor",
                 "unique": "sungrow_modbus_power_factor",
                 "category": Category.AC_INFORMATION,
-                "register": ['5034'],
+                "register": ["5034"],
                 "multiplier": 0.001,
                 "device_class": SensorDeviceClass.POWER_FACTOR,
                 "unit_of_measurement": PERCENTAGE,
                 "state_class": SensorStateClass.MEASUREMENT,
-                "signed": True
+                "signed": True,
             },
-        ]
+        ],
     },
-
     # ==================== FAULT CODES (Input Registers 5045-5049) ====================
     {
         "register_start": 5045,
@@ -279,45 +279,44 @@ hybrid_sensors = [
                 "name": "Fault Code 1",
                 "unique": "sungrow_modbus_fault_code_1",
                 "category": Category.STATUS_INFORMATION,
-                "register": ['5045'],
+                "register": ["5045"],
                 "multiplier": 1,
-                "value_mapping": "alarm"
+                "value_mapping": "alarm",
             },
             {
                 "name": "Fault Code 2",
                 "unique": "sungrow_modbus_fault_code_2",
                 "category": Category.STATUS_INFORMATION,
-                "register": ['5046'],
+                "register": ["5046"],
                 "multiplier": 1,
-                "value_mapping": "alarm"
+                "value_mapping": "alarm",
             },
             {
                 "name": "Fault Code 3",
                 "unique": "sungrow_modbus_fault_code_3",
                 "category": Category.STATUS_INFORMATION,
-                "register": ['5047'],
+                "register": ["5047"],
                 "multiplier": 1,
-                "value_mapping": "alarm"
+                "value_mapping": "alarm",
             },
             {
                 "name": "Fault Code 4",
                 "unique": "sungrow_modbus_fault_code_4",
                 "category": Category.STATUS_INFORMATION,
-                "register": ['5048'],
+                "register": ["5048"],
                 "multiplier": 1,
-                "value_mapping": "alarm"
+                "value_mapping": "alarm",
             },
             {
                 "name": "Fault Code 5",
                 "unique": "sungrow_modbus_fault_code_5",
                 "category": Category.STATUS_INFORMATION,
-                "register": ['5049'],
+                "register": ["5049"],
                 "multiplier": 1,
-                "value_mapping": "alarm"
+                "value_mapping": "alarm",
             },
-        ]
+        ],
     },
-
     # ==================== GRID FREQUENCY (Input Register 5241) ====================
     {
         "register_start": 5241,
@@ -327,15 +326,14 @@ hybrid_sensors = [
                 "name": "Grid Frequency",
                 "unique": "sungrow_modbus_grid_frequency",
                 "category": Category.GRID_CODE_INFORMATION,
-                "register": ['5241'],
+                "register": ["5241"],
                 "multiplier": 0.01,
                 "device_class": SensorDeviceClass.FREQUENCY,
                 "unit_of_measurement": UnitOfFrequency.HERTZ,
-                "state_class": SensorStateClass.MEASUREMENT
+                "state_class": SensorStateClass.MEASUREMENT,
             },
-        ]
+        ],
     },
-
     # ==================== METER DATA (Input Registers 5600-5608) ====================
     {
         "register_start": 5600,
@@ -345,49 +343,48 @@ hybrid_sensors = [
                 "name": "Meter Active Power",
                 "unique": "sungrow_modbus_meter_active_power",
                 "category": Category.METER_INFORMATION,
-                "register": ['5600', '5601'],
+                "register": ["5600", "5601"],
                 "multiplier": 1,
                 "device_class": SensorDeviceClass.POWER,
                 "unit_of_measurement": UnitOfPower.WATT,
                 "state_class": SensorStateClass.MEASUREMENT,
-                "signed": True
+                "signed": True,
             },
             {
                 "name": "Meter Phase A Active Power",
                 "unique": "sungrow_modbus_meter_phase_a_active_power",
                 "category": Category.METER_INFORMATION,
-                "register": ['5602', '5603'],
+                "register": ["5602", "5603"],
                 "multiplier": 1,
                 "device_class": SensorDeviceClass.POWER,
                 "unit_of_measurement": UnitOfPower.WATT,
                 "state_class": SensorStateClass.MEASUREMENT,
-                "signed": True
+                "signed": True,
             },
             {
                 "name": "Meter Phase B Active Power",
                 "unique": "sungrow_modbus_meter_phase_b_active_power",
                 "category": Category.METER_INFORMATION,
-                "register": ['5604', '5605'],
+                "register": ["5604", "5605"],
                 "multiplier": 1,
                 "device_class": SensorDeviceClass.POWER,
                 "unit_of_measurement": UnitOfPower.WATT,
                 "state_class": SensorStateClass.MEASUREMENT,
-                "signed": True
+                "signed": True,
             },
             {
                 "name": "Meter Phase C Active Power",
                 "unique": "sungrow_modbus_meter_phase_c_active_power",
                 "category": Category.METER_INFORMATION,
-                "register": ['5606', '5607'],
+                "register": ["5606", "5607"],
                 "multiplier": 1,
                 "device_class": SensorDeviceClass.POWER,
                 "unit_of_measurement": UnitOfPower.WATT,
                 "state_class": SensorStateClass.MEASUREMENT,
-                "signed": True
+                "signed": True,
             },
-        ]
+        ],
     },
-
     # ==================== BMS DATA (Input Registers 5627-5640) ====================
     {
         "register_start": 5627,
@@ -398,13 +395,13 @@ hybrid_sensors = [
                 "name": "BDC Rated Power",
                 "unique": "sungrow_modbus_bdc_rated_power",
                 "category": Category.BATTERY_INFORMATION,
-                "register": ['5627'],
+                "register": ["5627"],
                 "multiplier": 100,
                 "device_class": SensorDeviceClass.POWER,
                 "unit_of_measurement": UnitOfPower.WATT,
-                "state_class": SensorStateClass.MEASUREMENT
+                "state_class": SensorStateClass.MEASUREMENT,
             },
-        ]
+        ],
     },
     {
         "register_start": 5634,
@@ -415,23 +412,23 @@ hybrid_sensors = [
                 "name": "BMS Max Charging Current",
                 "unique": "sungrow_modbus_bms_max_charging_current",
                 "category": Category.BATTERY_INFORMATION,
-                "register": ['5634'],
+                "register": ["5634"],
                 "multiplier": 1,
                 "device_class": SensorDeviceClass.CURRENT,
                 "unit_of_measurement": UnitOfElectricCurrent.AMPERE,
-                "state_class": SensorStateClass.MEASUREMENT
+                "state_class": SensorStateClass.MEASUREMENT,
             },
             {
                 "name": "BMS Max Discharging Current",
                 "unique": "sungrow_modbus_bms_max_discharging_current",
                 "category": Category.BATTERY_INFORMATION,
-                "register": ['5635'],
+                "register": ["5635"],
                 "multiplier": 1,
                 "device_class": SensorDeviceClass.CURRENT,
                 "unit_of_measurement": UnitOfElectricCurrent.AMPERE,
-                "state_class": SensorStateClass.MEASUREMENT
+                "state_class": SensorStateClass.MEASUREMENT,
             },
-        ]
+        ],
     },
     {
         "register_start": 5638,
@@ -442,15 +439,14 @@ hybrid_sensors = [
                 "name": "Battery Capacity",
                 "unique": "sungrow_modbus_battery_capacity",
                 "category": Category.BATTERY_INFORMATION,
-                "register": ['5638'],
+                "register": ["5638"],
                 "multiplier": 0.01,
                 "device_class": SensorDeviceClass.ENERGY_STORAGE,
                 "unit_of_measurement": UnitOfEnergy.KILO_WATT_HOUR,
-                "state_class": SensorStateClass.MEASUREMENT
+                "state_class": SensorStateClass.MEASUREMENT,
             },
-        ]
+        ],
     },
-
     # ==================== BACKUP POWER (Input Registers 5722-5727) ====================
     {
         "register_start": 5722,
@@ -460,49 +456,48 @@ hybrid_sensors = [
                 "name": "Backup Phase A Power",
                 "unique": "sungrow_modbus_backup_phase_a_power",
                 "category": Category.LOAD_INFORMATION,
-                "register": ['5722'],
+                "register": ["5722"],
                 "multiplier": 1,
                 "device_class": SensorDeviceClass.POWER,
                 "unit_of_measurement": UnitOfPower.WATT,
                 "state_class": SensorStateClass.MEASUREMENT,
-                "signed": True
+                "signed": True,
             },
             {
                 "name": "Backup Phase B Power",
                 "unique": "sungrow_modbus_backup_phase_b_power",
                 "category": Category.LOAD_INFORMATION,
-                "register": ['5723'],
+                "register": ["5723"],
                 "multiplier": 1,
                 "device_class": SensorDeviceClass.POWER,
                 "unit_of_measurement": UnitOfPower.WATT,
                 "state_class": SensorStateClass.MEASUREMENT,
-                "signed": True
+                "signed": True,
             },
             {
                 "name": "Backup Phase C Power",
                 "unique": "sungrow_modbus_backup_phase_c_power",
                 "category": Category.LOAD_INFORMATION,
-                "register": ['5724'],
+                "register": ["5724"],
                 "multiplier": 1,
                 "device_class": SensorDeviceClass.POWER,
                 "unit_of_measurement": UnitOfPower.WATT,
                 "state_class": SensorStateClass.MEASUREMENT,
-                "signed": True
+                "signed": True,
             },
             {
                 "name": "Total Backup Power",
                 "unique": "sungrow_modbus_total_backup_power",
                 "category": Category.LOAD_INFORMATION,
-                "register": ['5725', '5726'],
+                "register": ["5725", "5726"],
                 "multiplier": 1,
                 "device_class": SensorDeviceClass.POWER,
                 "unit_of_measurement": UnitOfPower.WATT,
                 "state_class": SensorStateClass.MEASUREMENT,
-                "signed": True
+                "signed": True,
             },
-        ]
+        ],
     },
-
     # ==================== METER VOLTAGES AND CURRENTS (Input Registers 5740-5746) ====================
     {
         "register_start": 5740,
@@ -512,68 +507,67 @@ hybrid_sensors = [
                 "name": "Meter Phase A Voltage",
                 "unique": "sungrow_modbus_meter_phase_a_voltage",
                 "category": Category.METER_INFORMATION,
-                "register": ['5740'],
+                "register": ["5740"],
                 "multiplier": 0.1,
                 "device_class": SensorDeviceClass.VOLTAGE,
                 "unit_of_measurement": UnitOfElectricPotential.VOLT,
                 "state_class": SensorStateClass.MEASUREMENT,
-                "signed": True
+                "signed": True,
             },
             {
                 "name": "Meter Phase B Voltage",
                 "unique": "sungrow_modbus_meter_phase_b_voltage",
                 "category": Category.METER_INFORMATION,
-                "register": ['5741'],
+                "register": ["5741"],
                 "multiplier": 0.1,
                 "device_class": SensorDeviceClass.VOLTAGE,
                 "unit_of_measurement": UnitOfElectricPotential.VOLT,
                 "state_class": SensorStateClass.MEASUREMENT,
-                "signed": True
+                "signed": True,
             },
             {
                 "name": "Meter Phase C Voltage",
                 "unique": "sungrow_modbus_meter_phase_c_voltage",
                 "category": Category.METER_INFORMATION,
-                "register": ['5742'],
+                "register": ["5742"],
                 "multiplier": 0.1,
                 "device_class": SensorDeviceClass.VOLTAGE,
                 "unit_of_measurement": UnitOfElectricPotential.VOLT,
                 "state_class": SensorStateClass.MEASUREMENT,
-                "signed": True
+                "signed": True,
             },
             {
                 "name": "Meter Phase A Current",
                 "unique": "sungrow_modbus_meter_phase_a_current",
                 "category": Category.METER_INFORMATION,
-                "register": ['5743'],
+                "register": ["5743"],
                 "multiplier": 0.01,
                 "device_class": SensorDeviceClass.CURRENT,
                 "unit_of_measurement": UnitOfElectricCurrent.AMPERE,
-                "state_class": SensorStateClass.MEASUREMENT
+                "state_class": SensorStateClass.MEASUREMENT,
             },
             {
                 "name": "Meter Phase B Current",
                 "unique": "sungrow_modbus_meter_phase_b_current",
                 "category": Category.METER_INFORMATION,
-                "register": ['5744'],
+                "register": ["5744"],
                 "multiplier": 0.01,
                 "device_class": SensorDeviceClass.CURRENT,
                 "unit_of_measurement": UnitOfElectricCurrent.AMPERE,
-                "state_class": SensorStateClass.MEASUREMENT
+                "state_class": SensorStateClass.MEASUREMENT,
             },
             {
                 "name": "Meter Phase C Current",
                 "unique": "sungrow_modbus_meter_phase_c_current",
                 "category": Category.METER_INFORMATION,
-                "register": ['5745'],
+                "register": ["5745"],
                 "multiplier": 0.01,
                 "device_class": SensorDeviceClass.CURRENT,
                 "unit_of_measurement": UnitOfElectricCurrent.AMPERE,
-                "state_class": SensorStateClass.MEASUREMENT
+                "state_class": SensorStateClass.MEASUREMENT,
             },
-        ]
+        ],
     },
-
     # ==================== SYSTEM STATE (Input Registers 12999-13001) ====================
     {
         "register_start": 12999,
@@ -583,21 +577,20 @@ hybrid_sensors = [
                 "name": "System State",
                 "unique": "sungrow_modbus_system_state",
                 "category": Category.STATUS_INFORMATION,
-                "register": ['12999'],
+                "register": ["12999"],
                 "multiplier": 1,
-                "value_mapping": "system_state"
+                "value_mapping": "system_state",
             },
             {
                 "name": "Running State",
                 "unique": "sungrow_modbus_running_state",
                 "category": Category.STATUS_INFORMATION,
-                "register": ['13000'],
+                "register": ["13000"],
                 "multiplier": 1,
-                "value_mapping": "running_state"
+                "value_mapping": "running_state",
             },
-        ]
+        ],
     },
-
     # ==================== PV ENERGY (Input Registers 13002-13006) ====================
     {
         "register_start": 13002,
@@ -608,35 +601,34 @@ hybrid_sensors = [
                 "name": "Daily PV Energy",
                 "unique": "sungrow_modbus_daily_pv_energy",
                 "category": Category.PV_INFORMATION,
-                "register": ['13002'],
+                "register": ["13002"],
                 "multiplier": 0.1,
                 "device_class": SensorDeviceClass.ENERGY,
                 "unit_of_measurement": UnitOfEnergy.KILO_WATT_HOUR,
-                "state_class": SensorStateClass.TOTAL_INCREASING
+                "state_class": SensorStateClass.TOTAL_INCREASING,
             },
             {
                 "name": "Total PV Energy",
                 "unique": "sungrow_modbus_total_pv_energy",
                 "category": Category.PV_INFORMATION,
-                "register": ['13003', '13004'],
+                "register": ["13003", "13004"],
                 "multiplier": 0.1,
                 "device_class": SensorDeviceClass.ENERGY,
                 "unit_of_measurement": UnitOfEnergy.KILO_WATT_HOUR,
-                "state_class": SensorStateClass.TOTAL
+                "state_class": SensorStateClass.TOTAL,
             },
             {
                 "name": "Total Consumed Energy",
                 "unique": "sungrow_modbus_total_consumed_energy",
                 "category": Category.LOAD_INFORMATION,
-                "register": ['13005', '13006'],
+                "register": ["13005", "13006"],
                 "multiplier": 0.1,
                 "device_class": SensorDeviceClass.ENERGY,
                 "unit_of_measurement": UnitOfEnergy.KILO_WATT_HOUR,
-                "state_class": SensorStateClass.TOTAL
+                "state_class": SensorStateClass.TOTAL,
             },
-        ]
+        ],
     },
-
     # ==================== LOAD AND EXPORT (Input Registers 13007-13019) ====================
     {
         "register_start": 13007,
@@ -646,27 +638,26 @@ hybrid_sensors = [
                 "name": "Load Power",
                 "unique": "sungrow_modbus_load_power",
                 "category": Category.LOAD_INFORMATION,
-                "register": ['13007', '13008'],
+                "register": ["13007", "13008"],
                 "multiplier": 1,
                 "device_class": SensorDeviceClass.POWER,
                 "unit_of_measurement": UnitOfPower.WATT,
                 "state_class": SensorStateClass.MEASUREMENT,
-                "signed": True
+                "signed": True,
             },
             {
                 "name": "Export Power",
                 "unique": "sungrow_modbus_export_power",
                 "category": Category.GRID_CODE_INFORMATION,
-                "register": ['13009', '13010'],
+                "register": ["13009", "13010"],
                 "multiplier": 1,
                 "device_class": SensorDeviceClass.POWER,
                 "unit_of_measurement": UnitOfPower.WATT,
                 "state_class": SensorStateClass.MEASUREMENT,
-                "signed": True
+                "signed": True,
             },
-        ]
+        ],
     },
-
     # ==================== BATTERY CHARGE FROM PV (Input Registers 13011-13019) ====================
     {
         "register_start": 13011,
@@ -677,23 +668,23 @@ hybrid_sensors = [
                 "name": "Daily Battery Charge From PV",
                 "unique": "sungrow_modbus_daily_battery_charge_from_pv",
                 "category": Category.BATTERY_INFORMATION,
-                "register": ['13011'],
+                "register": ["13011"],
                 "multiplier": 0.1,
                 "device_class": SensorDeviceClass.ENERGY,
                 "unit_of_measurement": UnitOfEnergy.KILO_WATT_HOUR,
-                "state_class": SensorStateClass.TOTAL_INCREASING
+                "state_class": SensorStateClass.TOTAL_INCREASING,
             },
             {
                 "name": "Total Battery Charge From PV",
                 "unique": "sungrow_modbus_total_battery_charge_from_pv",
                 "category": Category.BATTERY_INFORMATION,
-                "register": ['13012', '13013'],
+                "register": ["13012", "13013"],
                 "multiplier": 0.1,
                 "device_class": SensorDeviceClass.ENERGY,
                 "unit_of_measurement": UnitOfEnergy.KILO_WATT_HOUR,
-                "state_class": SensorStateClass.TOTAL
+                "state_class": SensorStateClass.TOTAL,
             },
-        ]
+        ],
     },
     {
         "register_start": 13016,
@@ -703,25 +694,24 @@ hybrid_sensors = [
                 "name": "Daily Direct Energy Consumption",
                 "unique": "sungrow_modbus_daily_direct_energy_consumption",
                 "category": Category.LOAD_INFORMATION,
-                "register": ['13016'],
+                "register": ["13016"],
                 "multiplier": 0.1,
                 "device_class": SensorDeviceClass.ENERGY,
                 "unit_of_measurement": UnitOfEnergy.KILO_WATT_HOUR,
-                "state_class": SensorStateClass.TOTAL_INCREASING
+                "state_class": SensorStateClass.TOTAL_INCREASING,
             },
             {
                 "name": "Total Direct Energy Consumption",
                 "unique": "sungrow_modbus_total_direct_energy_consumption",
                 "category": Category.LOAD_INFORMATION,
-                "register": ['13017', '13018'],
+                "register": ["13017", "13018"],
                 "multiplier": 0.1,
                 "device_class": SensorDeviceClass.ENERGY,
                 "unit_of_measurement": UnitOfEnergy.KILO_WATT_HOUR,
-                "state_class": SensorStateClass.TOTAL
+                "state_class": SensorStateClass.TOTAL,
             },
-        ]
+        ],
     },
-
     # ==================== BATTERY STATUS (Input Registers 13020-13025) ====================
     {
         "register_start": 13020,
@@ -732,67 +722,66 @@ hybrid_sensors = [
                 "name": "Battery Voltage",
                 "unique": "sungrow_modbus_battery_voltage",
                 "category": Category.BATTERY_INFORMATION,
-                "register": ['13020'],
+                "register": ["13020"],
                 "multiplier": 0.1,
                 "device_class": SensorDeviceClass.VOLTAGE,
                 "unit_of_measurement": UnitOfElectricPotential.VOLT,
-                "state_class": SensorStateClass.MEASUREMENT
+                "state_class": SensorStateClass.MEASUREMENT,
             },
             {
                 "name": "Battery Current",
                 "unique": "sungrow_modbus_battery_current",
                 "category": Category.BATTERY_INFORMATION,
-                "register": ['13021'],
+                "register": ["13021"],
                 "multiplier": 0.1,
                 "device_class": SensorDeviceClass.CURRENT,
                 "unit_of_measurement": UnitOfElectricCurrent.AMPERE,
                 "state_class": SensorStateClass.MEASUREMENT,
-                "signed": True
+                "signed": True,
             },
             {
                 "name": "Battery Power",
                 "unique": "sungrow_modbus_battery_power",
                 "category": Category.BATTERY_INFORMATION,
-                "register": ['13022'],
+                "register": ["13022"],
                 "multiplier": 1,
                 "device_class": SensorDeviceClass.POWER,
                 "unit_of_measurement": UnitOfPower.WATT,
                 "state_class": SensorStateClass.MEASUREMENT,
-                "signed": True
+                "signed": True,
             },
             {
                 "name": "Battery Level",
                 "unique": "sungrow_modbus_battery_level",
                 "category": Category.BATTERY_INFORMATION,
-                "register": ['13023'],
+                "register": ["13023"],
                 "multiplier": 0.1,
                 "device_class": SensorDeviceClass.BATTERY,
                 "unit_of_measurement": PERCENTAGE,
-                "state_class": SensorStateClass.MEASUREMENT
+                "state_class": SensorStateClass.MEASUREMENT,
             },
             {
                 "name": "Battery State of Health",
                 "unique": "sungrow_modbus_battery_soh",
                 "category": Category.BATTERY_INFORMATION,
-                "register": ['13024'],
+                "register": ["13024"],
                 "multiplier": 0.1,
                 "unit_of_measurement": PERCENTAGE,
-                "state_class": SensorStateClass.MEASUREMENT
+                "state_class": SensorStateClass.MEASUREMENT,
             },
             {
                 "name": "Battery Temperature",
                 "unique": "sungrow_modbus_battery_temperature",
                 "category": Category.BATTERY_INFORMATION,
-                "register": ['13025'],
+                "register": ["13025"],
                 "multiplier": 0.1,
                 "device_class": SensorDeviceClass.TEMPERATURE,
                 "unit_of_measurement": UnitOfTemperature.CELSIUS,
                 "state_class": SensorStateClass.MEASUREMENT,
-                "signed": True
+                "signed": True,
             },
-        ]
+        ],
     },
-
     # ==================== BATTERY DISCHARGE (Input Registers 13026-13029) ====================
     {
         "register_start": 13026,
@@ -803,25 +792,24 @@ hybrid_sensors = [
                 "name": "Daily Battery Discharge",
                 "unique": "sungrow_modbus_daily_battery_discharge",
                 "category": Category.BATTERY_INFORMATION,
-                "register": ['13026'],
+                "register": ["13026"],
                 "multiplier": 0.1,
                 "device_class": SensorDeviceClass.ENERGY,
                 "unit_of_measurement": UnitOfEnergy.KILO_WATT_HOUR,
-                "state_class": SensorStateClass.TOTAL_INCREASING
+                "state_class": SensorStateClass.TOTAL_INCREASING,
             },
             {
                 "name": "Total Battery Discharge",
                 "unique": "sungrow_modbus_total_battery_discharge",
                 "category": Category.BATTERY_INFORMATION,
-                "register": ['13027', '13028'],
+                "register": ["13027", "13028"],
                 "multiplier": 0.1,
                 "device_class": SensorDeviceClass.ENERGY,
                 "unit_of_measurement": UnitOfEnergy.KILO_WATT_HOUR,
-                "state_class": SensorStateClass.TOTAL
+                "state_class": SensorStateClass.TOTAL,
             },
-        ]
+        ],
     },
-
     # ==================== AC CURRENTS AND POWER (Input Registers 13030-13038) ====================
     # Phase A Current - All inverters
     {
@@ -832,14 +820,14 @@ hybrid_sensors = [
                 "name": "Phase A Current",
                 "unique": "sungrow_modbus_phase_a_current",
                 "category": Category.AC_INFORMATION,
-                "register": ['13030'],
+                "register": ["13030"],
                 "multiplier": 0.1,
                 "device_class": SensorDeviceClass.CURRENT,
                 "unit_of_measurement": UnitOfElectricCurrent.AMPERE,
                 "state_class": SensorStateClass.MEASUREMENT,
-                "signed": True
+                "signed": True,
             },
-        ]
+        ],
     },
     # Phase B and C Current - Only three-phase inverters
     {
@@ -851,25 +839,25 @@ hybrid_sensors = [
                 "name": "Phase B Current",
                 "unique": "sungrow_modbus_phase_b_current",
                 "category": Category.AC_INFORMATION,
-                "register": ['13031'],
+                "register": ["13031"],
                 "multiplier": 0.1,
                 "device_class": SensorDeviceClass.CURRENT,
                 "unit_of_measurement": UnitOfElectricCurrent.AMPERE,
                 "state_class": SensorStateClass.MEASUREMENT,
-                "signed": True
+                "signed": True,
             },
             {
                 "name": "Phase C Current",
                 "unique": "sungrow_modbus_phase_c_current",
                 "category": Category.AC_INFORMATION,
-                "register": ['13032'],
+                "register": ["13032"],
                 "multiplier": 0.1,
                 "device_class": SensorDeviceClass.CURRENT,
                 "unit_of_measurement": UnitOfElectricCurrent.AMPERE,
                 "state_class": SensorStateClass.MEASUREMENT,
-                "signed": True
+                "signed": True,
             },
-        ]
+        ],
     },
     # Total Active Power - All inverters
     {
@@ -880,16 +868,15 @@ hybrid_sensors = [
                 "name": "Total Active Power",
                 "unique": "sungrow_modbus_total_active_power",
                 "category": Category.AC_INFORMATION,
-                "register": ['13033', '13034'],
+                "register": ["13033", "13034"],
                 "multiplier": 1,
                 "device_class": SensorDeviceClass.POWER,
                 "unit_of_measurement": UnitOfPower.WATT,
                 "state_class": SensorStateClass.MEASUREMENT,
-                "signed": True
+                "signed": True,
             },
-        ]
+        ],
     },
-
     # ==================== GRID IMPORT/EXPORT ENERGY (Input Registers 13035-13047) ====================
     {
         "register_start": 13035,
@@ -899,23 +886,23 @@ hybrid_sensors = [
                 "name": "Daily Imported Energy",
                 "unique": "sungrow_modbus_daily_imported_energy",
                 "category": Category.GRID_CODE_INFORMATION,
-                "register": ['13035'],
+                "register": ["13035"],
                 "multiplier": 0.1,
                 "device_class": SensorDeviceClass.ENERGY,
                 "unit_of_measurement": UnitOfEnergy.KILO_WATT_HOUR,
-                "state_class": SensorStateClass.TOTAL_INCREASING
+                "state_class": SensorStateClass.TOTAL_INCREASING,
             },
             {
                 "name": "Total Imported Energy",
                 "unique": "sungrow_modbus_total_imported_energy",
                 "category": Category.GRID_CODE_INFORMATION,
-                "register": ['13036', '13037'],
+                "register": ["13036", "13037"],
                 "multiplier": 0.1,
                 "device_class": SensorDeviceClass.ENERGY,
                 "unit_of_measurement": UnitOfEnergy.KILO_WATT_HOUR,
-                "state_class": SensorStateClass.TOTAL
+                "state_class": SensorStateClass.TOTAL,
             },
-        ]
+        ],
     },
     {
         "register_start": 13039,
@@ -926,23 +913,23 @@ hybrid_sensors = [
                 "name": "Daily Battery Charge",
                 "unique": "sungrow_modbus_daily_battery_charge",
                 "category": Category.BATTERY_INFORMATION,
-                "register": ['13039'],
+                "register": ["13039"],
                 "multiplier": 0.1,
                 "device_class": SensorDeviceClass.ENERGY,
                 "unit_of_measurement": UnitOfEnergy.KILO_WATT_HOUR,
-                "state_class": SensorStateClass.TOTAL_INCREASING
+                "state_class": SensorStateClass.TOTAL_INCREASING,
             },
             {
                 "name": "Total Battery Charge",
                 "unique": "sungrow_modbus_total_battery_charge",
                 "category": Category.BATTERY_INFORMATION,
-                "register": ['13040', '13041'],
+                "register": ["13040", "13041"],
                 "multiplier": 0.1,
                 "device_class": SensorDeviceClass.ENERGY,
                 "unit_of_measurement": UnitOfEnergy.KILO_WATT_HOUR,
-                "state_class": SensorStateClass.TOTAL
+                "state_class": SensorStateClass.TOTAL,
             },
-        ]
+        ],
     },
     {
         "register_start": 13044,
@@ -952,25 +939,24 @@ hybrid_sensors = [
                 "name": "Daily Exported Energy",
                 "unique": "sungrow_modbus_daily_exported_energy",
                 "category": Category.GRID_CODE_INFORMATION,
-                "register": ['13044'],
+                "register": ["13044"],
                 "multiplier": 0.1,
                 "device_class": SensorDeviceClass.ENERGY,
                 "unit_of_measurement": UnitOfEnergy.KILO_WATT_HOUR,
-                "state_class": SensorStateClass.TOTAL_INCREASING
+                "state_class": SensorStateClass.TOTAL_INCREASING,
             },
             {
                 "name": "Total Exported Energy",
                 "unique": "sungrow_modbus_total_exported_energy",
                 "category": Category.GRID_CODE_INFORMATION,
-                "register": ['13045', '13046'],
+                "register": ["13045", "13046"],
                 "multiplier": 0.1,
                 "device_class": SensorDeviceClass.ENERGY,
                 "unit_of_measurement": UnitOfEnergy.KILO_WATT_HOUR,
-                "state_class": SensorStateClass.TOTAL
+                "state_class": SensorStateClass.TOTAL,
             },
-        ]
+        ],
     },
-
     # ==================== EMS CONTROL (Holding Registers 13049-13051) ====================
     {
         "register_start": 13049,
@@ -981,32 +967,32 @@ hybrid_sensors = [
                 "name": "EMS Mode Selection",
                 "unique": "sungrow_modbus_ems_mode_selection",
                 "category": Category.FUNCTIONAL_INFORMATION,
-                "register": ['13049'],
+                "register": ["13049"],
                 "multiplier": 1,
                 "state_class": SensorStateClass.MEASUREMENT,
-                "editable": True
+                "editable": True,
             },
             {
                 "name": "Battery Forced Charge Discharge Cmd",
                 "unique": "sungrow_modbus_battery_forced_charge_discharge_cmd",
                 "category": Category.FUNCTIONAL_INFORMATION,
-                "register": ['13050'],
+                "register": ["13050"],
                 "multiplier": 1,
                 "state_class": SensorStateClass.MEASUREMENT,
-                "editable": True
+                "editable": True,
             },
             {
                 "name": "Battery Forced Charge Discharge Power",
                 "unique": "sungrow_modbus_battery_forced_charge_discharge_power",
                 "category": Category.FUNCTIONAL_INFORMATION,
-                "register": ['13051'],
+                "register": ["13051"],
                 "multiplier": 1,
                 "device_class": SensorDeviceClass.POWER,
                 "unit_of_measurement": UnitOfPower.WATT,
                 "state_class": SensorStateClass.MEASUREMENT,
-                "editable": True
+                "editable": True,
             },
-        ]
+        ],
     },
     {
         "register_start": 13057,
@@ -1018,27 +1004,26 @@ hybrid_sensors = [
                 "name": "Max SoC",
                 "unique": "sungrow_modbus_max_soc",
                 "category": Category.BATTERY_INFORMATION,
-                "register": ['13057'],
+                "register": ["13057"],
                 "multiplier": 0.1,
                 "device_class": SensorDeviceClass.BATTERY,
                 "unit_of_measurement": PERCENTAGE,
                 "state_class": SensorStateClass.MEASUREMENT,
-                "editable": True
+                "editable": True,
             },
             {
                 "name": "Min SoC",
                 "unique": "sungrow_modbus_min_soc",
                 "category": Category.BATTERY_INFORMATION,
-                "register": ['13058'],
+                "register": ["13058"],
                 "multiplier": 0.1,
                 "device_class": SensorDeviceClass.BATTERY,
                 "unit_of_measurement": PERCENTAGE,
                 "state_class": SensorStateClass.MEASUREMENT,
-                "editable": True
+                "editable": True,
             },
-        ]
+        ],
     },
-
     # ==================== EXPORT LIMITS (Holding Registers 13073-13086) ====================
     {
         "register_start": 13073,
@@ -1049,23 +1034,23 @@ hybrid_sensors = [
                 "name": "Export Power Limit",
                 "unique": "sungrow_modbus_export_power_limit",
                 "category": Category.GRID_CODE_INFORMATION,
-                "register": ['13073'],
+                "register": ["13073"],
                 "multiplier": 1,
                 "device_class": SensorDeviceClass.POWER,
                 "unit_of_measurement": UnitOfPower.WATT,
                 "state_class": SensorStateClass.MEASUREMENT,
-                "editable": True
+                "editable": True,
             },
             {
                 "name": "Backup Mode",
                 "unique": "sungrow_modbus_backup_mode",
                 "category": Category.FUNCTIONAL_INFORMATION,
-                "register": ['13074'],
+                "register": ["13074"],
                 "multiplier": 1,
                 "state_class": SensorStateClass.MEASUREMENT,
-                "editable": True
+                "editable": True,
             },
-        ]
+        ],
     },
     {
         "register_start": 13086,
@@ -1076,12 +1061,12 @@ hybrid_sensors = [
                 "name": "Export Power Limit Mode",
                 "unique": "sungrow_modbus_export_power_limit_mode",
                 "category": Category.GRID_CODE_INFORMATION,
-                "register": ['13086'],
+                "register": ["13086"],
                 "multiplier": 1,
                 "state_class": SensorStateClass.MEASUREMENT,
-                "editable": True
+                "editable": True,
             },
-        ]
+        ],
     },
     {
         "register_start": 13099,
@@ -1093,16 +1078,15 @@ hybrid_sensors = [
                 "name": "Reserved SoC For Backup",
                 "unique": "sungrow_modbus_reserved_soc_for_backup",
                 "category": Category.BATTERY_INFORMATION,
-                "register": ['13099'],
+                "register": ["13099"],
                 "multiplier": 1,
                 "device_class": SensorDeviceClass.BATTERY,
                 "unit_of_measurement": PERCENTAGE,
                 "state_class": SensorStateClass.MEASUREMENT,
-                "editable": True
+                "editable": True,
             },
-        ]
+        ],
     },
-
     # ==================== FIRMWARE VERSIONS (Input Registers 13249-13294) ====================
     {
         "register_start": 13249,
@@ -1112,11 +1096,26 @@ hybrid_sensors = [
                 "name": "Inverter Firmware Version",
                 "unique": "sungrow_modbus_inverter_firmware_version",
                 "category": Category.BASIC_INFORMATION,
-                "register": ['13249', '13250', '13251', '13252', '13253', '13254', '13255', '13256',
-                             '13257', '13258', '13259', '13260', '13261', '13262', '13263'],
-                "multiplier": 0  # String type
+                "register": [
+                    "13249",
+                    "13250",
+                    "13251",
+                    "13252",
+                    "13253",
+                    "13254",
+                    "13255",
+                    "13256",
+                    "13257",
+                    "13258",
+                    "13259",
+                    "13260",
+                    "13261",
+                    "13262",
+                    "13263",
+                ],
+                "multiplier": 0,  # String type
             },
-        ]
+        ],
     },
     {
         "register_start": 13264,
@@ -1126,11 +1125,26 @@ hybrid_sensors = [
                 "name": "Communication Module Firmware Version",
                 "unique": "sungrow_modbus_communication_module_firmware_version",
                 "category": Category.BASIC_INFORMATION,
-                "register": ['13264', '13265', '13266', '13267', '13268', '13269', '13270', '13271',
-                             '13272', '13273', '13274', '13275', '13276', '13277', '13278'],
-                "multiplier": 0  # String type
+                "register": [
+                    "13264",
+                    "13265",
+                    "13266",
+                    "13267",
+                    "13268",
+                    "13269",
+                    "13270",
+                    "13271",
+                    "13272",
+                    "13273",
+                    "13274",
+                    "13275",
+                    "13276",
+                    "13277",
+                    "13278",
+                ],
+                "multiplier": 0,  # String type
             },
-        ]
+        ],
     },
     {
         "register_start": 13279,
@@ -1141,13 +1155,27 @@ hybrid_sensors = [
                 "name": "Battery Firmware Version",
                 "unique": "sungrow_modbus_battery_firmware_version",
                 "category": Category.BATTERY_INFORMATION,
-                "register": ['13279', '13280', '13281', '13282', '13283', '13284', '13285', '13286',
-                             '13287', '13288', '13289', '13290', '13291', '13292', '13293'],
-                "multiplier": 0  # String type
+                "register": [
+                    "13279",
+                    "13280",
+                    "13281",
+                    "13282",
+                    "13283",
+                    "13284",
+                    "13285",
+                    "13286",
+                    "13287",
+                    "13288",
+                    "13289",
+                    "13290",
+                    "13291",
+                    "13292",
+                    "13293",
+                ],
+                "multiplier": 0,  # String type
             },
-        ]
+        ],
     },
-
     # ==================== BATTERY POWER SETTINGS (Holding Registers 33046-33150) ====================
     {
         "register_start": 33046,
@@ -1159,25 +1187,25 @@ hybrid_sensors = [
                 "name": "Battery Max Charge Power",
                 "unique": "sungrow_modbus_battery_max_charge_power",
                 "category": Category.BATTERY_INFORMATION,
-                "register": ['33046'],
+                "register": ["33046"],
                 "multiplier": 10,
                 "device_class": SensorDeviceClass.POWER,
                 "unit_of_measurement": UnitOfPower.WATT,
                 "state_class": SensorStateClass.MEASUREMENT,
-                "editable": True
+                "editable": True,
             },
             {
                 "name": "Battery Max Discharge Power",
                 "unique": "sungrow_modbus_battery_max_discharge_power",
                 "category": Category.BATTERY_INFORMATION,
-                "register": ['33047'],
+                "register": ["33047"],
                 "multiplier": 10,
                 "device_class": SensorDeviceClass.POWER,
                 "unit_of_measurement": UnitOfPower.WATT,
                 "state_class": SensorStateClass.MEASUREMENT,
-                "editable": True
+                "editable": True,
             },
-        ]
+        ],
     },
     {
         "register_start": 33148,
@@ -1189,25 +1217,25 @@ hybrid_sensors = [
                 "name": "Battery Charging Start Power",
                 "unique": "sungrow_modbus_battery_charging_start_power",
                 "category": Category.BATTERY_INFORMATION,
-                "register": ['33148'],
+                "register": ["33148"],
                 "multiplier": 10,
                 "device_class": SensorDeviceClass.POWER,
                 "unit_of_measurement": UnitOfPower.WATT,
                 "state_class": SensorStateClass.MEASUREMENT,
-                "editable": True
+                "editable": True,
             },
             {
                 "name": "Battery Discharging Start Power",
                 "unique": "sungrow_modbus_battery_discharging_start_power",
                 "category": Category.BATTERY_INFORMATION,
-                "register": ['33149'],
+                "register": ["33149"],
                 "multiplier": 10,
                 "device_class": SensorDeviceClass.POWER,
                 "unit_of_measurement": UnitOfPower.WATT,
                 "state_class": SensorStateClass.MEASUREMENT,
-                "editable": True
+                "editable": True,
             },
-        ]
+        ],
     },
 ]
 

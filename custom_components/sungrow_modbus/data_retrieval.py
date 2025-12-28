@@ -1,26 +1,33 @@
 import asyncio
+import contextlib
 import logging
 import time
 from datetime import timedelta
-from typing import Optional
 
 from homeassistant.const import EVENT_HOMEASSISTANT_STARTED
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.event import async_track_time_interval
-from typing_extensions import List
+
 from custom_components.sungrow_modbus.const import (
-    REGISTER, VALUE, DOMAIN, CONTROLLER, SLAVE,
-    BATTERY_CONTROLLER, BATTERY_SENSORS,
+    BATTERY_CONTROLLER,
+    BATTERY_SENSORS,
+    CONTROLLER,
+    DOMAIN,
+    REGISTER,
+    SLAVE,
+    VALUE,
 )
-from custom_components.sungrow_modbus.helpers import cache_save, cache_get
+from custom_components.sungrow_modbus.helpers import cache_get, cache_save
+
 from .data.enums import PollSpeed
 from .modbus_controller import ModbusController
 from .sensors.sungrow_base_sensor import SungrowSensorGroup
 
 _LOGGER = logging.getLogger(__name__)
 
+
 class DataRetrieval:
-    def __init__(self, hass: HomeAssistant, controller: ModbusController, entry_id: Optional[str] = None):
+    def __init__(self, hass: HomeAssistant, controller: ModbusController, entry_id: str | None = None):
         self._spike_counter = {}
         self.controller: ModbusController = controller
         self.hass = hass
@@ -40,7 +47,9 @@ class DataRetrieval:
         if self.hass.is_running:
             self.hass.create_task(self.poll_controller())
         else:
-            self._unsub_listeners.append(self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STARTED, self.poll_controller))
+            self._unsub_listeners.append(
+                self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STARTED, self.poll_controller)
+            )
 
     async def async_stop(self):
         """Cancel all listeners and background tasks."""
@@ -52,10 +61,8 @@ class DataRetrieval:
         # Cancel the write queue task if running
         if self._write_queue_task is not None and not self._write_queue_task.done():
             self._write_queue_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._write_queue_task
-            except asyncio.CancelledError:
-                pass
             self._write_queue_task = None
 
     async def check_connection(self, now=None):
@@ -77,8 +84,15 @@ class DataRetrieval:
 
         try:
             # Emit controller status
-            self.hass.bus.async_fire(DOMAIN,
-                                     {REGISTER: 90005, VALUE: self.controller.enabled, CONTROLLER: self.controller.host, SLAVE: self.controller.slave})
+            self.hass.bus.async_fire(
+                DOMAIN,
+                {
+                    REGISTER: 90005,
+                    VALUE: self.controller.enabled,
+                    CONTROLLER: self.controller.host,
+                    SLAVE: self.controller.slave,
+                },
+            )
 
             if self.controller.connected():
                 if self.first_poll:
@@ -90,9 +104,13 @@ class DataRetrieval:
             while not self.controller.connected():
                 try:
                     if await self.controller.connect():
-                        _LOGGER.info(f"✅({self.controller.host}.{self.controller.slave}) Modbus controller connected successfully.")
+                        _LOGGER.info(
+                            f"✅({self.controller.host}.{self.controller.slave}) Modbus controller connected successfully."
+                        )
                         break
-                    _LOGGER.debug(f"⚠️({self.controller.host}.{self.controller.slave}) Modbus connection failed, retrying in {retry_delay:.2f} seconds...")
+                    _LOGGER.debug(
+                        f"⚠️({self.controller.host}.{self.controller.slave}) Modbus connection failed, retrying in {retry_delay:.2f} seconds..."
+                    )
                 except Exception as e:
                     _LOGGER.error(f"❌({self.controller.host}.{self.controller.slave}) Connection error : {e}")
 
@@ -118,9 +136,27 @@ class DataRetrieval:
 
         # Start periodic polling
         self._unsub_listeners.append(async_track_time_interval(self.hass, self.check_connection, timedelta(minutes=2)))
-        self._unsub_listeners.append(async_track_time_interval(self.hass, self.modbus_update_fast, timedelta(seconds=self.controller.poll_speed.get(PollSpeed.FAST, 5))))
-        self._unsub_listeners.append(async_track_time_interval(self.hass, self.modbus_update_normal, timedelta(seconds=self.controller.poll_speed.get(PollSpeed.NORMAL, 15))))
-        self._unsub_listeners.append(async_track_time_interval(self.hass, self.modbus_update_slow, timedelta(seconds=self.controller.poll_speed.get(PollSpeed.SLOW, 30))))
+        self._unsub_listeners.append(
+            async_track_time_interval(
+                self.hass,
+                self.modbus_update_fast,
+                timedelta(seconds=self.controller.poll_speed.get(PollSpeed.FAST, 5)),
+            )
+        )
+        self._unsub_listeners.append(
+            async_track_time_interval(
+                self.hass,
+                self.modbus_update_normal,
+                timedelta(seconds=self.controller.poll_speed.get(PollSpeed.NORMAL, 15)),
+            )
+        )
+        self._unsub_listeners.append(
+            async_track_time_interval(
+                self.hass,
+                self.modbus_update_slow,
+                timedelta(seconds=self.controller.poll_speed.get(PollSpeed.SLOW, 30)),
+            )
+        )
 
         # Track the write queue task so it can be cancelled on unload
         self._write_queue_task = self.hass.async_create_task(self.controller.process_write_queue())
@@ -138,7 +174,7 @@ class DataRetrieval:
         await self.modbus_update_normal()
         await self.modbus_update_slow()
 
-    async def modbus_update_fast(self, now = None):
+    async def modbus_update_fast(self, now=None):
         """Updates sensor groups with fast poll speed.
 
         This method retrieves data for all sensor groups with a fast poll speed
@@ -150,10 +186,20 @@ class DataRetrieval:
         Returns:
             None
         """
-        await self.get_modbus_updates([g for g in self.controller.sensor_groups if g.poll_speed == PollSpeed.FAST], PollSpeed.FAST)
-        self.hass.bus.async_fire(DOMAIN, {REGISTER: 90006, VALUE: self.controller.last_modbus_success, CONTROLLER: self.controller.host, SLAVE: self.controller.slave})
+        await self.get_modbus_updates(
+            [g for g in self.controller.sensor_groups if g.poll_speed == PollSpeed.FAST], PollSpeed.FAST
+        )
+        self.hass.bus.async_fire(
+            DOMAIN,
+            {
+                REGISTER: 90006,
+                VALUE: self.controller.last_modbus_success,
+                CONTROLLER: self.controller.host,
+                SLAVE: self.controller.slave,
+            },
+        )
 
-    async def modbus_update_slow(self, now = None):
+    async def modbus_update_slow(self, now=None):
         """Updates sensor groups with slow poll speed.
 
         This method retrieves data for all sensor groups with a slow poll speed.
@@ -165,12 +211,14 @@ class DataRetrieval:
         Returns:
             None
         """
-        await self.get_modbus_updates([g for g in self.controller.sensor_groups if g.poll_speed == PollSpeed.SLOW], PollSpeed.SLOW)
+        await self.get_modbus_updates(
+            [g for g in self.controller.sensor_groups if g.poll_speed == PollSpeed.SLOW], PollSpeed.SLOW
+        )
 
         # Poll battery stacks if enabled
         await self.poll_battery_stacks()
 
-    async def modbus_update_normal(self, now = None):
+    async def modbus_update_normal(self, now=None):
         """Updates sensor groups with normal poll speed.
 
         This method retrieves data for all sensor groups with a normal poll speed
@@ -182,9 +230,12 @@ class DataRetrieval:
         Returns:
             None
         """
-        await self.get_modbus_updates([g for g in self.controller.sensor_groups if g.poll_speed in (PollSpeed.NORMAL, PollSpeed.ONCE)], PollSpeed.NORMAL)
+        await self.get_modbus_updates(
+            [g for g in self.controller.sensor_groups if g.poll_speed in (PollSpeed.NORMAL, PollSpeed.ONCE)],
+            PollSpeed.NORMAL,
+        )
 
-    async def get_modbus_updates(self, groups: List[SungrowSensorGroup], speed: PollSpeed):
+    async def get_modbus_updates(self, groups: list[SungrowSensorGroup], speed: PollSpeed):
         """Read registers from the Modbus controller, ensuring no concurrent runs.
 
         This method reads register values for the specified sensor groups and
@@ -204,7 +255,9 @@ class DataRetrieval:
         group_hash = frozenset({group.start_register for group in groups})
 
         if group_hash in self.poll_updating[speed]:
-            _LOGGER.debug(f"⚠️({self.controller.host}.{self.controller.slave}) Skipping {speed.name} update: A previous instance is still running")
+            _LOGGER.debug(
+                f"⚠️({self.controller.host}.{self.controller.slave}) Skipping {speed.name} update: A previous instance is still running"
+            )
             return
 
         self.poll_updating[speed][group_hash] = True
@@ -221,7 +274,9 @@ class DataRetrieval:
                     total_registrars += count
                     total_groups += 1
 
-                    _LOGGER.debug(f"Group {start_register} starting for ({self.controller.host}.{self.controller.slave})")
+                    _LOGGER.debug(
+                        f"Group {start_register} starting for ({self.controller.host}.{self.controller.slave})"
+                    )
 
                     # Use holding registers if explicitly marked or if register >= 40000
                     use_holding = sensor_group.is_holding or start_register >= 40000
@@ -232,7 +287,9 @@ class DataRetrieval:
                     )
 
                     if values is None:
-                        _LOGGER.debug(f"⚠️ Received None for register {start_register} - {start_register + count - 1}, fro ({self.controller.host}.{self.controller.slave}), skipping.")
+                        _LOGGER.debug(
+                            f"⚠️ Received None for register {start_register} - {start_register + count - 1}, fro ({self.controller.host}.{self.controller.slave}), skipping."
+                        )
                         continue
                     if len(values) != count:
                         _LOGGER.debug(
@@ -246,7 +303,15 @@ class DataRetrieval:
                         _LOGGER.debug(f"block {start_register}, register {reg} has value {value}")
                         corrected_value = self.spike_filtering(reg, value)
                         cache_save(self.hass, reg, corrected_value, self.controller.controller_key)
-                        self.hass.bus.async_fire(DOMAIN, {REGISTER: reg, VALUE: corrected_value, CONTROLLER: self.controller.host, SLAVE: self.controller.slave})
+                        self.hass.bus.async_fire(
+                            DOMAIN,
+                            {
+                                REGISTER: reg,
+                                VALUE: corrected_value,
+                                CONTROLLER: self.controller.host,
+                                SLAVE: self.controller.slave,
+                            },
+                        )
 
                     if sensor_group.poll_speed == PollSpeed.ONCE:
                         marked_for_removal.append(sensor_group)
@@ -254,8 +319,9 @@ class DataRetrieval:
                     self.controller._data_received = True
 
                 # Remove "ONCE" poll speed groups
-                self.controller._sensor_groups = [g for g in self.controller.sensor_groups if
-                                                  g not in marked_for_removal]
+                self.controller._sensor_groups = [
+                    g for g in self.controller.sensor_groups if g not in marked_for_removal
+                ]
 
                 total_duration = time.perf_counter() - total_start_time
                 _LOGGER.debug(f"✅ {speed.name} update completed in {total_duration:.4f}s")
@@ -337,8 +403,4 @@ class DataRetrieval:
                         data.get("temperature", 0),
                     )
             except Exception as e:
-                _LOGGER.warning(
-                    "Failed to poll battery stack %d: %s",
-                    battery_controller.stack_index,
-                    e
-                )
+                _LOGGER.warning("Failed to poll battery stack %d: %s", battery_controller.stack_index, e)

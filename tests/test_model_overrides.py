@@ -4,11 +4,11 @@ import unittest
 from copy import deepcopy
 
 from custom_components.sungrow_modbus.sensor_data.model_overrides import (
-    _match_model,
-    get_model_overrides,
-    apply_model_overrides,
-    apply_derived_overrides,
     MODEL_OVERRIDES,
+    _match_model,
+    apply_derived_overrides,
+    apply_model_overrides,
+    get_model_overrides,
 )
 
 
@@ -61,12 +61,11 @@ class TestModelOverrides(unittest.TestCase):
     def test_apply_sensor_register_override(self):
         """Test that sensor register overrides are applied."""
         # Temporarily add an override for testing
-        original = deepcopy(MODEL_OVERRIDES.get("SH25T", {}))
 
         MODEL_OVERRIDES["TEST_MODEL"] = {
             "sensors": {
                 "test_sensor_override": {
-                    "register": ['9999'],
+                    "register": ["9999"],
                     "multiplier": 0.5,
                 }
             }
@@ -81,10 +80,10 @@ class TestModelOverrides(unittest.TestCase):
                     {
                         "name": "Test Sensor",
                         "unique": "test_sensor_override",
-                        "register": ['1000'],
+                        "register": ["1000"],
                         "multiplier": 0.01,
                     }
-                ]
+                ],
             }
         ]
 
@@ -93,7 +92,7 @@ class TestModelOverrides(unittest.TestCase):
 
         # Check that the override was applied
         entity = modified[0]["entities"][0]
-        self.assertEqual(entity["register"], ['9999'])
+        self.assertEqual(entity["register"], ["9999"])
         self.assertEqual(entity["multiplier"], 0.5)
 
         # Cleanup
@@ -120,14 +119,14 @@ class TestModelOverrides(unittest.TestCase):
                     {
                         "name": "Test Sensor",
                         "unique": "test_disabled_sensor",
-                        "register": ['1000'],
+                        "register": ["1000"],
                     },
                     {
                         "name": "Keep Sensor",
                         "unique": "test_keep_sensor",
-                        "register": ['1001'],
-                    }
-                ]
+                        "register": ["1001"],
+                    },
+                ],
             }
         ]
 
@@ -154,9 +153,9 @@ class TestModelOverrides(unittest.TestCase):
                     {
                         "name": "No Override Sensor",
                         "unique": "sungrow_modbus_no_override",
-                        "register": ['9999'],
+                        "register": ["9999"],
                     }
-                ]
+                ],
             }
         ]
 
@@ -164,10 +163,7 @@ class TestModelOverrides(unittest.TestCase):
         modified = apply_model_overrides(sensor_groups, "SH25T")
 
         # The sensor should be unchanged
-        self.assertEqual(
-            modified[0]["entities"][0]["register"],
-            original[0]["entities"][0]["register"]
-        )
+        self.assertEqual(modified[0]["entities"][0]["register"], original[0]["entities"][0]["register"])
 
     def test_apply_derived_overrides(self):
         """Test applying overrides to derived sensors."""

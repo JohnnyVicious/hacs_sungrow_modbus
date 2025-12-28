@@ -1,10 +1,10 @@
 """Tests for number entity platform."""
-import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
 
-from custom_components.sungrow_modbus.const import (
-    DOMAIN, CONTROLLER, VALUES, REGISTER, VALUE, SLAVE
-)
+from unittest.mock import AsyncMock, MagicMock
+
+import pytest
+
+from custom_components.sungrow_modbus.const import CONTROLLER, DOMAIN, REGISTER, SLAVE, VALUE, VALUES
 from custom_components.sungrow_modbus.data.enums import InverterType, PollSpeed
 from custom_components.sungrow_modbus.number import async_setup_entry
 from custom_components.sungrow_modbus.sensors.sungrow_number_sensor import SungrowNumberEntity
@@ -45,7 +45,7 @@ def create_mock_base_sensor(
     editable=True,
     hidden=False,
     enabled=True,
-    controller=None
+    controller=None,
 ):
     """Create a mock base sensor."""
     if registers is None:
@@ -92,13 +92,7 @@ class TestNumberPlatformSetup:
         controller.sensor_groups = [sensor_group]
 
         hass = MagicMock()
-        hass.data = {
-            DOMAIN: {
-                CONTROLLER: {
-                    "10.0.0.1:502_1": controller
-                }
-            }
-        }
+        hass.data = {DOMAIN: {CONTROLLER: {"10.0.0.1:502_1": controller}}}
 
         config_entry = MagicMock()
         config_entry.data = {"host": "10.0.0.1", "port": 502, "slave": 1}
@@ -127,13 +121,7 @@ class TestNumberPlatformSetup:
         controller.sensor_groups = [sensor_group]
 
         hass = MagicMock()
-        hass.data = {
-            DOMAIN: {
-                CONTROLLER: {
-                    "10.0.0.1:502_1": controller
-                }
-            }
-        }
+        hass.data = {DOMAIN: {CONTROLLER: {"10.0.0.1:502_1": controller}}}
 
         config_entry = MagicMock()
         config_entry.data = {"host": "10.0.0.1", "port": 502, "slave": 1}
@@ -160,13 +148,7 @@ class TestNumberPlatformSetup:
         controller.sensor_groups = [sensor_group]
 
         hass = MagicMock()
-        hass.data = {
-            DOMAIN: {
-                CONTROLLER: {
-                    "10.0.0.1:502_1": controller
-                }
-            }
-        }
+        hass.data = {DOMAIN: {CONTROLLER: {"10.0.0.1:502_1": controller}}}
 
         config_entry = MagicMock()
         config_entry.data = {"host": "10.0.0.1", "port": 502, "slave": 1}
@@ -190,13 +172,7 @@ class TestSungrowNumberEntity:
         hass = MagicMock()
         hass.data = {DOMAIN: {VALUES: {}}}
         base_sensor = create_mock_base_sensor(
-            name="Power Limit",
-            registers=[33000],
-            min_value=0,
-            max_value=10000,
-            step=100,
-            default=5000,
-            unit="W"
+            name="Power Limit", registers=[33000], min_value=0, max_value=10000, step=100, default=5000, unit="W"
         )
 
         entity = SungrowNumberEntity(hass, base_sensor)
@@ -214,7 +190,7 @@ class TestSungrowNumberEntity:
         hass.data = {DOMAIN: {VALUES: {}}}
         base_sensor = create_mock_base_sensor(
             registers=[33000],
-            write_register=43000  # Different write register
+            write_register=43000,  # Different write register
         )
 
         entity = SungrowNumberEntity(hass, base_sensor)
@@ -225,10 +201,7 @@ class TestSungrowNumberEntity:
         """Test entity uses first register for write when only one register."""
         hass = MagicMock()
         hass.data = {DOMAIN: {VALUES: {}}}
-        base_sensor = create_mock_base_sensor(
-            registers=[33000],
-            write_register=None
-        )
+        base_sensor = create_mock_base_sensor(registers=[33000], write_register=None)
 
         entity = SungrowNumberEntity(hass, base_sensor)
 
@@ -240,11 +213,7 @@ class TestSungrowNumberEntity:
         hass.data = {DOMAIN: {VALUES: {}}}
         hass.create_task = MagicMock()
         controller = create_mock_controller()
-        base_sensor = create_mock_base_sensor(
-            registers=[33000],
-            multiplier=1,
-            controller=controller
-        )
+        base_sensor = create_mock_base_sensor(registers=[33000], multiplier=1, controller=controller)
 
         entity = SungrowNumberEntity(hass, base_sensor)
         entity.schedule_update_ha_state = MagicMock()
@@ -264,7 +233,7 @@ class TestSungrowNumberEntity:
         base_sensor = create_mock_base_sensor(
             registers=[33000],
             multiplier=0.1,  # Values displayed as 10x register value
-            controller=controller
+            controller=controller,
         )
 
         entity = SungrowNumberEntity(hass, base_sensor)
@@ -297,7 +266,7 @@ class TestSungrowNumberEntity:
         hass.create_task = MagicMock()
         base_sensor = create_mock_base_sensor(
             registers=[33000, 33001],  # Multi-register without explicit write_register
-            write_register=None
+            write_register=None,
         )
 
         entity = SungrowNumberEntity(hass, base_sensor)
@@ -313,23 +282,14 @@ class TestSungrowNumberEntity:
         hass = MagicMock()
         hass.data = {DOMAIN: {VALUES: {}}}
         controller = create_mock_controller()
-        base_sensor = create_mock_base_sensor(
-            registers=[33000],
-            multiplier=1,
-            controller=controller
-        )
+        base_sensor = create_mock_base_sensor(registers=[33000], multiplier=1, controller=controller)
 
         entity = SungrowNumberEntity(hass, base_sensor)
         entity.schedule_update_ha_state = MagicMock()
 
         # Simulate Modbus update event
         event = MagicMock()
-        event.data = {
-            REGISTER: 33000,
-            VALUE: 150,
-            CONTROLLER: "10.0.0.1",
-            SLAVE: 1
-        }
+        event.data = {REGISTER: 33000, VALUE: 150, CONTROLLER: "10.0.0.1", SLAVE: 1}
 
         entity.handle_modbus_update(event)
 
@@ -341,10 +301,7 @@ class TestSungrowNumberEntity:
         hass = MagicMock()
         hass.data = {DOMAIN: {VALUES: {}}}
         controller = create_mock_controller()
-        base_sensor = create_mock_base_sensor(
-            registers=[33000],
-            controller=controller
-        )
+        base_sensor = create_mock_base_sensor(registers=[33000], controller=controller)
 
         entity = SungrowNumberEntity(hass, base_sensor)
         entity._attr_native_value = 100
@@ -356,7 +313,7 @@ class TestSungrowNumberEntity:
             REGISTER: 33999,  # Different register
             VALUE: 999,
             CONTROLLER: "10.0.0.1",
-            SLAVE: 1
+            SLAVE: 1,
         }
 
         entity.handle_modbus_update(event)
@@ -370,10 +327,7 @@ class TestSungrowNumberEntity:
         hass = MagicMock()
         hass.data = {DOMAIN: {VALUES: {}}}
         controller = create_mock_controller(host="10.0.0.1", slave=1)
-        base_sensor = create_mock_base_sensor(
-            registers=[33000],
-            controller=controller
-        )
+        base_sensor = create_mock_base_sensor(registers=[33000], controller=controller)
 
         entity = SungrowNumberEntity(hass, base_sensor)
         entity._attr_native_value = 100
@@ -385,7 +339,7 @@ class TestSungrowNumberEntity:
             REGISTER: 33000,
             VALUE: 999,
             CONTROLLER: "10.0.0.2",  # Different host
-            SLAVE: 1
+            SLAVE: 1,
         }
 
         entity.handle_modbus_update(event)
@@ -401,7 +355,7 @@ class TestSungrowNumberEntity:
         controller = create_mock_controller()
         base_sensor = create_mock_base_sensor(
             registers=[33000, 33001],  # Multi-register
-            controller=controller
+            controller=controller,
         )
 
         entity = SungrowNumberEntity(hass, base_sensor)
@@ -409,12 +363,7 @@ class TestSungrowNumberEntity:
 
         # First register update
         event1 = MagicMock()
-        event1.data = {
-            REGISTER: 33000,
-            VALUE: 100,
-            CONTROLLER: "10.0.0.1",
-            SLAVE: 1
-        }
+        event1.data = {REGISTER: 33000, VALUE: 100, CONTROLLER: "10.0.0.1", SLAVE: 1}
 
         entity.handle_modbus_update(event1)
 
@@ -423,12 +372,7 @@ class TestSungrowNumberEntity:
 
         # Second register update
         event2 = MagicMock()
-        event2.data = {
-            REGISTER: 33001,
-            VALUE: 200,
-            CONTROLLER: "10.0.0.1",
-            SLAVE: 1
-        }
+        event2.data = {REGISTER: 33001, VALUE: 200, CONTROLLER: "10.0.0.1", SLAVE: 1}
 
         entity.handle_modbus_update(event2)
 
@@ -474,11 +418,7 @@ class TestNumberEntityLimits:
         """Test min/max/step values come from base sensor."""
         hass = MagicMock()
         hass.data = {DOMAIN: {VALUES: {}}}
-        base_sensor = create_mock_base_sensor(
-            min_value=-100,
-            max_value=100,
-            step=5
-        )
+        base_sensor = create_mock_base_sensor(min_value=-100, max_value=100, step=5)
 
         entity = SungrowNumberEntity(hass, base_sensor)
 
@@ -503,10 +443,7 @@ class TestNumberEntityLimits:
         hass.data = {DOMAIN: {VALUES: {}}}
         hass.create_task = MagicMock()
         controller = create_mock_controller()
-        base_sensor = create_mock_base_sensor(
-            multiplier=1,
-            controller=controller
-        )
+        base_sensor = create_mock_base_sensor(multiplier=1, controller=controller)
 
         entity = SungrowNumberEntity(hass, base_sensor)
         entity.schedule_update_ha_state = MagicMock()

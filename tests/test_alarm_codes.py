@@ -1,15 +1,13 @@
 """Tests for alarm code mapping functionality."""
+
 import pytest
 
 from custom_components.sungrow_modbus.data.alarm_codes import (
     ALARM_CODES,
-    RUNNING_STATE_CODES,
-    SYSTEM_STATE_CODES,
-    PID_STATE_CODES,
     get_alarm_description,
+    get_pid_state,
     get_running_state,
     get_system_state,
-    get_pid_state,
     is_fault_code,
 )
 
@@ -153,7 +151,7 @@ class TestValueMappingIntegration:
             registrars=[5045],
             write_register=None,
             multiplier=1,
-            value_mapping="alarm"
+            value_mapping="alarm",
         )
 
         # Test conversion
@@ -173,7 +171,7 @@ class TestValueMappingIntegration:
             registrars=[12999],
             write_register=None,
             multiplier=1,
-            value_mapping="system_state"
+            value_mapping="system_state",
         )
 
         result = sensor.convert_value([0x0040])
@@ -192,7 +190,7 @@ class TestValueMappingIntegration:
             registrars=[13000],
             write_register=None,
             multiplier=1,
-            value_mapping="running_state"
+            value_mapping="running_state",
         )
 
         result = sensor.convert_value([0x8000])
@@ -203,11 +201,7 @@ class TestValueMappingIntegration:
         """Test sensor with custom dictionary mapping."""
         from custom_components.sungrow_modbus.sensors.sungrow_base_sensor import SungrowBaseSensor
 
-        custom_mapping = {
-            0: "Off",
-            1: "On",
-            2: "Standby"
-        }
+        custom_mapping = {0: "Off", 1: "On", 2: "Standby"}
 
         sensor = SungrowBaseSensor(
             hass=mock_hass,
@@ -217,7 +211,7 @@ class TestValueMappingIntegration:
             registrars=[10000],
             write_register=None,
             multiplier=1,
-            value_mapping=custom_mapping
+            value_mapping=custom_mapping,
         )
 
         assert sensor.convert_value([0]) == "Off"
@@ -239,7 +233,7 @@ class TestValueMappingIntegration:
             registrars=[5000],
             write_register=None,
             multiplier=1,
-            value_mapping=None
+            value_mapping=None,
         )
 
         result = sensor.convert_value([1234])
@@ -258,7 +252,7 @@ class TestValueMappingIntegration:
             registrars=[5045],
             write_register=None,
             multiplier=1,
-            value_mapping="alarm"
+            value_mapping="alarm",
         )
 
         sensor_without = SungrowBaseSensor(
@@ -269,7 +263,7 @@ class TestValueMappingIntegration:
             registrars=[5000],
             write_register=None,
             multiplier=1,
-            value_mapping=None
+            value_mapping=None,
         )
 
         assert sensor_with.has_value_mapping is True

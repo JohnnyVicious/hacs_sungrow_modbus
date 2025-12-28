@@ -1,16 +1,12 @@
-import decimal
-import fractions
 import logging
-import numbers
-from datetime import datetime, UTC
-from typing import List
+from datetime import UTC, datetime
 
-from homeassistant.components.sensor import RestoreSensor, SensorEntity, SensorDeviceClass
-from homeassistant.core import callback, HomeAssistant
+from homeassistant.components.sensor import RestoreSensor, SensorDeviceClass, SensorEntity
+from homeassistant.core import HomeAssistant, callback
 
-from custom_components.sungrow_modbus.const import DOMAIN, REGISTER, VALUE, CONTROLLER, SLAVE
+from custom_components.sungrow_modbus.const import CONTROLLER, DOMAIN, REGISTER, SLAVE, VALUE
 from custom_components.sungrow_modbus.data.status_mapping import STATUS_MAPPING
-from custom_components.sungrow_modbus.helpers import decode_inverter_model, clock_drift_test, is_correct_controller
+from custom_components.sungrow_modbus.helpers import clock_drift_test, decode_inverter_model, is_correct_controller
 from custom_components.sungrow_modbus.sensors.sungrow_base_sensor import SungrowBaseSensor
 
 _LOGGER = logging.getLogger(__name__)
@@ -27,7 +23,7 @@ class SungrowDerivedSensor(RestoreSensor, SensorEntity):
         self._attr_has_entity_name = True
         self._attr_unique_id = sensor.unique_id
 
-        self._register: List[int] = sensor.registrars
+        self._register: list[int] = sensor.registrars
 
         self._device_class = sensor.device_class
         self._unit_of_measurement = sensor.unit_of_measurement
@@ -55,7 +51,7 @@ class SungrowDerivedSensor(RestoreSensor, SensorEntity):
 
     async def async_will_remove_from_hass(self) -> None:
         """Cleanup when entity is removed."""
-        if hasattr(self, '_unsub_listener') and self._unsub_listener:
+        if hasattr(self, "_unsub_listener") and self._unsub_listener:
             self._unsub_listener()
             self._unsub_listener = None
         await super().async_will_remove_from_hass()
@@ -82,11 +78,13 @@ class SungrowDerivedSensor(RestoreSensor, SensorEntity):
 
             ## start
             if 90007 in self._register:
-                is_adjusted = clock_drift_test(self.hass, self.base_sensor.controller,
-                                               self._received_values[33025],
-                                               self._received_values[33026],
-                                               self._received_values[33027],
-                                               )
+                is_adjusted = clock_drift_test(
+                    self.hass,
+                    self.base_sensor.controller,
+                    self._received_values[33025],
+                    self._received_values[33026],
+                    self._received_values[33027],
+                )
                 if is_adjusted:
                     self._attr_available = True
                     self._attr_native_value = datetime.now(UTC)
@@ -109,23 +107,23 @@ class SungrowDerivedSensor(RestoreSensor, SensorEntity):
                 new_value = round(self.base_sensor.get_value)
                 new_value = STATUS_MAPPING.get(new_value, "Unknown")
 
-            if 33049 in self._register or 33051 in self._register or 33053 in self._register or 33055 in self._register:
-                if len(self._register) >= 2:
-                    r1_value = self._received_values[self._register[0]] * self.base_sensor.multiplier
-                    r2_value = self._received_values[self._register[1]] * self.base_sensor.multiplier
-                    new_value = round(r1_value * r2_value)
+            if any(r in self._register for r in [33049, 33051, 33053, 33055]) and len(self._register) >= 2:
+                r1_value = self._received_values[self._register[0]] * self.base_sensor.multiplier
+                r2_value = self._received_values[self._register[1]] * self.base_sensor.multiplier
+                new_value = round(r1_value * r2_value)
 
-            if 33079 in self._register or 33080 in self._register or 33081 in self._register or 33082 in self._register:
-                if len(self._register) >= 4:
-                    active_power = self.base_sensor.convert_value(
-                        [self._received_values[self._register[0]], self._received_values[self._register[1]]])
-                    reactive_power = self.base_sensor.convert_value(
-                        [self._received_values[self._register[2]], self._received_values[self._register[3]]])
+            if any(r in self._register for r in [33079, 33080, 33081, 33082]) and len(self._register) >= 4:
+                active_power = self.base_sensor.convert_value(
+                    [self._received_values[self._register[0]], self._received_values[self._register[1]]]
+                )
+                reactive_power = self.base_sensor.convert_value(
+                    [self._received_values[self._register[2]], self._received_values[self._register[3]]]
+                )
 
-                    if active_power == 0 or reactive_power == 0:
-                        new_value = 1
-                    else:
-                        new_value = round(active_power / ((active_power ** 2 + reactive_power ** 2) ** 0.5), 3)
+                if active_power == 0 or reactive_power == 0:
+                    new_value = 1
+                else:
+                    new_value = round(active_power / ((active_power**2 + reactive_power**2) ** 0.5), 3)
 
             if 33135 in self._register and len(self._register) == 4:
                 registers = self._register.copy()

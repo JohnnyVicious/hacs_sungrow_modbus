@@ -1,16 +1,24 @@
 """Tests for sensor platform setup and entity behavior."""
+
+from datetime import UTC, datetime, timedelta
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from datetime import datetime, timedelta, timezone
-from unittest.mock import MagicMock, AsyncMock, patch
 
 from custom_components.sungrow_modbus.const import (
-    DOMAIN, CONTROLLER, VALUES, SENSOR_ENTITIES, SENSOR_DERIVED_ENTITIES,
-    REGISTER, VALUE, SLAVE
+    CONTROLLER,
+    DOMAIN,
+    REGISTER,
+    SENSOR_DERIVED_ENTITIES,
+    SENSOR_ENTITIES,
+    SLAVE,
+    VALUE,
+    VALUES,
 )
 from custom_components.sungrow_modbus.data.enums import InverterType, PollSpeed
 from custom_components.sungrow_modbus.sensor import async_setup_entry
-from custom_components.sungrow_modbus.sensors.sungrow_sensor import SungrowSensor
 from custom_components.sungrow_modbus.sensors.sungrow_base_sensor import SungrowBaseSensor
+from custom_components.sungrow_modbus.sensors.sungrow_sensor import SungrowSensor
 
 
 def create_mock_controller(host="10.0.0.1", slave=1, inverter_type=InverterType.HYBRID):
@@ -36,11 +44,7 @@ def create_mock_controller(host="10.0.0.1", slave=1, inverter_type=InverterType.
 
 
 def create_mock_base_sensor(
-    name="Test Sensor",
-    registrars=None,
-    multiplier=1,
-    poll_speed=PollSpeed.NORMAL,
-    controller=None
+    name="Test Sensor", registrars=None, multiplier=1, poll_speed=PollSpeed.NORMAL, controller=None
 ):
     """Create a mock base sensor."""
     if registrars is None:
@@ -83,13 +87,7 @@ class TestSensorPlatformSetup:
         controller.derived_sensors = []
 
         hass = MagicMock()
-        hass.data = {
-            DOMAIN: {
-                CONTROLLER: {
-                    "10.0.0.1:502_1": controller
-                }
-            }
-        }
+        hass.data = {DOMAIN: {CONTROLLER: {"10.0.0.1:502_1": controller}}}
 
         config_entry = MagicMock()
         config_entry.data = {"host": "10.0.0.1", "port": 502, "slave": 1}
@@ -119,13 +117,7 @@ class TestSensorPlatformSetup:
         controller.derived_sensors = [mock_derived]
 
         hass = MagicMock()
-        hass.data = {
-            DOMAIN: {
-                CONTROLLER: {
-                    "10.0.0.1:502_1": controller
-                }
-            }
-        }
+        hass.data = {DOMAIN: {CONTROLLER: {"10.0.0.1:502_1": controller}}}
 
         config_entry = MagicMock()
         config_entry.data = {"host": "10.0.0.1", "port": 502, "slave": 1}
@@ -148,11 +140,7 @@ class TestSungrowSensor:
     def test_sensor_initialization(self):
         """Test sensor is properly initialized."""
         hass = MagicMock()
-        base_sensor = create_mock_base_sensor(
-            name="Test Sensor",
-            registrars=[33000],
-            multiplier=0.1
-        )
+        base_sensor = create_mock_base_sensor(name="Test Sensor", registrars=[33000], multiplier=0.1)
 
         sensor = SungrowSensor(hass, base_sensor)
 
@@ -186,12 +174,7 @@ class TestSungrowSensor:
         """Test sensor updates correctly with single register."""
         hass = MagicMock()
         controller = create_mock_controller()
-        base_sensor = create_mock_base_sensor(
-            name="Power",
-            registrars=[33000],
-            multiplier=1,
-            controller=controller
-        )
+        base_sensor = create_mock_base_sensor(name="Power", registrars=[33000], multiplier=1, controller=controller)
 
         sensor = SungrowSensor(hass, base_sensor)
         sensor.is_added_to_hass = True
@@ -199,12 +182,7 @@ class TestSungrowSensor:
 
         # Create event with matching controller
         event = MagicMock()
-        event.data = {
-            REGISTER: 33000,
-            VALUE: 1000,
-            CONTROLLER: "10.0.0.1",
-            SLAVE: 1
-        }
+        event.data = {REGISTER: 33000, VALUE: 1000, CONTROLLER: "10.0.0.1", SLAVE: 1}
 
         sensor.handle_modbus_update(event)
 
@@ -217,10 +195,7 @@ class TestSungrowSensor:
         hass = MagicMock()
         controller = create_mock_controller()
         base_sensor = create_mock_base_sensor(
-            name="Power",
-            registrars=[33000, 33001],
-            multiplier=1,
-            controller=controller
+            name="Power", registrars=[33000, 33001], multiplier=1, controller=controller
         )
 
         sensor = SungrowSensor(hass, base_sensor)
@@ -229,24 +204,14 @@ class TestSungrowSensor:
 
         # First register event - should wait
         event1 = MagicMock()
-        event1.data = {
-            REGISTER: 33000,
-            VALUE: 100,
-            CONTROLLER: "10.0.0.1",
-            SLAVE: 1
-        }
+        event1.data = {REGISTER: 33000, VALUE: 100, CONTROLLER: "10.0.0.1", SLAVE: 1}
 
         sensor.handle_modbus_update(event1)
         assert sensor._attr_native_value is None  # Not yet updated
 
         # Second register event - should process both
         event2 = MagicMock()
-        event2.data = {
-            REGISTER: 33001,
-            VALUE: 200,
-            CONTROLLER: "10.0.0.1",
-            SLAVE: 1
-        }
+        event2.data = {REGISTER: 33001, VALUE: 200, CONTROLLER: "10.0.0.1", SLAVE: 1}
 
         sensor.handle_modbus_update(event2)
         # convert_value was called with [100, 200], returns sum * multiplier = 300
@@ -257,10 +222,7 @@ class TestSungrowSensor:
         """Test sensor ignores updates from different controller."""
         hass = MagicMock()
         controller = create_mock_controller(host="10.0.0.1", slave=1)
-        base_sensor = create_mock_base_sensor(
-            registrars=[33000],
-            controller=controller
-        )
+        base_sensor = create_mock_base_sensor(registrars=[33000], controller=controller)
 
         sensor = SungrowSensor(hass, base_sensor)
         sensor.is_added_to_hass = True
@@ -272,7 +234,7 @@ class TestSungrowSensor:
             REGISTER: 33000,
             VALUE: 1000,
             CONTROLLER: "10.0.0.2",  # Different host
-            SLAVE: 1
+            SLAVE: 1,
         }
 
         sensor.handle_modbus_update(event)
@@ -285,10 +247,7 @@ class TestSungrowSensor:
         """Test sensor ignores updates for unrelated registers."""
         hass = MagicMock()
         controller = create_mock_controller()
-        base_sensor = create_mock_base_sensor(
-            registrars=[33000],
-            controller=controller
-        )
+        base_sensor = create_mock_base_sensor(registrars=[33000], controller=controller)
 
         sensor = SungrowSensor(hass, base_sensor)
         sensor.is_added_to_hass = True
@@ -299,7 +258,7 @@ class TestSungrowSensor:
             REGISTER: 33999,  # Different register
             VALUE: 1000,
             CONTROLLER: "10.0.0.1",
-            SLAVE: 1
+            SLAVE: 1,
         }
 
         sensor.handle_modbus_update(event)
@@ -312,11 +271,7 @@ class TestSungrowSensor:
         """Test sensor becomes unavailable after watchdog timeout."""
         hass = MagicMock()
         controller = create_mock_controller()
-        base_sensor = create_mock_base_sensor(
-            registrars=[33000],
-            poll_speed=PollSpeed.NORMAL,
-            controller=controller
-        )
+        base_sensor = create_mock_base_sensor(registrars=[33000], poll_speed=PollSpeed.NORMAL, controller=controller)
 
         sensor = SungrowSensor(hass, base_sensor)
         sensor.is_added_to_hass = True
@@ -324,7 +279,7 @@ class TestSungrowSensor:
         sensor.schedule_update_ha_state = MagicMock()
 
         # Set last update to 30 minutes ago (exceeds timeout of ~25 min for NORMAL)
-        sensor._last_update = datetime.now(timezone.utc).astimezone() - timedelta(minutes=30)
+        sensor._last_update = datetime.now(UTC).astimezone() - timedelta(minutes=30)
 
         await sensor.async_update()
 
@@ -335,18 +290,14 @@ class TestSungrowSensor:
         """Test ONCE poll speed sensors don't trigger watchdog."""
         hass = MagicMock()
         controller = create_mock_controller()
-        base_sensor = create_mock_base_sensor(
-            registrars=[33000],
-            poll_speed=PollSpeed.ONCE,
-            controller=controller
-        )
+        base_sensor = create_mock_base_sensor(registrars=[33000], poll_speed=PollSpeed.ONCE, controller=controller)
 
         sensor = SungrowSensor(hass, base_sensor)
         sensor.is_added_to_hass = True
         sensor._attr_available = True
 
         # Set last update to very long ago
-        sensor._last_update = datetime.now(timezone.utc).astimezone() - timedelta(hours=24)
+        sensor._last_update = datetime.now(UTC).astimezone() - timedelta(hours=24)
 
         await sensor.async_update()
 
@@ -363,7 +314,7 @@ class TestSungrowSensor:
 
         sensor = SungrowSensor(hass, base_sensor)
 
-        with patch.object(sensor, 'async_get_last_sensor_data', new_callable=AsyncMock) as mock_restore:
+        with patch.object(sensor, "async_get_last_sensor_data", new_callable=AsyncMock) as mock_restore:
             mock_restore.return_value = None
             await sensor.async_added_to_hass()
 
@@ -382,7 +333,7 @@ class TestSungrowSensor:
 
         sensor = SungrowSensor(hass, base_sensor)
 
-        with patch.object(sensor, 'async_get_last_sensor_data', new_callable=AsyncMock) as mock_restore:
+        with patch.object(sensor, "async_get_last_sensor_data", new_callable=AsyncMock) as mock_restore:
             mock_restore.return_value = None
             await sensor.async_added_to_hass()
 
@@ -403,7 +354,7 @@ class TestSungrowSensor:
         mock_state = MagicMock()
         mock_state.native_value = 42.5
 
-        with patch.object(sensor, 'async_get_last_sensor_data', new_callable=AsyncMock) as mock_restore:
+        with patch.object(sensor, "async_get_last_sensor_data", new_callable=AsyncMock) as mock_restore:
             mock_restore.return_value = mock_state
             hass.bus.async_listen = MagicMock(return_value=MagicMock())
             await sensor.async_added_to_hass()
@@ -418,11 +369,7 @@ class TestSensorMultiplier:
         """Test multiplier of 1 (no conversion)."""
         hass = MagicMock()
         controller = create_mock_controller()
-        base_sensor = create_mock_base_sensor(
-            registrars=[33000],
-            multiplier=1,
-            controller=controller
-        )
+        base_sensor = create_mock_base_sensor(registrars=[33000], multiplier=1, controller=controller)
         base_sensor.convert_value = lambda vals: vals[0] * 1
 
         sensor = SungrowSensor(hass, base_sensor)
@@ -430,12 +377,7 @@ class TestSensorMultiplier:
         sensor.schedule_update_ha_state = MagicMock()
 
         event = MagicMock()
-        event.data = {
-            REGISTER: 33000,
-            VALUE: 123,
-            CONTROLLER: "10.0.0.1",
-            SLAVE: 1
-        }
+        event.data = {REGISTER: 33000, VALUE: 123, CONTROLLER: "10.0.0.1", SLAVE: 1}
 
         sensor.handle_modbus_update(event)
         assert sensor._attr_native_value == 123
@@ -444,11 +386,7 @@ class TestSensorMultiplier:
         """Test multiplier of 0.1."""
         hass = MagicMock()
         controller = create_mock_controller()
-        base_sensor = create_mock_base_sensor(
-            registrars=[33000],
-            multiplier=0.1,
-            controller=controller
-        )
+        base_sensor = create_mock_base_sensor(registrars=[33000], multiplier=0.1, controller=controller)
         base_sensor.convert_value = lambda vals: vals[0] * 0.1
 
         sensor = SungrowSensor(hass, base_sensor)
@@ -456,12 +394,7 @@ class TestSensorMultiplier:
         sensor.schedule_update_ha_state = MagicMock()
 
         event = MagicMock()
-        event.data = {
-            REGISTER: 33000,
-            VALUE: 123,
-            CONTROLLER: "10.0.0.1",
-            SLAVE: 1
-        }
+        event.data = {REGISTER: 33000, VALUE: 123, CONTROLLER: "10.0.0.1", SLAVE: 1}
 
         sensor.handle_modbus_update(event)
         assert sensor._attr_native_value == 12.3
@@ -470,11 +403,7 @@ class TestSensorMultiplier:
         """Test multiplier of 1000."""
         hass = MagicMock()
         controller = create_mock_controller()
-        base_sensor = create_mock_base_sensor(
-            registrars=[33000],
-            multiplier=1000,
-            controller=controller
-        )
+        base_sensor = create_mock_base_sensor(registrars=[33000], multiplier=1000, controller=controller)
         base_sensor.convert_value = lambda vals: vals[0] * 1000
 
         sensor = SungrowSensor(hass, base_sensor)
@@ -482,12 +411,7 @@ class TestSensorMultiplier:
         sensor.schedule_update_ha_state = MagicMock()
 
         event = MagicMock()
-        event.data = {
-            REGISTER: 33000,
-            VALUE: 5,
-            CONTROLLER: "10.0.0.1",
-            SLAVE: 1
-        }
+        event.data = {REGISTER: 33000, VALUE: 5, CONTROLLER: "10.0.0.1", SLAVE: 1}
 
         sensor.handle_modbus_update(event)
         assert sensor._attr_native_value == 5000

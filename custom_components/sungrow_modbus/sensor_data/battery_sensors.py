@@ -10,15 +10,14 @@ not through WiNet-S which only exposes limited battery data on slave ID 2.
 
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
 from homeassistant.const import (
-    UnitOfElectricPotential,
-    UnitOfElectricCurrent,
-    UnitOfTemperature,
-    UnitOfEnergy,
     PERCENTAGE,
+    UnitOfElectricCurrent,
+    UnitOfElectricPotential,
+    UnitOfEnergy,
+    UnitOfTemperature,
 )
 
-from ..data.enums import PollSpeed, Category, InverterFeature
-
+from custom_components.sungrow_modbus.data.enums import Category, PollSpeed
 
 # Battery stack sensors (read from slave ID 200+)
 # These are separate from inverter sensor groups and polled independently

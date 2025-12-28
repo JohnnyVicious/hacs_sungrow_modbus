@@ -1,18 +1,24 @@
 import logging
 import struct
 from datetime import datetime
-from typing import List
 
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_utils
-from homeassistant.config_entries import ConfigEntry
+
 from custom_components.sungrow_modbus import DOMAIN
 from custom_components.sungrow_modbus.const import (
-    DRIFT_COUNTER, VALUES, CONTROLLER,
-    CONN_TYPE_TCP, CONN_TYPE_SERIAL, CONF_SERIAL_PORT, CONF_CONNECTION_TYPE
+    CONF_CONNECTION_TYPE,
+    CONF_SERIAL_PORT,
+    CONN_TYPE_SERIAL,
+    CONN_TYPE_TCP,
+    CONTROLLER,
+    DRIFT_COUNTER,
+    VALUES,
 )
 
 _LOGGER = logging.getLogger(__name__)
+
 
 def hex_to_ascii(hex_value):
     # Convert hexadecimal to decimal
@@ -23,21 +29,20 @@ def hex_to_ascii(hex_value):
     byte2 = decimal_value & 0xFF
 
     # Convert bytes to ASCII characters
-    ascii_chars = ''.join([chr(byte) for byte in [byte1, byte2]])
+    ascii_chars = "".join([chr(byte) for byte in [byte1, byte2]])
 
     return ascii_chars
 
 
 def extract_serial_number(values):
-    packed = struct.pack('>' + 'H'*len(values), *values)
-    return packed.decode('ascii', errors='ignore').strip('\x00\r\n ')
+    packed = struct.pack(">" + "H" * len(values), *values)
+    return packed.decode("ascii", errors="ignore").strip("\x00\r\n ")
 
 
 def clock_drift_test(hass, controller, hours, minutes, seconds):
     current_time = dt_utils.now()
     device_time = datetime(
-        current_time.year, current_time.month, current_time.day, hours, minutes, seconds,
-        tzinfo=current_time.tzinfo
+        current_time.year, current_time.month, current_time.day, hours, minutes, seconds, tzinfo=current_time.tzinfo
     )
     total_drift = (current_time - device_time).total_seconds()
 
@@ -50,9 +55,11 @@ def clock_drift_test(hass, controller, hours, minutes, seconds):
     if abs(total_drift) > 60:
         if drift_counter > 5:
             if controller.connected():
-                hass.create_task(controller.async_write_holding_registers(
-                    43003, [current_time.hour, current_time.minute, current_time.second]
-                ))
+                hass.create_task(
+                    controller.async_write_holding_registers(
+                        43003, [current_time.hour, current_time.minute, current_time.second]
+                    )
+                )
                 clock_adjusted = True
         else:
             hass.data[DOMAIN][DRIFT_COUNTER] = drift_counter + 1
@@ -104,6 +111,7 @@ def decode_inverter_model(hex_value):
     model_description = inverter_models.get(inverter_model, "Unknown Model")
 
     return protocol_version, model_description
+
 
 def get_controller_key(controller) -> str:
     """Generate a unique key for a controller (includes port for TCP, path for serial)."""
@@ -167,7 +175,7 @@ def get_controller(hass: HomeAssistant, controller_host: str, controller_slave: 
     if controller_host is None:
         # This is a serial connection, but we don't have the port info here
         # Return the first controller with matching slave
-        for key, controller in hass.data[DOMAIN][CONTROLLER].items():
+        for _key, controller in hass.data[DOMAIN][CONTROLLER].items():
             if controller.device_id == controller_slave:
                 return controller
         return None
@@ -183,13 +191,14 @@ def get_controller(hass: HomeAssistant, controller_host: str, controller_slave: 
         return controller
 
     # Search all controllers for matching host and slave
-    for key, ctrl in hass.data[DOMAIN][CONTROLLER].items():
+    for _key, ctrl in hass.data[DOMAIN][CONTROLLER].items():
         if ctrl.host == controller_host and ctrl.device_id == controller_slave:
             return ctrl
 
     return None
 
-def split_s32(s32_values: List[int]):
+
+def split_s32(s32_values: list[int]):
     """Combine two 16-bit registers into a signed 32-bit integer.
 
     Args:
@@ -213,8 +222,10 @@ def split_s32(s32_values: List[int]):
         return unsigned_value - (1 << 32)
     return unsigned_value
 
-def _any_in(target: List[int], collection: set[int]) -> bool:
+
+def _any_in(target: list[int], collection: set[int]) -> bool:
     return any(item in collection for item in target)
+
 
 def is_correct_controller(controller, host: str, slave: int):
     return controller.host == host and controller.device_id == slave

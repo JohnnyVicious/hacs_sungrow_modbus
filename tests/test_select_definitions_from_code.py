@@ -1,9 +1,11 @@
-import pytest
 from unittest.mock import MagicMock
 
-from custom_components.sungrow_modbus.const import DOMAIN, CONTROLLER
+import pytest
+
+from custom_components.sungrow_modbus.const import CONTROLLER, DOMAIN
 from custom_components.sungrow_modbus.data.enums import InverterType
 from custom_components.sungrow_modbus.select import async_setup_entry
+
 
 @pytest.mark.asyncio
 async def test_select_bit_position_requires_combinations_are_unique():
@@ -48,5 +50,7 @@ async def test_select_bit_position_requires_combinations_are_unique():
                 continue  # ignore value-based selects like battery model
             requires = tuple(sorted(raw.get("requires", ())))
             key = (register, bit, requires)
-            assert key not in seen_keys, f"Duplicate (register, bit_position, requires): {key} in entity: {raw.get('name')}"
+            assert key not in seen_keys, (
+                f"Duplicate (register, bit_position, requires): {key} in entity: {raw.get('name')}"
+            )
             seen_keys.add(key)

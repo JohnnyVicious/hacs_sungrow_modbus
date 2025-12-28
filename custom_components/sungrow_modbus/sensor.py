@@ -1,5 +1,4 @@
 import logging
-from typing import List
 
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
@@ -7,8 +6,12 @@ from homeassistant.core import HomeAssistant, callback
 
 from custom_components.sungrow_modbus import ModbusController
 from custom_components.sungrow_modbus.const import (
-    DOMAIN, VALUES, SENSOR_DERIVED_ENTITIES, SENSOR_ENTITIES,
-    BATTERY_CONTROLLER, BATTERY_SENSORS,
+    BATTERY_CONTROLLER,
+    BATTERY_SENSORS,
+    DOMAIN,
+    SENSOR_DERIVED_ENTITIES,
+    SENSOR_ENTITIES,
+    VALUES,
 )
 from custom_components.sungrow_modbus.helpers import get_controller_from_entry
 from custom_components.sungrow_modbus.sensors.sungrow_derived_sensor import SungrowDerivedSensor
@@ -20,8 +23,8 @@ _LOGGER = logging.getLogger(__name__)
 async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry, async_add_entities):
     """Set up Modbus sensors from a config entry."""
     controller: ModbusController = get_controller_from_entry(hass, config_entry)
-    sensor_entities: List[SungrowSensor] = []
-    sensor_derived_entities: List[SensorEntity] = []
+    sensor_entities: list[SungrowSensor] = []
+    sensor_derived_entities: list[SensorEntity] = []
     hass.data[DOMAIN].setdefault(VALUES, {})
 
     for sensor_group in controller.sensor_groups:
@@ -58,10 +61,11 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry, asyn
         _LOGGER.info(
             "Added %d battery sensors for %d stack(s)",
             len(status_sensors) + len(diagnostic_sensors),
-            len(battery_controllers)
+            len(battery_controllers),
         )
 
     @callback
     def update(now):
         """Update Modbus data periodically."""
+
     return True

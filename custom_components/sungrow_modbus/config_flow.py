@@ -1,5 +1,3 @@
-import asyncio
-import copy
 import logging
 import struct
 
@@ -8,12 +6,23 @@ from homeassistant import config_entries
 from homeassistant.config_entries import OptionsFlowWithConfigEntry
 
 from .const import (
-    DOMAIN, CONN_TYPE_TCP, CONN_TYPE_SERIAL, CONF_SERIAL_PORT,
-    CONF_BAUDRATE, CONF_BYTESIZE, CONF_PARITY, CONF_STOPBITS,
-    CONF_CONNECTION_TYPE, CONF_INVERTER_SERIAL, CONF_MULTI_BATTERY,
-    DEFAULT_BAUDRATE, DEFAULT_BYTESIZE, DEFAULT_PARITY, DEFAULT_STOPBITS
+    CONF_BAUDRATE,
+    CONF_BYTESIZE,
+    CONF_CONNECTION_TYPE,
+    CONF_INVERTER_SERIAL,
+    CONF_MULTI_BATTERY,
+    CONF_PARITY,
+    CONF_SERIAL_PORT,
+    CONF_STOPBITS,
+    CONN_TYPE_SERIAL,
+    CONN_TYPE_TCP,
+    DEFAULT_BAUDRATE,
+    DEFAULT_BYTESIZE,
+    DEFAULT_PARITY,
+    DEFAULT_STOPBITS,
+    DOMAIN,
 )
-from .data.sungrow_config import SUNGROW_INVERTERS, CONNECTION_METHOD
+from .data.sungrow_config import CONNECTION_METHOD, SUNGROW_INVERTERS
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -21,17 +30,10 @@ _LOGGER = logging.getLogger(__name__)
 SUNGROW_MODELS = {inverter.model: inverter.model for inverter in SUNGROW_INVERTERS}
 
 # Connection type options
-CONNECTION_TYPES = {
-    CONN_TYPE_TCP: "TCP (WiFi Dongle)",
-    CONN_TYPE_SERIAL: "Serial (RS485)"
-}
+CONNECTION_TYPES = {CONN_TYPE_TCP: "TCP (WiFi Dongle)", CONN_TYPE_SERIAL: "Serial (RS485)"}
 
 # Parity options
-PARITY_OPTIONS = {
-    "N": "None",
-    "E": "Even",
-    "O": "Odd"
-}
+PARITY_OPTIONS = {"N": "None", "E": "Even", "O": "Odd"}
 
 # Device type code to model mapping
 # Sources: SunGather registers-sungrow.yaml, Sungrow Modbus Protocol documentation
@@ -40,7 +42,6 @@ DEVICE_TYPE_MAP = {
     # ==========================================================================
     # RESIDENTIAL HYBRID INVERTERS (SH Series - with battery storage)
     # ==========================================================================
-
     # --- SH-RS series (single phase residential hybrid) ---
     0x0D0F: "SH5.0RS",
     0x0D10: "SH3.6RS",
@@ -50,51 +51,46 @@ DEVICE_TYPE_MAP = {
     0x0D24: "SH10RS",
     0x0D25: "SH3.0RS",
     0x0D26: "SH4.0RS",
-
     # --- SH-RT series (three phase residential hybrid) ---
     0x0E00: "SH5.0RT",
     0x0E01: "SH6.0RT",
     0x0E02: "SH8.0RT",
     0x0E03: "SH10RT",
-    0x0E04: "SH6.0RT",      # Alternate code
-    0x0E05: "SH8.0RT",      # Alternate code
-    0x0E06: "SH10RT",       # Alternate code
+    0x0E04: "SH6.0RT",  # Alternate code
+    0x0E05: "SH8.0RT",  # Alternate code
+    0x0E06: "SH10RT",  # Alternate code
     0x0E07: "SH5.0RT-20",
     0x0E08: "SH6.0RT-20",
     0x0E09: "SH8.0RT-20",
     0x0E0A: "SH10RT-20",
     0x0E0B: "SH5.0RT-V112",
-    0x0E0C: "SH5.0RT-V112", # Alternate mapping
+    0x0E0C: "SH5.0RT-V112",  # Alternate mapping
     0x0E0D: "SH8.0RT-V112",
     0x0E0E: "SH10RT-V112",
     0x0E0F: "SH10RT-V112",  # Alternate code
-    0x0E13: "SH10RT-20",    # Alternate code
+    0x0E13: "SH10RT-20",  # Alternate code
     0x0E23: "SH5.0RT-V122",
     0x0E24: "SH6.0RT-V122",
     0x0E25: "SH8.0RT-V122",
     0x0E26: "SH10RT-V122",
-
     # --- SH-T series (three phase large hybrid) ---
     0x0E27: "SH5T",
     0x0E28: "SH25T",
     0x0E29: "SH15T",
     0x0E2A: "SH20T",
     0x0E2B: "SH10T",
-
     # --- Legacy SH series (older models) ---
     0x0D03: "SH5K-V13",
     0x0D06: "SH3K6",
     0x0D07: "SH4K6",
     0x0D09: "SH5K-20",
     0x0D0A: "SH5K-30",
-    0x0D0B: "SH5K-30",      # Alternate code
+    0x0D0B: "SH5K-30",  # Alternate code
     0x0D0C: "SH3K6-30",
     0x0D0D: "SH4K6-30",
-
     # ==========================================================================
     # STRING INVERTERS - RESIDENTIAL (SG-RS Series - grid-tied, no battery)
     # ==========================================================================
-
     # --- SG-RS series (single phase residential string) ---
     0x2603: "SG3.0RS",
     0x2604: "SG3.6RS",
@@ -103,7 +99,6 @@ DEVICE_TYPE_MAP = {
     0x2607: "SG6.0RS",
     0x260E: "SG9.0RS",
     0x2609: "SG10RS",
-
     # --- SG-RT series (three phase residential string) ---
     0x243D: "SG3.0RT",
     0x243E: "SG4.0RT",
@@ -116,11 +111,9 @@ DEVICE_TYPE_MAP = {
     0x2435: "SG15RT",
     0x2436: "SG17RT",
     0x2437: "SG20RT",
-
     # ==========================================================================
     # STRING INVERTERS - COMMERCIAL (SG-KTL/CX/HX Series)
     # ==========================================================================
-
     # --- SG-KTL series (commercial string, older) ---
     0x0027: "SG30KTL",
     0x0026: "SG10KTL",
@@ -157,7 +150,6 @@ DEVICE_TYPE_MAP = {
     0x0148: "SG6KTL-MT",
     0x0149: "SG17KTL-M",
     0x014C: "SG111HV",
-
     # --- SG-CX series (commercial string, current gen) ---
     0x2C00: "SG33CX",
     0x2C01: "SG40CX",
@@ -172,18 +164,15 @@ DEVICE_TYPE_MAP = {
     0x2C13: "SG250HX-IN",
     0x2C15: "SG25CX-SA",
     0x2C22: "SG75CX",
-
     # --- SG-HX series (commercial high power) ---
     0x2C0C: "SG250HX",
     0x2C11: "SG250HX-US",
-
     # ==========================================================================
     # G2 INVERTERS (Older generation)
     # ==========================================================================
     0x0122: "SG3K-D",
     0x0126: "SG5K-D",
     0x2403: "SG8K-D",
-
     # ==========================================================================
     # LEGACY STRING INVERTERS (kept for backwards compatibility)
     # ==========================================================================
@@ -219,10 +208,12 @@ class ModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="user",
-            data_schema=vol.Schema({
-                vol.Required(CONF_CONNECTION_TYPE, default=CONN_TYPE_TCP): vol.In(CONNECTION_TYPES),
-            }),
-            errors=errors
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_CONNECTION_TYPE, default=CONN_TYPE_TCP): vol.In(CONNECTION_TYPES),
+                }
+            ),
+            errors=errors,
         )
 
     async def async_step_connection(self, user_input=None):
@@ -251,41 +242,37 @@ class ModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         # Show connection-specific form
         if self._connection_type == CONN_TYPE_TCP:
-            schema = vol.Schema({
-                vol.Required("host"): str,
-                vol.Required("port", default=502): int,
-                vol.Required("slave", default=1): int,
-            })
+            schema = vol.Schema(
+                {
+                    vol.Required("host"): str,
+                    vol.Required("port", default=502): int,
+                    vol.Required("slave", default=1): int,
+                }
+            )
         else:
-            schema = vol.Schema({
-                vol.Required(CONF_SERIAL_PORT, default="/dev/ttyUSB0"): str,
-                vol.Required(CONF_BAUDRATE, default=DEFAULT_BAUDRATE): vol.In([9600, 19200, 38400, 57600, 115200]),
-                vol.Required(CONF_BYTESIZE, default=DEFAULT_BYTESIZE): vol.In([7, 8]),
-                vol.Required(CONF_PARITY, default=DEFAULT_PARITY): vol.In(PARITY_OPTIONS),
-                vol.Required(CONF_STOPBITS, default=DEFAULT_STOPBITS): vol.In([1, 2]),
-                vol.Required("slave", default=1): int,
-            })
+            schema = vol.Schema(
+                {
+                    vol.Required(CONF_SERIAL_PORT, default="/dev/ttyUSB0"): str,
+                    vol.Required(CONF_BAUDRATE, default=DEFAULT_BAUDRATE): vol.In([9600, 19200, 38400, 57600, 115200]),
+                    vol.Required(CONF_BYTESIZE, default=DEFAULT_BYTESIZE): vol.In([7, 8]),
+                    vol.Required(CONF_PARITY, default=DEFAULT_PARITY): vol.In(PARITY_OPTIONS),
+                    vol.Required(CONF_STOPBITS, default=DEFAULT_STOPBITS): vol.In([1, 2]),
+                    vol.Required("slave", default=1): int,
+                }
+            )
 
-        return self.async_show_form(
-            step_id="connection",
-            data_schema=schema,
-            errors=errors
-        )
+        return self.async_show_form(step_id="connection", data_schema=schema, errors=errors)
 
     async def _detect_device(self, config) -> dict | None:
         """Connect to device and auto-detect serial number and model."""
-        from pymodbus.client import AsyncModbusTcpClient, AsyncModbusSerialClient
+        from pymodbus.client import AsyncModbusSerialClient, AsyncModbusTcpClient
 
         conn_type = config.get(CONF_CONNECTION_TYPE, CONN_TYPE_TCP)
         slave_id = config.get("slave", 1)
 
         try:
             if conn_type == CONN_TYPE_TCP:
-                client = AsyncModbusTcpClient(
-                    host=config["host"],
-                    port=config.get("port", 502),
-                    timeout=10
-                )
+                client = AsyncModbusTcpClient(host=config["host"], port=config.get("port", 502), timeout=10)
             else:
                 client = AsyncModbusSerialClient(
                     port=config[CONF_SERIAL_PORT],
@@ -293,7 +280,7 @@ class ModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     bytesize=config.get(CONF_BYTESIZE, DEFAULT_BYTESIZE),
                     parity=config.get(CONF_PARITY, DEFAULT_PARITY),
                     stopbits=config.get(CONF_STOPBITS, DEFAULT_STOPBITS),
-                    timeout=10
+                    timeout=10,
                 )
 
             connected = await client.connect()
@@ -309,8 +296,8 @@ class ModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 return None
 
             # Decode serial number
-            packed = struct.pack('>' + 'H' * len(result.registers), *result.registers)
-            serial_number = packed.decode('ascii', errors='ignore').strip('\x00\r\n ')
+            packed = struct.pack(">" + "H" * len(result.registers), *result.registers)
+            serial_number = packed.decode("ascii", errors="ignore").strip("\x00\r\n ")
 
             # Read device type code (register 4999)
             result = await client.read_input_registers(address=4999, count=1, device_id=slave_id)
@@ -327,12 +314,14 @@ class ModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             firmware_version = "N/A"
             result = await client.read_input_registers(address=13249, count=15, device_id=slave_id)
             if not result.isError():
-                packed = struct.pack('>' + 'H' * len(result.registers), *result.registers)
-                firmware_version = packed.decode('ascii', errors='ignore').strip('\x00\r\n ')
+                packed = struct.pack(">" + "H" * len(result.registers), *result.registers)
+                firmware_version = packed.decode("ascii", errors="ignore").strip("\x00\r\n ")
 
             client.close()
 
-            _LOGGER.info(f"Detected inverter: {model}, Serial: {serial_number}, Power: {nominal_power}kW, Firmware: {firmware_version}")
+            _LOGGER.info(
+                f"Detected inverter: {model}, Serial: {serial_number}, Power: {nominal_power}kW, Firmware: {firmware_version}"
+            )
 
             return {
                 "serial_number": serial_number,
@@ -356,7 +345,7 @@ class ModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         # Find matching inverter config or use first hybrid as default
         inverter_config = next(
             (inv for inv in SUNGROW_INVERTERS if inv.model == model),
-            SUNGROW_INVERTERS[0]  # Default to first inverter if not found
+            SUNGROW_INVERTERS[0],  # Default to first inverter if not found
         )
 
         # Build entry data
@@ -399,27 +388,34 @@ class ModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         # Show connection form with existing values
         if conn_type == CONN_TYPE_TCP:
-            schema = vol.Schema({
-                vol.Required("host", default=entry.data.get("host", "")): str,
-                vol.Required("port", default=entry.data.get("port", 502)): int,
-                vol.Required("slave", default=entry.data.get("slave", 1)): int,
-            })
+            schema = vol.Schema(
+                {
+                    vol.Required("host", default=entry.data.get("host", "")): str,
+                    vol.Required("port", default=entry.data.get("port", 502)): int,
+                    vol.Required("slave", default=entry.data.get("slave", 1)): int,
+                }
+            )
         else:
-            schema = vol.Schema({
-                vol.Required(CONF_SERIAL_PORT, default=entry.data.get(CONF_SERIAL_PORT, "/dev/ttyUSB0")): str,
-                vol.Required(CONF_BAUDRATE, default=entry.data.get(CONF_BAUDRATE, DEFAULT_BAUDRATE)): vol.In(
-                    [9600, 19200, 38400, 57600, 115200]),
-                vol.Required(CONF_BYTESIZE, default=entry.data.get(CONF_BYTESIZE, DEFAULT_BYTESIZE)): vol.In([7, 8]),
-                vol.Required(CONF_PARITY, default=entry.data.get(CONF_PARITY, DEFAULT_PARITY)): vol.In(PARITY_OPTIONS),
-                vol.Required(CONF_STOPBITS, default=entry.data.get(CONF_STOPBITS, DEFAULT_STOPBITS)): vol.In([1, 2]),
-                vol.Required("slave", default=entry.data.get("slave", 1)): int,
-            })
+            schema = vol.Schema(
+                {
+                    vol.Required(CONF_SERIAL_PORT, default=entry.data.get(CONF_SERIAL_PORT, "/dev/ttyUSB0")): str,
+                    vol.Required(CONF_BAUDRATE, default=entry.data.get(CONF_BAUDRATE, DEFAULT_BAUDRATE)): vol.In(
+                        [9600, 19200, 38400, 57600, 115200]
+                    ),
+                    vol.Required(CONF_BYTESIZE, default=entry.data.get(CONF_BYTESIZE, DEFAULT_BYTESIZE)): vol.In(
+                        [7, 8]
+                    ),
+                    vol.Required(CONF_PARITY, default=entry.data.get(CONF_PARITY, DEFAULT_PARITY)): vol.In(
+                        PARITY_OPTIONS
+                    ),
+                    vol.Required(CONF_STOPBITS, default=entry.data.get(CONF_STOPBITS, DEFAULT_STOPBITS)): vol.In(
+                        [1, 2]
+                    ),
+                    vol.Required("slave", default=entry.data.get("slave", 1)): int,
+                }
+            )
 
-        return self.async_show_form(
-            step_id="reconfigure",
-            data_schema=schema,
-            errors=errors
-        )
+        return self.async_show_form(step_id="reconfigure", data_schema=schema, errors=errors)
 
     @staticmethod
     @config_entries.HANDLERS.register(DOMAIN)
@@ -460,5 +456,5 @@ class ModbusOptionsFlowHandler(OptionsFlowWithConfigEntry):
         return self.async_show_form(
             step_id="init",
             data_schema=self.add_suggested_values_to_schema(OPTIONS_SCHEMA, current_data),
-            errors=errors
+            errors=errors,
         )

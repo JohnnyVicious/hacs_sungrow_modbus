@@ -14,8 +14,8 @@ Configuration:
         SUNGROW_IP=192.168.1.100
 """
 
-import asyncio
 import argparse
+import asyncio
 import os
 import sys
 from pathlib import Path
@@ -27,18 +27,19 @@ sys.path.insert(0, str(project_root))
 # Load .env file if present
 try:
     from dotenv import load_dotenv
+
     load_dotenv(project_root / ".env")
 except ImportError:
     pass  # python-dotenv not installed, rely on environment variables
 
-from pymodbus.client import AsyncModbusTcpClient
+from pymodbus.client import AsyncModbusTcpClient  # noqa: E402
 
 
 async def test_connection(ip: str, port: int, slave_id: int):
     """Test basic connectivity."""
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"Testing connection to {ip}:{port} (slave {slave_id})")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     client = AsyncModbusTcpClient(host=ip, port=port, timeout=10)
 
@@ -47,7 +48,7 @@ async def test_connection(ip: str, port: int, slave_id: int):
         if not connected:
             print(f"FAILED: Could not connect to {ip}:{port}")
             return None
-        print(f"SUCCESS: Connected to inverter")
+        print("SUCCESS: Connected to inverter")
         return client
     except Exception as e:
         print(f"ERROR: {e}")
@@ -74,9 +75,9 @@ RUNNING_STATE_MAPPING = {
 
 async def read_device_info(client: AsyncModbusTcpClient, slave_id: int):
     """Read device identification registers."""
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("Device Information")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     # Serial Number (registers 4989-4998, 10 registers = 20 chars)
     result = await client.read_input_registers(address=4989, count=10, device_id=slave_id)
@@ -116,14 +117,14 @@ async def read_device_info(client: AsyncModbusTcpClient, slave_id: int):
         state_name = RUNNING_STATE_MAPPING.get(state_code, f"Unknown (0x{state_code:04X})")
         print(f"  Running State:    {state_name}")
     else:
-        print(f"  Running State:    Not available")
+        print("  Running State:    Not available")
 
 
 async def read_pv_data(client: AsyncModbusTcpClient, slave_id: int):
     """Read PV/solar data."""
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("PV/Solar Data")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     # Daily PV Generation - try register 13001 first (hybrid inverters), fallback to 5002
     result = await client.read_input_registers(address=13001, count=1, device_id=slave_id)
@@ -176,9 +177,9 @@ async def read_pv_data(client: AsyncModbusTcpClient, slave_id: int):
 
 async def read_grid_data(client: AsyncModbusTcpClient, slave_id: int):
     """Read grid/AC data."""
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("Grid/AC Data")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     # Grid Frequency (register 5035), unit: 0.1Hz
     result = await client.read_input_registers(address=5035, count=1, device_id=slave_id)
@@ -212,9 +213,9 @@ async def read_grid_data(client: AsyncModbusTcpClient, slave_id: int):
 
 async def read_battery_data(client: AsyncModbusTcpClient, slave_id: int):
     """Read battery data."""
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("Battery Data")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     # Battery Voltage (register 5082), unit: 0.1V
     result = await client.read_input_registers(address=5082, count=1, device_id=slave_id)
@@ -222,7 +223,7 @@ async def read_battery_data(client: AsyncModbusTcpClient, slave_id: int):
         voltage = result.registers[0] * 0.1
         print(f"  Battery Voltage:  {voltage} V")
     else:
-        print(f"  Battery Voltage:  Not available")
+        print("  Battery Voltage:  Not available")
 
     # Battery Current (register 5083), unit: 0.1A, signed
     result = await client.read_input_registers(address=5083, count=1, device_id=slave_id)
@@ -233,7 +234,7 @@ async def read_battery_data(client: AsyncModbusTcpClient, slave_id: int):
         current = current_raw * 0.1
         print(f"  Battery Current:  {current} A")
     else:
-        print(f"  Battery Current:  Not available")
+        print("  Battery Current:  Not available")
 
     # Battery Power (register 5084), unit: 1W, signed
     result = await client.read_input_registers(address=5084, count=2, device_id=slave_id)
@@ -243,7 +244,7 @@ async def read_battery_data(client: AsyncModbusTcpClient, slave_id: int):
             power_raw -= 0x100000000
         print(f"  Battery Power:    {power_raw} W")
     else:
-        print(f"  Battery Power:    Not available")
+        print("  Battery Power:    Not available")
 
     # Battery SOC (register 13022), unit: 0.1%
     result = await client.read_input_registers(address=13022, count=1, device_id=slave_id)
@@ -251,7 +252,7 @@ async def read_battery_data(client: AsyncModbusTcpClient, slave_id: int):
         soc = result.registers[0] / 10
         print(f"  Battery SOC:      {soc:.1f}%")
     else:
-        print(f"  Battery SOC:      Not available")
+        print("  Battery SOC:      Not available")
 
     # Battery SOH (register 13023), unit: 0.1%
     result = await client.read_input_registers(address=13023, count=1, device_id=slave_id)
@@ -259,14 +260,14 @@ async def read_battery_data(client: AsyncModbusTcpClient, slave_id: int):
         soh = result.registers[0] / 10
         print(f"  Battery SOH:      {soh:.1f}%")
     else:
-        print(f"  Battery SOH:      Not available")
+        print("  Battery SOH:      Not available")
 
 
 async def read_ems_settings(client: AsyncModbusTcpClient, slave_id: int):
     """Read EMS/configuration settings (holding registers)."""
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("EMS Settings (Holding Registers - READ ONLY)")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     # EMS Mode (register 13049)
     result = await client.read_holding_registers(address=13049, count=1, device_id=slave_id)
@@ -275,7 +276,7 @@ async def read_ems_settings(client: AsyncModbusTcpClient, slave_id: int):
         mode_names = {0: "Self-consumption", 1: "Forced mode", 2: "Backup", 3: "Feed-in priority"}
         print(f"  EMS Mode:         {mode_names.get(mode, f'Unknown ({mode})')}")
     else:
-        print(f"  EMS Mode:         Not available")
+        print("  EMS Mode:         Not available")
 
     # Max SOC (register 13057), unit: 0.1%
     result = await client.read_holding_registers(address=13057, count=1, device_id=slave_id)
@@ -283,7 +284,7 @@ async def read_ems_settings(client: AsyncModbusTcpClient, slave_id: int):
         max_soc = result.registers[0] * 0.1
         print(f"  Max SOC:          {max_soc}%")
     else:
-        print(f"  Max SOC:          Not available")
+        print("  Max SOC:          Not available")
 
     # Min SOC (register 13058), unit: 0.1%
     result = await client.read_holding_registers(address=13058, count=1, device_id=slave_id)
@@ -291,15 +292,16 @@ async def read_ems_settings(client: AsyncModbusTcpClient, slave_id: int):
         min_soc = result.registers[0] * 0.1
         print(f"  Min SOC:          {min_soc}%")
     else:
-        print(f"  Min SOC:          Not available")
+        print("  Min SOC:          Not available")
 
 
-async def scan_register_range(client: AsyncModbusTcpClient, slave_id: int,
-                               start: int, end: int, reg_type: str = "input"):
+async def scan_register_range(
+    client: AsyncModbusTcpClient, slave_id: int, start: int, end: int, reg_type: str = "input"
+):
     """Scan a range of registers and print values."""
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"Scanning {reg_type} registers {start}-{end}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     for addr in range(start, end + 1):
         try:
@@ -325,21 +327,17 @@ async def main():
 
     parser = argparse.ArgumentParser(
         description="Test Sungrow inverter Modbus connection",
-        epilog="Set SUNGROW_IP environment variable or use --ip flag"
+        epilog="Set SUNGROW_IP environment variable or use --ip flag",
     )
     parser.add_argument(
-        "--ip",
-        default=default_ip,
-        required=default_ip is None,
-        help="Inverter IP address (or set SUNGROW_IP env var)"
+        "--ip", default=default_ip, required=default_ip is None, help="Inverter IP address (or set SUNGROW_IP env var)"
     )
     parser.add_argument("--port", type=int, default=502, help="Modbus port")
     parser.add_argument("--slave", type=int, default=1, help="Modbus slave ID")
     parser.add_argument("--scan", action="store_true", help="Scan register ranges")
     parser.add_argument("--scan-start", type=int, default=4989, help="Scan start register")
     parser.add_argument("--scan-end", type=int, default=5050, help="Scan end register")
-    parser.add_argument("--scan-type", choices=["input", "holding"], default="input",
-                        help="Register type to scan")
+    parser.add_argument("--scan-type", choices=["input", "holding"], default="input", help="Register type to scan")
     args = parser.parse_args()
 
     client = await test_connection(args.ip, args.port, args.slave)
@@ -356,9 +354,9 @@ async def main():
             await read_battery_data(client, args.slave)
             await read_ems_settings(client, args.slave)
 
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print("TEST COMPLETED SUCCESSFULLY")
-        print(f"{'='*60}\n")
+        print(f"{'=' * 60}\n")
         return 0
 
     except Exception as e:

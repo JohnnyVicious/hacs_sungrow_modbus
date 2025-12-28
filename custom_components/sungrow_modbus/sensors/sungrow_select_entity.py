@@ -11,16 +11,15 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class SungrowSelectEntity(RestoreEntity, SelectEntity):
-
     def __init__(self, hass, modbus_controller, entity_definition) -> None:
         self._hass = hass
         self._modbus_controller: ModbusController = modbus_controller
         self._register = entity_definition["register"]
         self._attr_name = entity_definition["name"]
         self._attr_has_entity_name = True
-        self._attr_unique_id = "{}_{}_{}_select".format(DOMAIN,
-                                                        self._modbus_controller.device_serial_number,
-                                                        entity_definition["register"])
+        self._attr_unique_id = "{}_{}_{}_select".format(
+            DOMAIN, self._modbus_controller.device_serial_number, entity_definition["register"]
+        )
         self._attr_options = [e["name"] for e in entity_definition["entities"]]
         self._attr_options_raw = entity_definition["entities"]
         self._current_option = None
@@ -33,9 +32,7 @@ class SungrowSelectEntity(RestoreEntity, SelectEntity):
 
         # Sort by number of requires descending to prioritize more specific matches
         sorted_options = sorted(
-            self._attr_options_raw,
-            key=lambda e: len(e.get("requires", [])) if "requires" in e else 0,
-            reverse=True
+            self._attr_options_raw, key=lambda e: len(e.get("requires", [])) if "requires" in e else 0, reverse=True
         )
 
         for e in sorted_options:
@@ -43,16 +40,12 @@ class SungrowSelectEntity(RestoreEntity, SelectEntity):
             bit_position = e.get("bit_position")
             requires = e.get("requires")
 
-            if on_value is not None:
-                if reg_cache == on_value:
-                    return e["name"]
-            elif bit_position is not None:
-                if get_bit_bool(reg_cache, bit_position):
-                    if requires:
-                        if all(get_bit_bool(reg_cache, rbit) for rbit in requires):
-                            return e["name"]
-                    else:
-                        return e["name"]
+            if (on_value is not None and reg_cache == on_value) or (
+                bit_position is not None
+                and get_bit_bool(reg_cache, bit_position)
+                and (not requires or all(get_bit_bool(reg_cache, rbit) for rbit in requires))
+            ):
+                return e["name"]
 
         return None
 
@@ -106,7 +99,8 @@ class SungrowSelectEntity(RestoreEntity, SelectEntity):
             new_register_value: int = on_value
 
         _LOGGER.debug(
-            f"Attempting bit {bit_position} to {True} in register {self._register}. New value for register {new_register_value}")
+            f"Attempting bit {bit_position} to {True} in register {self._register}. New value for register {new_register_value}"
+        )
         # we only want to write when values has changed. After, we read the register again to make sure it applied.
         # Note: cache_save is handled by ModbusController on successful write
         if current_register_value != new_register_value and controller.connected():

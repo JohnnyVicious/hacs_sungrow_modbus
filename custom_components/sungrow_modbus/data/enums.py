@@ -8,12 +8,14 @@ class PollSpeed(Enum):
     NORMAL = "normal"
     SLOW = "slow"
 
+
 class InverterType(Enum):
     HYBRID = "hybrid"
     STRING = "string"
     GRID = "grid"
     ENERGY = "energy"
     WAVESHARE = "waveshare"
+
 
 class InverterFeature(Enum):
     PV = "pv"
@@ -30,6 +32,7 @@ class InverterFeature(Enum):
     MPPT3 = "mppt3"
     MULTI_BATTERY = "multi_battery"  # Multiple battery stacks (slave ID 200-203)
     BATTERY_DIRECT = "battery_direct"  # Direct battery communication available
+
 
 class Category(Enum):
     BASIC_INFORMATION = "Basic Information"

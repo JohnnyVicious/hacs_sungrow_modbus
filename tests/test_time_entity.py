@@ -1,13 +1,13 @@
 """Tests for time entity platform."""
-import pytest
-from datetime import time
-from unittest.mock import MagicMock, AsyncMock, patch
 
-from custom_components.sungrow_modbus.const import (
-    DOMAIN, CONTROLLER, TIME_ENTITIES, REGISTER, VALUE, SLAVE, VALUES
-)
-from custom_components.sungrow_modbus.data.enums import InverterType, InverterFeature, PollSpeed
-from custom_components.sungrow_modbus.time import async_setup_entry, SungrowTimeEntity
+from datetime import time
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+
+from custom_components.sungrow_modbus.const import CONTROLLER, DOMAIN, REGISTER, SLAVE, TIME_ENTITIES, VALUE, VALUES
+from custom_components.sungrow_modbus.data.enums import InverterFeature, InverterType, PollSpeed
+from custom_components.sungrow_modbus.time import SungrowTimeEntity, async_setup_entry
 
 
 def create_mock_controller(host="10.0.0.1", slave=1, inverter_type=InverterType.HYBRID, features=None):
@@ -42,19 +42,10 @@ class TestTimeEntityPlatformSetup:
     @pytest.mark.asyncio
     async def test_hybrid_with_battery_creates_load_timing_entities(self):
         """Test HYBRID inverter with BATTERY feature creates load timing entities."""
-        controller = create_mock_controller(
-            inverter_type=InverterType.HYBRID,
-            features={InverterFeature.BATTERY}
-        )
+        controller = create_mock_controller(inverter_type=InverterType.HYBRID, features={InverterFeature.BATTERY})
 
         hass = MagicMock()
-        hass.data = {
-            DOMAIN: {
-                CONTROLLER: {
-                    "10.0.0.1:502_1": controller
-                }
-            }
-        }
+        hass.data = {DOMAIN: {CONTROLLER: {"10.0.0.1:502_1": controller}}}
 
         config_entry = MagicMock()
         config_entry.data = {"host": "10.0.0.1", "port": 502, "slave": 1}
@@ -88,17 +79,11 @@ class TestTimeEntityPlatformSetup:
         """Test HYBRID inverter without BATTERY feature creates no time entities."""
         controller = create_mock_controller(
             inverter_type=InverterType.HYBRID,
-            features=set()  # No BATTERY feature
+            features=set(),  # No BATTERY feature
         )
 
         hass = MagicMock()
-        hass.data = {
-            DOMAIN: {
-                CONTROLLER: {
-                    "10.0.0.1:502_1": controller
-                }
-            }
-        }
+        hass.data = {DOMAIN: {CONTROLLER: {"10.0.0.1:502_1": controller}}}
 
         config_entry = MagicMock()
         config_entry.data = {"host": "10.0.0.1", "port": 502, "slave": 1}
@@ -119,17 +104,11 @@ class TestTimeEntityPlatformSetup:
         """Test STRING inverter creates no time entities."""
         controller = create_mock_controller(
             inverter_type=InverterType.STRING,
-            features={InverterFeature.BATTERY}  # Even with battery, STRING has no load timing
+            features={InverterFeature.BATTERY},  # Even with battery, STRING has no load timing
         )
 
         hass = MagicMock()
-        hass.data = {
-            DOMAIN: {
-                CONTROLLER: {
-                    "10.0.0.1:502_1": controller
-                }
-            }
-        }
+        hass.data = {DOMAIN: {CONTROLLER: {"10.0.0.1:502_1": controller}}}
 
         config_entry = MagicMock()
         config_entry.data = {"host": "10.0.0.1", "port": 502, "slave": 1}
@@ -148,19 +127,10 @@ class TestTimeEntityPlatformSetup:
     @pytest.mark.asyncio
     async def test_load_timing_registers_are_correct(self):
         """Test that load timing entities use correct Sungrow registers."""
-        controller = create_mock_controller(
-            inverter_type=InverterType.HYBRID,
-            features={InverterFeature.BATTERY}
-        )
+        controller = create_mock_controller(inverter_type=InverterType.HYBRID, features={InverterFeature.BATTERY})
 
         hass = MagicMock()
-        hass.data = {
-            DOMAIN: {
-                CONTROLLER: {
-                    "10.0.0.1:502_1": controller
-                }
-            }
-        }
+        hass.data = {DOMAIN: {CONTROLLER: {"10.0.0.1:502_1": controller}}}
 
         config_entry = MagicMock()
         config_entry.data = {"host": "10.0.0.1", "port": 502, "slave": 1}
@@ -191,11 +161,7 @@ class TestSungrowTimeEntity:
         hass = MagicMock()
         controller = create_mock_controller()
 
-        entity_def = {
-            "name": "Load Timing Period 1 Start",
-            "register": 13003,
-            "enabled": True
-        }
+        entity_def = {"name": "Load Timing Period 1 Start", "register": 13003, "enabled": True}
 
         entity = SungrowTimeEntity(hass, controller, entity_def)
 
@@ -258,14 +224,9 @@ class TestSungrowTimeEntity:
         hass.data[DOMAIN][VALUES]["13004"] = 30  # minute
 
         event = MagicMock()
-        event.data = {
-            REGISTER: 13003,
-            VALUE: 14,
-            CONTROLLER: "10.0.0.1",
-            SLAVE: 1
-        }
+        event.data = {REGISTER: 13003, VALUE: 14, CONTROLLER: "10.0.0.1", SLAVE: 1}
 
-        with patch('custom_components.sungrow_modbus.time.cache_get') as mock_cache:
+        with patch("custom_components.sungrow_modbus.time.cache_get") as mock_cache:
             # cache_get takes 3 args: hass, register, controller_key
             mock_cache.side_effect = lambda h, r, k: {13003: 14, 13004: 30}.get(r)
             entity.handle_modbus_update(event)
@@ -288,10 +249,10 @@ class TestSungrowTimeEntity:
             REGISTER: 13003,
             VALUE: 25,  # Invalid hour (> 23)
             CONTROLLER: "10.0.0.1",
-            SLAVE: 1
+            SLAVE: 1,
         }
 
-        with patch('custom_components.sungrow_modbus.time.cache_get') as mock_cache:
+        with patch("custom_components.sungrow_modbus.time.cache_get") as mock_cache:
             mock_cache.side_effect = lambda h, r, k: {13003: 25, 13004: 30}.get(r)
             entity.handle_modbus_update(event)
 
@@ -308,14 +269,9 @@ class TestSungrowTimeEntity:
         entity.schedule_update_ha_state = MagicMock()
 
         event = MagicMock()
-        event.data = {
-            REGISTER: 13003,
-            VALUE: 14,
-            CONTROLLER: "10.0.0.1",
-            SLAVE: 1
-        }
+        event.data = {REGISTER: 13003, VALUE: 14, CONTROLLER: "10.0.0.1", SLAVE: 1}
 
-        with patch('custom_components.sungrow_modbus.time.cache_get') as mock_cache:
+        with patch("custom_components.sungrow_modbus.time.cache_get") as mock_cache:
             mock_cache.side_effect = lambda h, r, k: {13003: 14, 13004: 70}.get(r)  # 70 is invalid minute
             entity.handle_modbus_update(event)
 
@@ -332,14 +288,9 @@ class TestSungrowTimeEntity:
         entity.schedule_update_ha_state = MagicMock()
 
         event = MagicMock()
-        event.data = {
-            REGISTER: 13003,
-            VALUE: 14,
-            CONTROLLER: "10.0.0.1",
-            SLAVE: 1
-        }
+        event.data = {REGISTER: 13003, VALUE: 14, CONTROLLER: "10.0.0.1", SLAVE: 1}
 
-        with patch('custom_components.sungrow_modbus.time.cache_get') as mock_cache:
+        with patch("custom_components.sungrow_modbus.time.cache_get") as mock_cache:
             mock_cache.side_effect = lambda h, r, k: {13003: 14}.get(r)  # minute not in cache
             entity.handle_modbus_update(event)
 
@@ -360,7 +311,7 @@ class TestSungrowTimeEntity:
             REGISTER: 13003,
             VALUE: 14,
             CONTROLLER: "10.0.0.2",  # Different host
-            SLAVE: 1
+            SLAVE: 1,
         }
 
         entity.handle_modbus_update(event)
@@ -383,7 +334,7 @@ class TestSungrowTimeEntity:
             REGISTER: 13999,  # Different register
             VALUE: 14,
             CONTROLLER: "10.0.0.1",
-            SLAVE: 1
+            SLAVE: 1,
         }
 
         entity.handle_modbus_update(event)
@@ -401,7 +352,7 @@ class TestSungrowTimeEntity:
         entity_def = {"name": "Test", "register": 13003, "enabled": True}
         entity = SungrowTimeEntity(hass, controller, entity_def)
 
-        with patch.object(entity, 'async_get_last_sensor_data', new_callable=AsyncMock) as mock_restore:
+        with patch.object(entity, "async_get_last_sensor_data", new_callable=AsyncMock) as mock_restore:
             mock_restore.return_value = None
             await entity.async_added_to_hass()
 
@@ -419,7 +370,7 @@ class TestSungrowTimeEntity:
         entity_def = {"name": "Test", "register": 13003, "enabled": True}
         entity = SungrowTimeEntity(hass, controller, entity_def)
 
-        with patch.object(entity, 'async_get_last_sensor_data', new_callable=AsyncMock) as mock_restore:
+        with patch.object(entity, "async_get_last_sensor_data", new_callable=AsyncMock) as mock_restore:
             mock_restore.return_value = None
             await entity.async_added_to_hass()
 
@@ -441,7 +392,7 @@ class TestSungrowTimeEntity:
         mock_state = MagicMock()
         mock_state.native_value = time(hour=8, minute=30)
 
-        with patch.object(entity, 'async_get_last_sensor_data', new_callable=AsyncMock) as mock_restore:
+        with patch.object(entity, "async_get_last_sensor_data", new_callable=AsyncMock) as mock_restore:
             mock_restore.return_value = mock_state
             await entity.async_added_to_hass()
 

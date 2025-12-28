@@ -1,0 +1,35 @@
+[project]
+name = "sungrow_modbus"
+version = "0.1.5"
+description = "Home Assistant custom integration for Sungrow inverters via Modbus"
+requires-python = ">=3.12"
+
+[tool.ruff]
+required-version = ">=0.8.0"
+target-version = "py312"
+line-length = 119
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # Pyflakes
+    "I",      # isort
+    "UP",     # pyupgrade
+    "B",      # flake8-bugbear
+    "SIM",    # flake8-simplify
+    "TID",    # flake8-tidy-imports
+]
+ignore = [
+    "E501",   # line too long (handled by formatter)
+    "B008",   # do not perform function calls in argument defaults
+    "SIM108", # use ternary operator instead of if-else
+]
+
+[tool.ruff.lint.isort]
+force-single-line = false
+combine-as-imports = true
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"

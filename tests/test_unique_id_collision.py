@@ -1,9 +1,9 @@
 import unittest
 from unittest.mock import MagicMock
-from custom_components.sungrow_modbus.sensors.sungrow_base_sensor import SungrowSensorGroup
-from custom_components.sungrow_modbus.modbus_controller import ModbusController
+
 from custom_components.sungrow_modbus.data.enums import PollSpeed
-from custom_components.sungrow_modbus.const import DOMAIN
+from custom_components.sungrow_modbus.sensors.sungrow_base_sensor import SungrowSensorGroup
+
 
 class TestSensorCollision(unittest.TestCase):
     def setUp(self):
@@ -31,13 +31,7 @@ class TestSensorCollision(unittest.TestCase):
 
         definition = {
             "poll_speed": PollSpeed.NORMAL,
-            "entities": [
-                {
-                    "name": "Active Power",
-                    "register": [3000],
-                    "unique": "active_power"
-                }
-            ]
+            "entities": [{"name": "Active Power", "register": [3000], "unique": "active_power"}],
         }
 
         group_a = SungrowSensorGroup(self.hass, definition, controller_a)
@@ -49,7 +43,9 @@ class TestSensorCollision(unittest.TestCase):
         print(f"Sensor A Unique ID: {sensor_a.unique_id}")
         print(f"Sensor B Unique ID: {sensor_b.unique_id}")
 
-        self.assertNotEqual(sensor_a.unique_id, sensor_b.unique_id, "Unique IDs should be different for different slaves")
+        self.assertNotEqual(
+            sensor_a.unique_id, sensor_b.unique_id, "Unique IDs should be different for different slaves"
+        )
 
     def test_derived_unique_id_collision(self):
         # Even with different hosts, Derived Sensors might collide if they don't use Host in ID
@@ -61,22 +57,17 @@ class TestSensorCollision(unittest.TestCase):
         controller_a.device_serial_number = "SN_A"
 
         controller_b = MagicMock()
-        controller_b.host = "192.168.1.20" # Different IP!
+        controller_b.host = "192.168.1.20"  # Different IP!
         controller_b.port = 502
         controller_b.device_id = 1
         controller_b.inverter_config = self.inverter_config
         controller_b.device_serial_number = "SN_B"
 
-        entity_def = {
-            "name": "Status",
-            "unique": "inverter_status",
-            "register": []
-        }
-        
+        entity_def = {"name": "Status", "unique": "inverter_status", "register": []}
+
         # Simulating __init__.py logic
         DOMAIN = "sungrow_modbus"
-        identification = None
-        
+
         unique_id_a = f"{DOMAIN}_{controller_a.device_serial_number}_{entity_def['unique']}"
         unique_id_b = f"{DOMAIN}_{controller_b.device_serial_number}_{entity_def['unique']}"
 
@@ -103,13 +94,7 @@ class TestSensorCollision(unittest.TestCase):
 
         definition = {
             "poll_speed": PollSpeed.NORMAL,
-            "entities": [
-                {
-                    "name": "Active Power",
-                    "register": [3000],
-                    "unique": "active_power"
-                }
-            ]
+            "entities": [{"name": "Active Power", "register": [3000], "unique": "active_power"}],
         }
 
         group_a = SungrowSensorGroup(self.hass, definition, controller_a)
@@ -121,7 +106,10 @@ class TestSensorCollision(unittest.TestCase):
         print(f"Sensor A Unique ID: {sensor_a.unique_id}")
         print(f"Sensor B Unique ID: {sensor_b.unique_id}")
 
-        self.assertNotEqual(sensor_a.unique_id, sensor_b.unique_id, "Unique IDs should distinguish by Port if Host is same")
+        self.assertNotEqual(
+            sensor_a.unique_id, sensor_b.unique_id, "Unique IDs should distinguish by Port if Host is same"
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

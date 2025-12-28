@@ -1,26 +1,26 @@
 """Tests for battery sensor entities."""
 
-import pytest
-from unittest.mock import MagicMock, AsyncMock
+from unittest.mock import MagicMock
 
+import pytest
 from homeassistant.const import EntityCategory
 
-from custom_components.sungrow_modbus.sensors.sungrow_battery_sensor import (
-    SungrowBatterySensor,
-    SungrowBatteryDiagnosticSensor,
-    create_battery_sensors,
-)
 from custom_components.sungrow_modbus.battery_controller import (
     BatteryController,
     BatteryStack,
 )
-from custom_components.sungrow_modbus.sensor_data.battery_sensors import (
-    battery_stack_sensors,
-    battery_stack_diagnostic_sensors,
-    get_battery_sensor_unique_id,
-    get_battery_sensor_name,
-)
 from custom_components.sungrow_modbus.const import DOMAIN, MANUFACTURER
+from custom_components.sungrow_modbus.sensor_data.battery_sensors import (
+    battery_stack_diagnostic_sensors,
+    battery_stack_sensors,
+    get_battery_sensor_name,
+    get_battery_sensor_unique_id,
+)
+from custom_components.sungrow_modbus.sensors.sungrow_battery_sensor import (
+    SungrowBatteryDiagnosticSensor,
+    SungrowBatterySensor,
+    create_battery_sensors,
+)
 
 
 class TestBatterySensorHelpers:
@@ -225,7 +225,7 @@ class TestCreateBatterySensors:
             controller.inverter.serial_number = "INV123456"
             controller.battery = BatteryStack(stack_index=i, slave_id=200 + i)
             controller.battery.available = True
-            controller.battery.serial_number = f"BAT00{i+1}"
+            controller.battery.serial_number = f"BAT00{i + 1}"
             controller.battery.firmware_version = "1.0.0"
             controller.device_info = {"identifiers": {(DOMAIN, f"INV123456_battery_{i}")}}
             controllers.append(controller)

@@ -9,8 +9,6 @@ Sources:
 Codes are organized by series/category for maintainability.
 """
 
-from typing import Optional
-
 
 # =============================================================================
 # ALARM CODE MAPPING
@@ -81,7 +79,6 @@ ALARM_CODES = {
     87: "AFCI abnormal",
     88: "Arc fault",
     89: "AFCI function disabled",
-
     # =========================================================================
     # 1xx Series - AC Output and Grid Faults
     # =========================================================================
@@ -94,7 +91,6 @@ ALARM_CODES = {
     113: "Temporary bypass overcurrent",
     116: "Device abnormal",
     117: "Device abnormal",
-
     # =========================================================================
     # 2xx Series - Bus and PV Hardware Faults
     # =========================================================================
@@ -104,7 +100,6 @@ ALARM_CODES = {
     203: "PV input voltage exceeds bus voltage",
     204: "PV1 boost short-circuit fault",
     205: "PV2 boost short-circuit fault",
-
     # =========================================================================
     # 3xx Series - System and Sampling Faults
     # =========================================================================
@@ -124,7 +119,6 @@ ALARM_CODES = {
     320: "Leakage current sensor fault",
     321: "SPI communication failure",
     322: "Master DSP communication fault",
-
     # =========================================================================
     # 4xx Series - Permanent Faults and Grid Issues
     # =========================================================================
@@ -140,7 +134,6 @@ ALARM_CODES = {
     432: "PID resistance abnormal",
     433: "PID function abnormal",
     434: "PID overvoltage/overcurrent protection",
-
     # =========================================================================
     # 5xx Series - Sensor and String Faults
     # =========================================================================
@@ -163,7 +156,6 @@ ALARM_CODES = {
     549: "Abnormal PV string 2 current",
     550: "Abnormal PV string 3 current",
     551: "Abnormal PV string 4 current",
-
     # =========================================================================
     # 6xx Series - Single-Phase Hybrid BDC Faults
     # =========================================================================
@@ -177,7 +169,6 @@ ALARM_CODES = {
     620: "BDC current sampling fault",
     623: "Slave DSP communication fault",
     624: "BDC soft-start fault",
-
     # =========================================================================
     # 7xx Series - Battery Side Faults (Single-Phase Hybrid)
     # =========================================================================
@@ -193,7 +184,6 @@ ALARM_CODES = {
     734: "Battery under-temperature protection",
     735: "Battery charging/discharging over-current",
     739: "Battery under-voltage protection",
-
     # =========================================================================
     # 8xx Series - Permanent BDC and Battery Faults
     # =========================================================================
@@ -211,7 +201,6 @@ ALARM_CODES = {
     867: "Battery under-voltage fault",
     868: "Battery cell voltage imbalance",
     870: "Battery cable connection fault",
-
     # =========================================================================
     # 9xx Series - Warnings (BDC and Battery)
     # =========================================================================
@@ -227,14 +216,12 @@ ALARM_CODES = {
     937: "Battery tray voltage imbalance warning",
     939: "Battery under-voltage warning",
     964: "Battery internal warning",
-
     # =========================================================================
     # Three-Phase Hybrid Specific Codes (overlapping with 0xx but different meaning)
     # These are used when detected on three-phase hybrid inverters
     # =========================================================================
     # Note: Three-phase hybrids may use different code meanings
     # The base 0xx codes above are generally applicable
-
     # =========================================================================
     # 41xx Series - Extended Fault Codes (from status_mapping.py)
     # =========================================================================
@@ -305,8 +292,7 @@ RUNNING_STATE_CODES = {
     0x8200: "Dispatch Run",
     0x5500: "Fault",
     0x2500: "Communication Fault",
-    # Numeric equivalents for work_state_2
-    0: "Run",
+    # Numeric equivalents for work_state_2 (note: 0 is same as 0x0000, already defined above)
     1: "Stop",
     2: "Initial Standby",
     3: "Key Stop",
@@ -356,6 +342,7 @@ PID_STATE_CODES = {
 # =============================================================================
 # HELPER FUNCTIONS
 # =============================================================================
+
 
 def get_alarm_description(code: int) -> str:
     """

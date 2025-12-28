@@ -48,11 +48,7 @@ async def modbus_client(inverter_ip, inverter_port, run_live):
     if not run_live:
         pytest.skip("Live tests disabled. Use --run-live to enable.")
 
-    client = AsyncModbusTcpClient(
-        host=inverter_ip,
-        port=inverter_port,
-        timeout=10
-    )
+    client = AsyncModbusTcpClient(host=inverter_ip, port=inverter_port, timeout=10)
 
     connected = await client.connect()
     if not connected:
@@ -83,7 +79,7 @@ class TestLiveDeviceInfo:
         result = await modbus_client.read_input_registers(
             address=4989 - 1,  # 0-based
             count=10,
-            slave=slave_id
+            slave=slave_id,
         )
 
         assert not result.isError(), f"Failed to read serial number: {result}"
@@ -104,11 +100,7 @@ class TestLiveDeviceInfo:
     @pytest.mark.asyncio
     async def test_read_device_type_code(self, modbus_client, slave_id):
         """Read device type code (register 4999)."""
-        result = await modbus_client.read_input_registers(
-            address=4999 - 1,
-            count=1,
-            slave=slave_id
-        )
+        result = await modbus_client.read_input_registers(address=4999 - 1, count=1, slave=slave_id)
 
         assert not result.isError(), f"Failed to read device type: {result}"
         device_type = result.registers[0]
@@ -117,11 +109,7 @@ class TestLiveDeviceInfo:
     @pytest.mark.asyncio
     async def test_read_nominal_power(self, modbus_client, slave_id):
         """Read nominal output power (register 5000), unit: 0.1kW."""
-        result = await modbus_client.read_input_registers(
-            address=5000 - 1,
-            count=1,
-            slave=slave_id
-        )
+        result = await modbus_client.read_input_registers(address=5000 - 1, count=1, slave=slave_id)
 
         assert not result.isError(), f"Failed to read nominal power: {result}"
         nominal_power_raw = result.registers[0]
@@ -138,11 +126,7 @@ class TestLivePVData:
     @pytest.mark.asyncio
     async def test_read_daily_pv_generation(self, modbus_client, slave_id):
         """Read daily PV generation (register 5002), unit: 0.1kWh."""
-        result = await modbus_client.read_input_registers(
-            address=5002 - 1,
-            count=1,
-            slave=slave_id
-        )
+        result = await modbus_client.read_input_registers(address=5002 - 1, count=1, slave=slave_id)
 
         assert not result.isError(), f"Failed to read daily generation: {result}"
         daily_gen_kwh = result.registers[0] * 0.1
@@ -151,11 +135,7 @@ class TestLivePVData:
     @pytest.mark.asyncio
     async def test_read_total_pv_generation(self, modbus_client, slave_id):
         """Read total PV generation (registers 5003-5004), unit: 0.1kWh, U32."""
-        result = await modbus_client.read_input_registers(
-            address=5003 - 1,
-            count=2,
-            slave=slave_id
-        )
+        result = await modbus_client.read_input_registers(address=5003 - 1, count=2, slave=slave_id)
 
         assert not result.isError(), f"Failed to read total generation: {result}"
         # Combine two 16-bit registers into 32-bit value (high word first for Sungrow)
@@ -166,11 +146,7 @@ class TestLivePVData:
     @pytest.mark.asyncio
     async def test_read_mppt1_voltage_current(self, modbus_client, slave_id):
         """Read MPPT1 voltage (5010) and current (5011)."""
-        result = await modbus_client.read_input_registers(
-            address=5010 - 1,
-            count=2,
-            slave=slave_id
-        )
+        result = await modbus_client.read_input_registers(address=5010 - 1, count=2, slave=slave_id)
 
         assert not result.isError(), f"Failed to read MPPT1 data: {result}"
         voltage = result.registers[0] * 0.1  # Unit: 0.1V
@@ -185,11 +161,7 @@ class TestLiveGridData:
     @pytest.mark.asyncio
     async def test_read_grid_frequency(self, modbus_client, slave_id):
         """Read grid frequency (register 5035), unit: 0.1Hz."""
-        result = await modbus_client.read_input_registers(
-            address=5035 - 1,
-            count=1,
-            slave=slave_id
-        )
+        result = await modbus_client.read_input_registers(address=5035 - 1, count=1, slave=slave_id)
 
         assert not result.isError(), f"Failed to read grid frequency: {result}"
         frequency = result.registers[0] * 0.1
@@ -200,11 +172,7 @@ class TestLiveGridData:
     @pytest.mark.asyncio
     async def test_read_internal_temperature(self, modbus_client, slave_id):
         """Read internal temperature (register 5007), unit: 0.1C, signed."""
-        result = await modbus_client.read_input_registers(
-            address=5007 - 1,
-            count=1,
-            slave=slave_id
-        )
+        result = await modbus_client.read_input_registers(address=5007 - 1, count=1, slave=slave_id)
 
         assert not result.isError(), f"Failed to read temperature: {result}"
         # Handle signed 16-bit value
@@ -223,11 +191,7 @@ class TestLiveBatteryData:
     @pytest.mark.asyncio
     async def test_read_battery_voltage(self, modbus_client, slave_id):
         """Read battery voltage (register 5082), unit: 0.1V."""
-        result = await modbus_client.read_input_registers(
-            address=5082 - 1,
-            count=1,
-            slave=slave_id
-        )
+        result = await modbus_client.read_input_registers(address=5082 - 1, count=1, slave=slave_id)
 
         if result.isError():
             pytest.skip("Battery data not available (may not have battery connected)")
@@ -238,11 +202,7 @@ class TestLiveBatteryData:
     @pytest.mark.asyncio
     async def test_read_battery_soc(self, modbus_client, slave_id):
         """Read battery state of charge (register 13022), unit: 0.1%."""
-        result = await modbus_client.read_input_registers(
-            address=13022 - 1,
-            count=1,
-            slave=slave_id
-        )
+        result = await modbus_client.read_input_registers(address=13022 - 1, count=1, slave=slave_id)
 
         if result.isError():
             pytest.skip("Battery SOC not available")
@@ -258,33 +218,20 @@ class TestLiveHoldingRegisters:
     @pytest.mark.asyncio
     async def test_read_ems_mode(self, modbus_client, slave_id):
         """Read EMS mode (holding register 13049)."""
-        result = await modbus_client.read_holding_registers(
-            address=13049 - 1,
-            count=1,
-            slave=slave_id
-        )
+        result = await modbus_client.read_holding_registers(address=13049 - 1, count=1, slave=slave_id)
 
         if result.isError():
             pytest.skip(f"EMS mode register not available: {result}")
 
         ems_mode = result.registers[0]
-        mode_names = {
-            0: "Self-consumption",
-            1: "Forced charge/discharge",
-            2: "Backup mode",
-            3: "Feed-in priority"
-        }
+        mode_names = {0: "Self-consumption", 1: "Forced charge/discharge", 2: "Backup mode", 3: "Feed-in priority"}
         mode_name = mode_names.get(ems_mode, f"Unknown ({ems_mode})")
         print(f"\n  EMS Mode: {mode_name}")
 
     @pytest.mark.asyncio
     async def test_read_max_soc(self, modbus_client, slave_id):
         """Read max SOC setting (holding register 13057), unit: 0.1%."""
-        result = await modbus_client.read_holding_registers(
-            address=13057 - 1,
-            count=1,
-            slave=slave_id
-        )
+        result = await modbus_client.read_holding_registers(address=13057 - 1, count=1, slave=slave_id)
 
         if result.isError():
             pytest.skip(f"Max SOC register not available: {result}")
@@ -303,11 +250,7 @@ class TestLiveRegisterScan:
 
         for addr in range(4989, 5009):
             try:
-                result = await modbus_client.read_input_registers(
-                    address=addr - 1,
-                    count=1,
-                    slave=slave_id
-                )
+                result = await modbus_client.read_input_registers(address=addr - 1, count=1, slave=slave_id)
                 if not result.isError():
                     val = result.registers[0]
                     print(f"    {addr}: {val} (0x{val:04X})")
@@ -321,11 +264,7 @@ class TestLiveRegisterScan:
 
         for addr in range(13000, 13011):
             try:
-                result = await modbus_client.read_input_registers(
-                    address=addr - 1,
-                    count=1,
-                    slave=slave_id
-                )
+                result = await modbus_client.read_input_registers(address=addr - 1, count=1, slave=slave_id)
                 if not result.isError():
                     val = result.registers[0]
                     print(f"    {addr}: {val} (0x{val:04X})")

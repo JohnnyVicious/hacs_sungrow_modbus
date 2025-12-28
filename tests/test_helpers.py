@@ -1,12 +1,18 @@
 """Tests for helper functions."""
-import pytest
-from datetime import datetime, timedelta
+
+from datetime import datetime
 from unittest.mock import MagicMock, patch
 
-from custom_components.sungrow_modbus.const import DOMAIN, VALUES, DRIFT_COUNTER
+from custom_components.sungrow_modbus.const import DOMAIN, DRIFT_COUNTER, VALUES
 from custom_components.sungrow_modbus.helpers import (
-    hex_to_ascii, extract_serial_number, clock_drift_test,
-    decode_inverter_model, cache_save, cache_get, split_s32, _any_in
+    _any_in,
+    cache_get,
+    cache_save,
+    clock_drift_test,
+    decode_inverter_model,
+    extract_serial_number,
+    hex_to_ascii,
+    split_s32,
 )
 
 
@@ -69,7 +75,7 @@ class TestClockDriftTest:
         controller.connected.return_value = True
 
         # Use mock to control dt_utils.now()
-        with patch('custom_components.sungrow_modbus.helpers.dt_utils') as mock_dt:
+        with patch("custom_components.sungrow_modbus.helpers.dt_utils") as mock_dt:
             mock_now = datetime(2024, 1, 1, 12, 0, 30)
             mock_dt.now.return_value = mock_now
 
@@ -87,7 +93,7 @@ class TestClockDriftTest:
         controller = MagicMock()
         controller.connected.return_value = True
 
-        with patch('custom_components.sungrow_modbus.helpers.dt_utils') as mock_dt:
+        with patch("custom_components.sungrow_modbus.helpers.dt_utils") as mock_dt:
             mock_now = datetime(2024, 1, 1, 12, 5, 0)
             mock_dt.now.return_value = mock_now
 
@@ -106,7 +112,7 @@ class TestClockDriftTest:
         controller = MagicMock()
         controller.connected.return_value = True
 
-        with patch('custom_components.sungrow_modbus.helpers.dt_utils') as mock_dt:
+        with patch("custom_components.sungrow_modbus.helpers.dt_utils") as mock_dt:
             mock_now = datetime(2024, 1, 1, 12, 5, 0)
             mock_dt.now.return_value = mock_now
 
@@ -124,7 +130,7 @@ class TestClockDriftTest:
         controller = MagicMock()
         controller.connected.return_value = True
 
-        with patch('custom_components.sungrow_modbus.helpers.dt_utils') as mock_dt:
+        with patch("custom_components.sungrow_modbus.helpers.dt_utils") as mock_dt:
             mock_now = datetime(2024, 1, 1, 12, 0, 30)
             mock_dt.now.return_value = mock_now
 
@@ -143,7 +149,7 @@ class TestClockDriftTest:
         controller = MagicMock()
         controller.connected.return_value = False
 
-        with patch('custom_components.sungrow_modbus.helpers.dt_utils') as mock_dt:
+        with patch("custom_components.sungrow_modbus.helpers.dt_utils") as mock_dt:
             mock_now = datetime(2024, 1, 1, 12, 5, 0)
             mock_dt.now.return_value = mock_now
 

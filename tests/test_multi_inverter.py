@@ -1,16 +1,26 @@
 """Tests for multi-inverter configuration and controller management."""
-import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
+
+from unittest.mock import MagicMock
 
 from custom_components.sungrow_modbus.const import (
-    DOMAIN, CONTROLLER, VALUES, REGISTER, VALUE, SLAVE,
-    CONF_CONNECTION_TYPE, CONN_TYPE_TCP, CONN_TYPE_SERIAL, CONF_SERIAL_PORT
+    CONF_CONNECTION_TYPE,
+    CONF_SERIAL_PORT,
+    CONN_TYPE_SERIAL,
+    CONN_TYPE_TCP,
+    CONTROLLER,
+    DOMAIN,
+    VALUES,
 )
 from custom_components.sungrow_modbus.data.enums import InverterType, PollSpeed
 from custom_components.sungrow_modbus.helpers import (
-    get_controller_key, get_controller_key_from_config, get_controller,
-    get_controller_from_entry, set_controller, cache_save, cache_get,
-    is_correct_controller
+    cache_get,
+    cache_save,
+    get_controller,
+    get_controller_from_entry,
+    get_controller_key,
+    get_controller_key_from_config,
+    is_correct_controller,
+    set_controller,
 )
 
 
@@ -60,41 +70,25 @@ class TestControllerKeyGeneration:
 
     def test_get_controller_key_from_config_tcp(self):
         """Test key from config dict for TCP."""
-        config = {
-            "host": "192.168.1.100",
-            "port": 502,
-            "slave": 1,
-            CONF_CONNECTION_TYPE: CONN_TYPE_TCP
-        }
+        config = {"host": "192.168.1.100", "port": 502, "slave": 1, CONF_CONNECTION_TYPE: CONN_TYPE_TCP}
         key = get_controller_key_from_config(config)
         assert key == "192.168.1.100:502_1"
 
     def test_get_controller_key_from_config_tcp_default_port(self):
         """Test key from config uses default port 502."""
-        config = {
-            "host": "192.168.1.100",
-            "slave": 1,
-            CONF_CONNECTION_TYPE: CONN_TYPE_TCP
-        }
+        config = {"host": "192.168.1.100", "slave": 1, CONF_CONNECTION_TYPE: CONN_TYPE_TCP}
         key = get_controller_key_from_config(config)
         assert key == "192.168.1.100:502_1"
 
     def test_get_controller_key_from_config_serial(self):
         """Test key from config for serial connection."""
-        config = {
-            CONF_SERIAL_PORT: "/dev/ttyUSB0",
-            "slave": 1,
-            CONF_CONNECTION_TYPE: CONN_TYPE_SERIAL
-        }
+        config = {CONF_SERIAL_PORT: "/dev/ttyUSB0", "slave": 1, CONF_CONNECTION_TYPE: CONN_TYPE_SERIAL}
         key = get_controller_key_from_config(config)
         assert key == "/dev/ttyUSB0_1"
 
     def test_get_controller_key_from_config_default_slave(self):
         """Test key from config uses default slave 1."""
-        config = {
-            "host": "192.168.1.100",
-            CONF_CONNECTION_TYPE: CONN_TYPE_TCP
-        }
+        config = {"host": "192.168.1.100", CONF_CONNECTION_TYPE: CONN_TYPE_TCP}
         key = get_controller_key_from_config(config)
         assert key == "192.168.1.100:502_1"
 
@@ -118,13 +112,7 @@ class TestControllerRegistry:
         controller = create_mock_controller(host="192.168.1.100", port=502, slave=1)
 
         hass = MagicMock()
-        hass.data = {
-            DOMAIN: {
-                CONTROLLER: {
-                    "192.168.1.100:502_1": controller
-                }
-            }
-        }
+        hass.data = {DOMAIN: {CONTROLLER: {"192.168.1.100:502_1": controller}}}
 
         config_entry = MagicMock()
         config_entry.data = {"host": "192.168.1.100", "port": 502, "slave": 1}
@@ -138,13 +126,7 @@ class TestControllerRegistry:
         controller = create_mock_controller(host="192.168.1.100", port=502, slave=1)
 
         hass = MagicMock()
-        hass.data = {
-            DOMAIN: {
-                CONTROLLER: {
-                    "192.168.1.100:502_1": controller
-                }
-            }
-        }
+        hass.data = {DOMAIN: {CONTROLLER: {"192.168.1.100:502_1": controller}}}
 
         result = get_controller(hass, "192.168.1.100", 1)
         assert result is controller
@@ -238,14 +220,7 @@ class TestMultiInverterSetup:
         controller2 = create_mock_controller(host="192.168.1.100", slave=2)
 
         hass = MagicMock()
-        hass.data = {
-            DOMAIN: {
-                CONTROLLER: {
-                    "192.168.1.100:502_1": controller1,
-                    "192.168.1.100:502_2": controller2
-                }
-            }
-        }
+        hass.data = {DOMAIN: {CONTROLLER: {"192.168.1.100:502_1": controller1, "192.168.1.100:502_2": controller2}}}
 
         result1 = get_controller(hass, "192.168.1.100", 1)
         result2 = get_controller(hass, "192.168.1.100", 2)
@@ -278,10 +253,6 @@ class TestConnectionTypes:
         assert "192.168.1.100" in tcp_key
 
         # Serial config (no host, has serial_port)
-        serial_config = {
-            CONF_SERIAL_PORT: "/dev/ttyUSB0",
-            "slave": 1,
-            CONF_CONNECTION_TYPE: CONN_TYPE_SERIAL
-        }
+        serial_config = {CONF_SERIAL_PORT: "/dev/ttyUSB0", "slave": 1, CONF_CONNECTION_TYPE: CONN_TYPE_SERIAL}
         serial_key = get_controller_key_from_config(serial_config)
         assert "/dev/ttyUSB0" in serial_key

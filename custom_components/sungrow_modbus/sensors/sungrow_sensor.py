@@ -1,12 +1,10 @@
 import logging
-from datetime import datetime, timedelta, timezone
-from typing import List
+from datetime import UTC, datetime, timedelta
 
 from homeassistant.components.sensor import RestoreSensor, SensorEntity
 from homeassistant.core import HomeAssistant, callback
 
-from custom_components.sungrow_modbus.const import DOMAIN, SLAVE
-from custom_components.sungrow_modbus.const import REGISTER, VALUE, CONTROLLER
+from custom_components.sungrow_modbus.const import CONTROLLER, DOMAIN, REGISTER, SLAVE, VALUE
 from custom_components.sungrow_modbus.data.enums import InverterType, PollSpeed
 from custom_components.sungrow_modbus.helpers import cache_get, is_correct_controller
 from custom_components.sungrow_modbus.sensors.sungrow_base_sensor import SungrowBaseSensor
@@ -26,7 +24,7 @@ class SungrowSensor(RestoreSensor, SensorEntity):
         self._attr_has_entity_name = True
         self._attr_unique_id = sensor.unique_id
 
-        self._register: List[int] = sensor.registrars
+        self._register: list[int] = sensor.registrars
 
         self._device_class = sensor.device_class
         self._unit_of_measurement = sensor.unit_of_measurement
@@ -42,9 +40,10 @@ class SungrowSensor(RestoreSensor, SensorEntity):
         self.poll_speed = sensor.poll_speed
 
         # Watchdog parameters
-        self._last_update = datetime.now(timezone.utc).astimezone()
+        self._last_update = datetime.now(UTC).astimezone()
         self._update_timeout = timedelta(
-            minutes=self.base_sensor.controller.poll_speed.get(sensor.poll_speed, 0) + _WATCHDOG_TIMEOUT_MIN)
+            minutes=self.base_sensor.controller.poll_speed.get(sensor.poll_speed, 0) + _WATCHDOG_TIMEOUT_MIN
+        )
 
     def decimal_count(self, number: float) -> int | None:
         """Returns the number of decimal places in a given number."""
@@ -53,8 +52,8 @@ class SungrowSensor(RestoreSensor, SensorEntity):
         if number == int(number):  # Whole number
             return 0
 
-        str_number = str(number).rstrip('0')  # Convert to string and remove trailing zeros
-        decimal_part = str_number.split('.')[-1]  # Get the decimal part
+        str_number = str(number).rstrip("0")  # Convert to string and remove trailing zeros
+        decimal_part = str_number.split(".")[-1]  # Get the decimal part
 
         return len(decimal_part)
 
@@ -70,7 +69,7 @@ class SungrowSensor(RestoreSensor, SensorEntity):
 
     async def async_will_remove_from_hass(self) -> None:
         """Cleanup when entity is removed."""
-        if hasattr(self, '_unsub_listener') and self._unsub_listener:
+        if hasattr(self, "_unsub_listener") and self._unsub_listener:
             self._unsub_listener()
             self._unsub_listener = None
         await super().async_will_remove_from_hass()
@@ -87,12 +86,15 @@ class SungrowSensor(RestoreSensor, SensorEntity):
 
         if updated_register in self._register:
             # Causes issues with grid inverters going offline, and messing up energy dashboard
-            if self.base_sensor.controller.inverter_config.type == InverterType.GRID and 3014 == updated_register:
-                if cache_get(self.hass, 3043, self.base_sensor.controller.controller_key) == 2:
-                    self._attr_native_value = 0
-                    self.schedule_update_ha_state()
-                    self._last_update = datetime.now(timezone.utc).astimezone()
-                    return
+            if (
+                self.base_sensor.controller.inverter_config.type == InverterType.GRID
+                and updated_register == 3014
+                and cache_get(self.hass, 3043, self.base_sensor.controller.controller_key) == 2
+            ):
+                self._attr_native_value = 0
+                self.schedule_update_ha_state()
+                self._last_update = datetime.now(UTC).astimezone()
+                return
 
             updated_value = int(event.data.get(VALUE))
             self._received_values[updated_register] = updated_value
@@ -104,8 +106,11 @@ class SungrowSensor(RestoreSensor, SensorEntity):
 
             values = [self._received_values[reg] for reg in self._register]
             if None in values:
-                problematic_regs = {reg: self._received_values.get(reg) for reg in self._register if
-                                    self._received_values.get(reg) is None}
+                problematic_regs = {
+                    reg: self._received_values.get(reg)
+                    for reg in self._register
+                    if self._received_values.get(reg) is None
+                }
                 if problematic_regs:
                     _LOGGER.debug(f"⚠️ Problematic values received in registrars: {problematic_regs}, skipping update")
                     return
@@ -118,15 +123,16 @@ class SungrowSensor(RestoreSensor, SensorEntity):
             if new_value is not None:
                 self._attr_native_value = new_value
                 self._attr_available = True
-                self._last_update = datetime.now(timezone.utc).astimezone()
+                self._last_update = datetime.now(UTC).astimezone()
                 self.schedule_update_ha_state()
 
     async def async_update(self):
         """Fallback-Check: If no update for more than _WATCHDOG_TIMEOUT_MIN minutes, set values to 0 or unavailable"""
-        now = datetime.now(timezone.utc).astimezone()
+        now = datetime.now(UTC).astimezone()
         if (now - self._last_update > self._update_timeout) and self.poll_speed != PollSpeed.ONCE:
             _LOGGER.warning(
-                f"⚠️ No Modbus update for sensor {self._attr_name} in over {_WATCHDOG_TIMEOUT_MIN} minutes. Setting to 0.")
+                f"⚠️ No Modbus update for sensor {self._attr_name} in over {_WATCHDOG_TIMEOUT_MIN} minutes. Setting to 0."
+            )
             # self._attr_native_value = 0
             self._attr_available = False  # Set attribute unavailable (if desired)
             self.schedule_update_ha_state()

@@ -1,14 +1,11 @@
 """Tests for SungrowBinaryEntity (switch) bit operations and conflicts."""
-import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
 
-from custom_components.sungrow_modbus.const import (
-    DOMAIN, CONTROLLER, REGISTER, VALUE, SLAVE, VALUES
-)
-from custom_components.sungrow_modbus.data.enums import InverterType, PollSpeed
-from custom_components.sungrow_modbus.sensors.sungrow_binary_sensor import (
-    SungrowBinaryEntity, set_bit, get_bit_bool
-)
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+
+from custom_components.sungrow_modbus.const import CONTROLLER, DOMAIN, REGISTER, SLAVE, VALUE, VALUES
+from custom_components.sungrow_modbus.sensors.sungrow_binary_sensor import SungrowBinaryEntity, get_bit_bool, set_bit
 
 
 def create_mock_controller(host="10.0.0.1", slave=1):
@@ -94,11 +91,7 @@ class TestSungrowBinaryEntityInit:
         hass = MagicMock()
         controller = create_mock_controller()
 
-        entity_def = {
-            "name": "Self-Use Mode",
-            "register": 43110,
-            "bit_position": 0
-        }
+        entity_def = {"name": "Self-Use Mode", "register": 43110, "bit_position": 0}
 
         entity = SungrowBinaryEntity(hass, controller, entity_def)
 
@@ -111,12 +104,7 @@ class TestSungrowBinaryEntityInit:
         hass = MagicMock()
         controller = create_mock_controller()
 
-        entity_def = {
-            "name": "EMS Mode",
-            "register": 43007,
-            "on_value": 190,
-            "off_value": 222
-        }
+        entity_def = {"name": "EMS Mode", "register": 43007, "on_value": 190, "off_value": 222}
 
         entity = SungrowBinaryEntity(hass, controller, entity_def)
 
@@ -128,12 +116,7 @@ class TestSungrowBinaryEntityInit:
         hass = MagicMock()
         controller = create_mock_controller()
 
-        entity_def = {
-            "name": "Test",
-            "read_register": 33000,
-            "write_register": 43000,
-            "bit_position": 0
-        }
+        entity_def = {"name": "Test", "read_register": 33000, "write_register": 43000, "bit_position": 0}
 
         entity = SungrowBinaryEntity(hass, controller, entity_def)
 
@@ -145,12 +128,7 @@ class TestSungrowBinaryEntityInit:
         hass = MagicMock()
         controller = create_mock_controller()
 
-        entity_def = {
-            "name": "Test",
-            "register": 43110,
-            "offset": 10,
-            "bit_position": 0
-        }
+        entity_def = {"name": "Test", "register": 43110, "offset": 10, "bit_position": 0}
 
         entity = SungrowBinaryEntity(hass, controller, entity_def)
 
@@ -168,15 +146,11 @@ class TestSungrowBinaryEntityTurnOnOff:
 
         controller = create_mock_controller()
 
-        entity_def = {
-            "name": "Self-Use Mode",
-            "register": 43110,
-            "bit_position": 0
-        }
+        entity_def = {"name": "Self-Use Mode", "register": 43110, "bit_position": 0}
 
         entity = SungrowBinaryEntity(hass, controller, entity_def)
 
-        with patch('custom_components.sungrow_modbus.sensors.sungrow_binary_sensor.cache_get') as mock_get:
+        with patch("custom_components.sungrow_modbus.sensors.sungrow_binary_sensor.cache_get") as mock_get:
             mock_get.return_value = 0
             entity.turn_on()
 
@@ -192,15 +166,11 @@ class TestSungrowBinaryEntityTurnOnOff:
 
         controller = create_mock_controller()
 
-        entity_def = {
-            "name": "Self-Use Mode",
-            "register": 43110,
-            "bit_position": 0
-        }
+        entity_def = {"name": "Self-Use Mode", "register": 43110, "bit_position": 0}
 
         entity = SungrowBinaryEntity(hass, controller, entity_def)
 
-        with patch('custom_components.sungrow_modbus.sensors.sungrow_binary_sensor.cache_get') as mock_get:
+        with patch("custom_components.sungrow_modbus.sensors.sungrow_binary_sensor.cache_get") as mock_get:
             mock_get.return_value = 1
             entity.turn_off()
 
@@ -215,16 +185,11 @@ class TestSungrowBinaryEntityTurnOnOff:
 
         controller = create_mock_controller()
 
-        entity_def = {
-            "name": "EMS Mode",
-            "register": 43007,
-            "on_value": 190,
-            "off_value": 222
-        }
+        entity_def = {"name": "EMS Mode", "register": 43007, "on_value": 190, "off_value": 222}
 
         entity = SungrowBinaryEntity(hass, controller, entity_def)
 
-        with patch('custom_components.sungrow_modbus.sensors.sungrow_binary_sensor.cache_get') as mock_get:
+        with patch("custom_components.sungrow_modbus.sensors.sungrow_binary_sensor.cache_get") as mock_get:
             mock_get.return_value = 222
             entity.turn_on()
 
@@ -239,16 +204,11 @@ class TestSungrowBinaryEntityTurnOnOff:
 
         controller = create_mock_controller()
 
-        entity_def = {
-            "name": "EMS Mode",
-            "register": 43007,
-            "on_value": 190,
-            "off_value": 222
-        }
+        entity_def = {"name": "EMS Mode", "register": 43007, "on_value": 190, "off_value": 222}
 
         entity = SungrowBinaryEntity(hass, controller, entity_def)
 
-        with patch('custom_components.sungrow_modbus.sensors.sungrow_binary_sensor.cache_get') as mock_get:
+        with patch("custom_components.sungrow_modbus.sensors.sungrow_binary_sensor.cache_get") as mock_get:
             mock_get.return_value = 190
             entity.turn_off()
 
@@ -268,16 +228,11 @@ class TestConflictsAndRequires:
 
         controller = create_mock_controller()
 
-        entity_def = {
-            "name": "Self-Use Mode",
-            "register": 43110,
-            "bit_position": 0,
-            "conflicts_with": [6, 11]
-        }
+        entity_def = {"name": "Self-Use Mode", "register": 43110, "bit_position": 0, "conflicts_with": [6, 11]}
 
         entity = SungrowBinaryEntity(hass, controller, entity_def)
 
-        with patch('custom_components.sungrow_modbus.sensors.sungrow_binary_sensor.cache_get') as mock_get:
+        with patch("custom_components.sungrow_modbus.sensors.sungrow_binary_sensor.cache_get") as mock_get:
             mock_get.return_value = 0b100001000000
             entity.turn_on()
 
@@ -298,12 +253,12 @@ class TestConflictsAndRequires:
             "name": "TOU Mode",
             "register": 43110,
             "bit_position": 1,
-            "requires": [0]  # Requires bit 0 to be set
+            "requires": [0],  # Requires bit 0 to be set
         }
 
         entity = SungrowBinaryEntity(hass, controller, entity_def)
 
-        with patch('custom_components.sungrow_modbus.sensors.sungrow_binary_sensor.cache_get') as mock_get:
+        with patch("custom_components.sungrow_modbus.sensors.sungrow_binary_sensor.cache_get") as mock_get:
             mock_get.return_value = 0
             entity.turn_on()
 
@@ -323,12 +278,12 @@ class TestConflictsAndRequires:
             "name": "TOU Mode",
             "register": 43110,
             "bit_position": 1,
-            "requires_any": [0, 6]  # Needs either bit 0 or 6
+            "requires_any": [0, 6],  # Needs either bit 0 or 6
         }
 
         entity = SungrowBinaryEntity(hass, controller, entity_def)
 
-        with patch('custom_components.sungrow_modbus.sensors.sungrow_binary_sensor.cache_get') as mock_get:
+        with patch("custom_components.sungrow_modbus.sensors.sungrow_binary_sensor.cache_get") as mock_get:
             mock_get.return_value = 0
             entity.turn_on()
 
@@ -344,16 +299,11 @@ class TestConflictsAndRequires:
 
         controller = create_mock_controller()
 
-        entity_def = {
-            "name": "TOU Mode",
-            "register": 43110,
-            "bit_position": 1,
-            "requires_any": [0, 6]
-        }
+        entity_def = {"name": "TOU Mode", "register": 43110, "bit_position": 1, "requires_any": [0, 6]}
 
         entity = SungrowBinaryEntity(hass, controller, entity_def)
 
-        with patch('custom_components.sungrow_modbus.sensors.sungrow_binary_sensor.cache_get') as mock_get:
+        with patch("custom_components.sungrow_modbus.sensors.sungrow_binary_sensor.cache_get") as mock_get:
             mock_get.return_value = 64
             entity.turn_on()
 
@@ -370,11 +320,7 @@ class TestSungrowBinaryEntityUpdate:
         hass = MagicMock()
         controller = create_mock_controller()
 
-        entity_def = {
-            "name": "Self-Use Mode",
-            "register": 43110,
-            "bit_position": 0
-        }
+        entity_def = {"name": "Self-Use Mode", "register": 43110, "bit_position": 0}
 
         entity = SungrowBinaryEntity(hass, controller, entity_def)
         entity.async_write_ha_state = MagicMock()  # Mock HA state update
@@ -384,7 +330,7 @@ class TestSungrowBinaryEntityUpdate:
             REGISTER: 43110,
             VALUE: 1,  # Bit 0 is set
             CONTROLLER: "10.0.0.1",
-            SLAVE: 1
+            SLAVE: 1,
         }
 
         entity.handle_modbus_update(event)
@@ -398,11 +344,7 @@ class TestSungrowBinaryEntityUpdate:
         hass = MagicMock()
         controller = create_mock_controller()
 
-        entity_def = {
-            "name": "Self-Use Mode",
-            "register": 43110,
-            "bit_position": 0
-        }
+        entity_def = {"name": "Self-Use Mode", "register": 43110, "bit_position": 0}
 
         entity = SungrowBinaryEntity(hass, controller, entity_def)
         entity.async_write_ha_state = MagicMock()  # Mock HA state update
@@ -412,7 +354,7 @@ class TestSungrowBinaryEntityUpdate:
             REGISTER: 43110,
             VALUE: 2,  # Bit 0 is clear, bit 1 is set
             CONTROLLER: "10.0.0.1",
-            SLAVE: 1
+            SLAVE: 1,
         }
 
         entity.handle_modbus_update(event)
@@ -425,23 +367,13 @@ class TestSungrowBinaryEntityUpdate:
         hass = MagicMock()
         controller = create_mock_controller()
 
-        entity_def = {
-            "name": "EMS Mode",
-            "register": 43007,
-            "on_value": 190,
-            "off_value": 222
-        }
+        entity_def = {"name": "EMS Mode", "register": 43007, "on_value": 190, "off_value": 222}
 
         entity = SungrowBinaryEntity(hass, controller, entity_def)
         entity.async_write_ha_state = MagicMock()  # Mock HA state update
 
         event = MagicMock()
-        event.data = {
-            REGISTER: 43007,
-            VALUE: 190,
-            CONTROLLER: "10.0.0.1",
-            SLAVE: 1
-        }
+        event.data = {REGISTER: 43007, VALUE: 190, CONTROLLER: "10.0.0.1", SLAVE: 1}
 
         entity.handle_modbus_update(event)
 
@@ -453,23 +385,13 @@ class TestSungrowBinaryEntityUpdate:
         hass = MagicMock()
         controller = create_mock_controller()
 
-        entity_def = {
-            "name": "EMS Mode",
-            "register": 43007,
-            "on_value": 190,
-            "off_value": 222
-        }
+        entity_def = {"name": "EMS Mode", "register": 43007, "on_value": 190, "off_value": 222}
 
         entity = SungrowBinaryEntity(hass, controller, entity_def)
         entity.async_write_ha_state = MagicMock()  # Mock HA state update
 
         event = MagicMock()
-        event.data = {
-            REGISTER: 43007,
-            VALUE: 222,
-            CONTROLLER: "10.0.0.1",
-            SLAVE: 1
-        }
+        event.data = {REGISTER: 43007, VALUE: 222, CONTROLLER: "10.0.0.1", SLAVE: 1}
 
         entity.handle_modbus_update(event)
 
@@ -481,11 +403,7 @@ class TestSungrowBinaryEntityUpdate:
         hass = MagicMock()
         controller = create_mock_controller(host="10.0.0.1", slave=1)
 
-        entity_def = {
-            "name": "Test",
-            "register": 43110,
-            "bit_position": 0
-        }
+        entity_def = {"name": "Test", "register": 43110, "bit_position": 0}
 
         entity = SungrowBinaryEntity(hass, controller, entity_def)
         entity._attr_is_on = True  # Existing state
@@ -495,7 +413,7 @@ class TestSungrowBinaryEntityUpdate:
             REGISTER: 43110,
             VALUE: 0,
             CONTROLLER: "10.0.0.2",  # Different host
-            SLAVE: 1
+            SLAVE: 1,
         }
 
         entity.handle_modbus_update(event)
@@ -508,11 +426,7 @@ class TestSungrowBinaryEntityUpdate:
         hass = MagicMock()
         controller = create_mock_controller()
 
-        entity_def = {
-            "name": "Test",
-            "register": 43110,
-            "bit_position": 0
-        }
+        entity_def = {"name": "Test", "register": 43110, "bit_position": 0}
 
         entity = SungrowBinaryEntity(hass, controller, entity_def)
         entity._attr_is_on = True
@@ -522,7 +436,7 @@ class TestSungrowBinaryEntityUpdate:
             REGISTER: 43111,  # Different register
             VALUE: 0,
             CONTROLLER: "10.0.0.1",
-            SLAVE: 1
+            SLAVE: 1,
         }
 
         entity.handle_modbus_update(event)
@@ -538,11 +452,7 @@ class TestConnectionToggle:
         hass = MagicMock()
         controller = create_mock_controller()
 
-        entity_def = {
-            "name": "Modbus Enabled",
-            "register": 5,
-            "bit_position": 0
-        }
+        entity_def = {"name": "Modbus Enabled", "register": 5, "bit_position": 0}
 
         entity = SungrowBinaryEntity(hass, controller, entity_def)
         entity.turn_on()
@@ -554,11 +464,7 @@ class TestConnectionToggle:
         hass = MagicMock()
         controller = create_mock_controller()
 
-        entity_def = {
-            "name": "Modbus Enabled",
-            "register": 5,
-            "bit_position": 0
-        }
+        entity_def = {"name": "Modbus Enabled", "register": 5, "bit_position": 0}
 
         entity = SungrowBinaryEntity(hass, controller, entity_def)
         entity.turn_off()

@@ -1,5 +1,4 @@
 import logging
-from typing import List
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -13,9 +12,9 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-        hass: HomeAssistant,
-        config_entry: ConfigEntry,
-        async_add_devices,
+    hass: HomeAssistant,
+    config_entry: ConfigEntry,
+    async_add_devices,
 ) -> None:
     controller: ModbusController = get_controller_from_entry(hass, config_entry)
     _LOGGER.info("Options %s", len(config_entry.options))
@@ -40,31 +39,35 @@ async def async_setup_entry(
         # 3 = External EMS
         # 4 = VPP (used for Amber control)
         # 8 = MicroGrid
-        sensor_groups.append({
-            "register": 13049,
-            "name": "EMS Mode",
-            "entities": [
-                {"name": "Self-consumption", "on_value": 0},
-                {"name": "Forced mode", "on_value": 2},
-                {"name": "External EMS", "on_value": 3},
-                {"name": "VPP", "on_value": 4},
-                {"name": "MicroGrid", "on_value": 8},
-            ]
-        })
+        sensor_groups.append(
+            {
+                "register": 13049,
+                "name": "EMS Mode",
+                "entities": [
+                    {"name": "Self-consumption", "on_value": 0},
+                    {"name": "Forced mode", "on_value": 2},
+                    {"name": "External EMS", "on_value": 3},
+                    {"name": "VPP", "on_value": 4},
+                    {"name": "MicroGrid", "on_value": 8},
+                ],
+            }
+        )
 
         # Battery Forced Charge/Discharge Command - Register 13050
         # 0xCC (204) = Stop (default)
         # 0xAA (170) = Forced charge
         # 0xBB (187) = Forced discharge
-        sensor_groups.append({
-            "register": 13050,
-            "name": "Battery Forced Charge/Discharge",
-            "entities": [
-                {"name": "Stop", "on_value": 0xCC},
-                {"name": "Force Charge", "on_value": 0xAA},
-                {"name": "Force Discharge", "on_value": 0xBB},
-            ]
-        })
+        sensor_groups.append(
+            {
+                "register": 13050,
+                "name": "Battery Forced Charge/Discharge",
+                "entities": [
+                    {"name": "Stop", "on_value": 0xCC},
+                    {"name": "Force Charge", "on_value": 0xAA},
+                    {"name": "Force Discharge", "on_value": 0xBB},
+                ],
+            }
+        )
 
         # Load Adjustment Mode - Register 13001
         # 0 = Timing
@@ -72,18 +75,20 @@ async def async_setup_entry(
         # 2 = Power optimization
         # 3 = Disabled
         if InverterFeature.BATTERY in controller.inverter_config.features:
-            sensor_groups.append({
-                "register": 13001,
-                "name": "Load Adjustment Mode",
-                "entities": [
-                    {"name": "Timing", "on_value": 0},
-                    {"name": "ON/OFF", "on_value": 1},
-                    {"name": "Power optimization", "on_value": 2},
-                    {"name": "Disabled", "on_value": 3},
-                ]
-            })
+            sensor_groups.append(
+                {
+                    "register": 13001,
+                    "name": "Load Adjustment Mode",
+                    "entities": [
+                        {"name": "Timing", "on_value": 0},
+                        {"name": "ON/OFF", "on_value": 1},
+                        {"name": "Power optimization", "on_value": 2},
+                        {"name": "Disabled", "on_value": 3},
+                    ],
+                }
+            )
 
-    sensors: List[SungrowSelectEntity] = []
+    sensors: list[SungrowSelectEntity] = []
     for sensor_group in sensor_groups:
         sensors.append(SungrowSelectEntity(hass, controller, sensor_group))
     _LOGGER.info(f"Select entities = {len(sensors)}")

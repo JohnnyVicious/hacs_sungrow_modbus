@@ -41,9 +41,9 @@ Example:
     }
 """
 
-from typing import Dict, List, Any, Optional
 import copy
 import logging
+from typing import Any
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -51,7 +51,7 @@ _LOGGER = logging.getLogger(__name__)
 # Model override definitions
 # Key: Model name (or pattern like "SH*T" for wildcards)
 # Value: Override configuration
-MODEL_OVERRIDES: Dict[str, Dict[str, Any]] = {
+MODEL_OVERRIDES: dict[str, dict[str, Any]] = {
     # ==========================================================================
     # SH25T overrides based on live device testing (2024-12)
     # Tested via WiNet-S dongle at 192.168.11.6
@@ -63,65 +63,62 @@ MODEL_OVERRIDES: Dict[str, Dict[str, Any]] = {
             # MPPT registers are at -1 offset on SH25T
             # Base: 5011-5012, SH25T: 5010-5011
             "sungrow_modbus_mppt1_voltage": {
-                "register": ['5010'],
+                "register": ["5010"],
             },
             "sungrow_modbus_mppt1_current": {
-                "register": ['5011'],
+                "register": ["5011"],
             },
             "sungrow_modbus_mppt2_voltage": {
-                "register": ['5012'],
+                "register": ["5012"],
             },
             "sungrow_modbus_mppt2_current": {
-                "register": ['5013'],
+                "register": ["5013"],
             },
             "sungrow_modbus_mppt3_voltage": {
-                "register": ['5014'],
+                "register": ["5014"],
             },
             "sungrow_modbus_mppt3_current": {
-                "register": ['5015'],
+                "register": ["5015"],
             },
             "sungrow_modbus_total_dc_power": {
-                "register": ['5016', '5017'],
+                "register": ["5016", "5017"],
             },
-
             # Daily/Total PV at -1 offset on SH25T
             # Live test: 13001 = 18.7 kWh (daily), 13002 = 1569.1 kWh (total)
             "sungrow_modbus_daily_pv_energy": {
-                "register": ['13001'],
+                "register": ["13001"],
             },
             "sungrow_modbus_total_pv_energy": {
-                "register": ['13002', '13003'],
+                "register": ["13002", "13003"],
             },
-
             # Battery registers at -1 offset on SH25T
             # Live test confirmed: 13022 = SOC, 13023 = SOH
             "sungrow_modbus_battery_voltage": {
-                "register": ['13019'],
+                "register": ["13019"],
             },
             "sungrow_modbus_battery_current": {
-                "register": ['13020'],
+                "register": ["13020"],
             },
             "sungrow_modbus_battery_power": {
-                "register": ['13021'],
+                "register": ["13021"],
             },
             "sungrow_modbus_battery_level": {
-                "register": ['13022'],
+                "register": ["13022"],
             },
             "sungrow_modbus_battery_soh": {
-                "register": ['13023'],
+                "register": ["13023"],
             },
             "sungrow_modbus_battery_temperature": {
-                "register": ['13024'],
+                "register": ["13024"],
             },
             "sungrow_modbus_daily_battery_discharge": {
-                "register": ['13025'],
+                "register": ["13025"],
             },
             "sungrow_modbus_total_battery_discharge": {
-                "register": ['13026', '13027'],
+                "register": ["13026", "13027"],
             },
         },
     },
-
     # ==========================================================================
     # SH-T series (larger three-phase hybrids: SH5T, SH6T, SH8T, SH10T, etc.)
     # These may share similar register maps with SH25T
@@ -132,7 +129,6 @@ MODEL_OVERRIDES: Dict[str, Dict[str, Any]] = {
             # T-series typically uses same register layout
         },
     },
-
     # ==========================================================================
     # SH-RT series (three-phase residential hybrid)
     # ==========================================================================
@@ -140,7 +136,6 @@ MODEL_OVERRIDES: Dict[str, Dict[str, Any]] = {
     #     "description": "SH-RT series overrides",
     #     "sensors": {},
     # },
-
     # ==========================================================================
     # SH-RS series (single-phase residential hybrid)
     # ==========================================================================
@@ -160,11 +155,11 @@ def _match_model(model: str, pattern: str) -> bool:
     - Wildcard: "SH*T" matches "SH25T", "SH10T", etc.
     - Prefix: "SH*" matches any model starting with "SH"
     """
-    if '*' not in pattern:
+    if "*" not in pattern:
         return model == pattern
 
     # Simple wildcard matching
-    parts = pattern.split('*')
+    parts = pattern.split("*")
     if len(parts) == 2:
         prefix, suffix = parts
         return model.startswith(prefix) and model.endswith(suffix)
@@ -173,10 +168,11 @@ def _match_model(model: str, pattern: str) -> bool:
     else:
         # Multiple wildcards - use more complex matching
         import fnmatch
+
         return fnmatch.fnmatch(model, pattern)
 
 
-def get_model_overrides(model: str) -> Optional[Dict[str, Any]]:
+def get_model_overrides(model: str) -> dict[str, Any] | None:
     """
     Get override configuration for a specific model.
 
@@ -187,7 +183,7 @@ def get_model_overrides(model: str) -> Optional[Dict[str, Any]]:
         Override configuration dict, or None if no overrides exist.
         If multiple patterns match, they are merged (later patterns override earlier).
     """
-    merged_overrides: Dict[str, Any] = {}
+    merged_overrides: dict[str, Any] = {}
 
     for pattern, overrides in MODEL_OVERRIDES.items():
         if _match_model(model, pattern):
@@ -198,7 +194,7 @@ def get_model_overrides(model: str) -> Optional[Dict[str, Any]]:
     return merged_overrides if merged_overrides else None
 
 
-def _deep_merge(base: Dict, overlay: Dict) -> Dict:
+def _deep_merge(base: dict, overlay: dict) -> dict:
     """Deep merge overlay into base dict, modifying base in place."""
     for key, value in overlay.items():
         if key in base and isinstance(base[key], dict) and isinstance(value, dict):
@@ -208,10 +204,7 @@ def _deep_merge(base: Dict, overlay: Dict) -> Dict:
     return base
 
 
-def apply_model_overrides(
-    sensor_groups: List[Dict[str, Any]],
-    model: str
-) -> List[Dict[str, Any]]:
+def apply_model_overrides(sensor_groups: list[dict[str, Any]], model: str) -> list[dict[str, Any]]:
     """
     Apply model-specific overrides to sensor group definitions.
 
@@ -264,19 +257,18 @@ def apply_model_overrides(
     additional = overrides.get("additional_sensors", [])
     if additional:
         # Add as a new sensor group
-        modified_groups.append({
-            "register_start": additional[0].get("register", ['0'])[0] if additional else 0,
-            "poll_speed": additional[0].get("poll_speed", "NORMAL") if additional else "NORMAL",
-            "entities": additional
-        })
+        modified_groups.append(
+            {
+                "register_start": additional[0].get("register", ["0"])[0] if additional else 0,
+                "poll_speed": additional[0].get("poll_speed", "NORMAL") if additional else "NORMAL",
+                "entities": additional,
+            }
+        )
 
     return modified_groups
 
 
-def apply_derived_overrides(
-    derived_sensors: List[Dict[str, Any]],
-    model: str
-) -> List[Dict[str, Any]]:
+def apply_derived_overrides(derived_sensors: list[dict[str, Any]], model: str) -> list[dict[str, Any]]:
     """
     Apply model-specific overrides to derived sensor definitions.
 
@@ -322,7 +314,7 @@ def apply_derived_overrides(
 
 
 # Convenience function to get all overrides for debugging
-def list_all_overrides() -> Dict[str, List[str]]:
+def list_all_overrides() -> dict[str, list[str]]:
     """List all model patterns and their override keys for debugging."""
     result = {}
     for pattern, overrides in MODEL_OVERRIDES.items():

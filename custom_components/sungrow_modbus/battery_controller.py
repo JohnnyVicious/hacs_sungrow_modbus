@@ -11,14 +11,12 @@ These registers are only accessible via the direct LAN port, not through WiNet-S
 
 import logging
 from dataclasses import dataclass, field
-from typing import Optional, List, Dict, Any
+from typing import Any
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 
-from .const import (
-    DOMAIN, BATTERY_SLAVE_BASE, MAX_BATTERY_STACKS, MANUFACTURER
-)
+from .const import BATTERY_SLAVE_BASE, DOMAIN, MANUFACTURER, MAX_BATTERY_STACKS
 from .modbus_controller import ModbusController
 
 _LOGGER = logging.getLogger(__name__)
@@ -27,6 +25,7 @@ _LOGGER = logging.getLogger(__name__)
 @dataclass
 class BatteryModule:
     """Represents a single battery module within a stack."""
+
     index: int
     serial_number: str = ""
     cell_voltage_max: float = 0.0
@@ -37,6 +36,7 @@ class BatteryModule:
 @dataclass
 class BatteryStack:
     """Represents a battery stack connected to the inverter."""
+
     stack_index: int  # 0-3
     slave_id: int  # 200-203
     serial_number: str = ""
@@ -52,7 +52,7 @@ class BatteryStack:
     cell_voltage_max_position: int = 0
     cell_voltage_min: float = 0.0
     cell_voltage_min_position: int = 0
-    modules: List[BatteryModule] = field(default_factory=list)
+    modules: list[BatteryModule] = field(default_factory=list)
     available: bool = False
 
 
@@ -137,19 +137,10 @@ class BatteryController:
             if result is not None and len(result) > 0:
                 self._available = True
                 self.battery.available = True
-                _LOGGER.info(
-                    "Battery stack %d detected on slave ID %d",
-                    self.stack_index,
-                    self.slave_id
-                )
+                _LOGGER.info("Battery stack %d detected on slave ID %d", self.stack_index, self.slave_id)
                 return True
         except Exception as e:
-            _LOGGER.debug(
-                "Battery stack %d not found on slave ID %d: %s",
-                self.stack_index,
-                self.slave_id,
-                e
-            )
+            _LOGGER.debug("Battery stack %d not found on slave ID %d: %s", self.stack_index, self.slave_id, e)
 
         self._available = False
         self.battery.available = False
@@ -159,7 +150,7 @@ class BatteryController:
         self,
         address: int,
         count: int,
-    ) -> Optional[List[int]]:
+    ) -> list[int] | None:
         """Read input registers from the battery stack.
 
         Uses the inverter's Modbus client but with this battery's slave ID.
@@ -179,20 +170,14 @@ class BatteryController:
                     slave=self.slave_id,
                 )
                 if result.isError():
-                    _LOGGER.debug(
-                        "Error reading battery registers %d-%d: %s",
-                        address, address + count, result
-                    )
+                    _LOGGER.debug("Error reading battery registers %d-%d: %s", address, address + count, result)
                     return None
                 return list(result.registers)
             except Exception as e:
-                _LOGGER.error(
-                    "Exception reading battery registers %d-%d: %s",
-                    address, address + count, e
-                )
+                _LOGGER.error("Exception reading battery registers %d-%d: %s", address, address + count, e)
                 return None
 
-    async def read_status(self) -> Dict[str, Any]:
+    async def read_status(self) -> dict[str, Any]:
         """Read all battery status registers.
 
         Returns a dictionary with battery data or empty dict on failure.
@@ -249,7 +234,7 @@ class BatteryController:
 
         return bool(self.battery.serial_number)
 
-    async def read_module_serials(self) -> List[str]:
+    async def read_module_serials(self) -> list[str]:
         """Read serial numbers of all battery modules.
 
         Returns list of serial numbers for detected modules.
@@ -272,7 +257,7 @@ class BatteryController:
         return serials
 
     @staticmethod
-    def _decode_string(registers: List[int]) -> str:
+    def _decode_string(registers: list[int]) -> str:
         """Decode a UTF-8 string from register values."""
         try:
             bytes_data = b""
@@ -286,14 +271,14 @@ class BatteryController:
     def _to_signed(value: int, bits: int = 16) -> int:
         """Convert unsigned int to signed."""
         if value >= (1 << (bits - 1)):
-            value -= (1 << bits)
+            value -= 1 << bits
         return value
 
 
 async def detect_battery_stacks(
     hass: HomeAssistant,
     inverter_controller: ModbusController,
-) -> List[BatteryController]:
+) -> list[BatteryController]:
     """Detect all connected battery stacks.
 
     Probes slave IDs 200-203 to find connected batteries.
@@ -318,7 +303,7 @@ async def detect_battery_stacks(
                 stack_idx,
                 controller.battery.serial_number,
                 controller.battery.firmware_version,
-                len(controller.battery.modules)
+                len(controller.battery.modules),
             )
         else:
             # Stop probing after first failure (stacks must be sequential)

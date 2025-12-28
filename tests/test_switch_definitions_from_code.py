@@ -1,8 +1,9 @@
-import pytest
 from unittest.mock import MagicMock
 
-from custom_components.sungrow_modbus.const import DOMAIN, CONTROLLER
-from custom_components.sungrow_modbus.data.enums import InverterType, InverterFeature
+import pytest
+
+from custom_components.sungrow_modbus.const import CONTROLLER, DOMAIN
+from custom_components.sungrow_modbus.data.enums import InverterFeature, InverterType
 from custom_components.sungrow_modbus.switch import async_setup_entry
 
 
@@ -22,13 +23,7 @@ async def test_switch_bit_position_requires_combinations_are_unique():
 
     hass = MagicMock()
     hass.create_task = MagicMock()
-    hass.data = {
-        DOMAIN: {
-            CONTROLLER: {
-                "10.0.0.1:502_1": controller
-            }
-        }
-    }
+    hass.data = {DOMAIN: {CONTROLLER: {"10.0.0.1:502_1": controller}}}
 
     config_entry = MagicMock()
     config_entry.data = {"host": "10.0.0.1", "port": 502, "slave": 1}
@@ -49,7 +44,9 @@ async def test_switch_bit_position_requires_combinations_are_unique():
         if bit is None:
             continue
         key = (register, bit, requires)
-        assert key not in seen_keys, f"Duplicate (register, bit_position, requires): {key} in entity: {entity._attr_name}"
+        assert key not in seen_keys, (
+            f"Duplicate (register, bit_position, requires): {key} in entity: {entity._attr_name}"
+        )
         seen_keys.add(key)
 
 
@@ -70,13 +67,7 @@ async def test_hybrid_switch_entities_created():
 
     hass = MagicMock()
     hass.create_task = MagicMock()
-    hass.data = {
-        DOMAIN: {
-            CONTROLLER: {
-                "10.0.0.1:502_1": controller
-            }
-        }
-    }
+    hass.data = {DOMAIN: {CONTROLLER: {"10.0.0.1:502_1": controller}}}
 
     config_entry = MagicMock()
     config_entry.data = {"host": "10.0.0.1", "port": 502, "slave": 1}
@@ -115,13 +106,7 @@ async def test_string_inverter_switch_entities():
 
     hass = MagicMock()
     hass.create_task = MagicMock()
-    hass.data = {
-        DOMAIN: {
-            CONTROLLER: {
-                "10.0.0.1:502_1": controller
-            }
-        }
-    }
+    hass.data = {DOMAIN: {CONTROLLER: {"10.0.0.1:502_1": controller}}}
 
     config_entry = MagicMock()
     config_entry.data = {"host": "10.0.0.1", "port": 502, "slave": 1}
