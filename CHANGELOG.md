@@ -43,6 +43,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Defensive code with unclear purpose** (`sensors/sungrow_derived_sensor.py:44-45`) - Unnecessary fallback `hass if hass else sensor.hass` when `hass` parameter is typed as `HomeAssistant` (not Optional). Root cause: historical usage patterns that no longer exist. Fixed by simplifying to direct assignment `self._hass = hass`.
 
+- **Unhelpful unknown device type message** (`config_flow.py:307`) - Users with unrecognized device type codes saw only "Unknown (0x...)" without guidance. Root cause: fallback message didn't explain what to do. Fixed by logging a WARNING with the GitHub issues URL and updating the display message to prompt users to report the device type.
+
 ## [0.1.15] - 2024-12-XX
 
 ### Fixed

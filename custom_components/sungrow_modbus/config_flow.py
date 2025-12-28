@@ -304,7 +304,16 @@ class ModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             device_type_code = result.registers[0] if not result.isError() else 0
 
             # Map to model name
-            model = DEVICE_TYPE_MAP.get(device_type_code, f"Unknown (0x{device_type_code:04X})")
+            if device_type_code in DEVICE_TYPE_MAP:
+                model = DEVICE_TYPE_MAP[device_type_code]
+            else:
+                _LOGGER.warning(
+                    "Unknown device type code 0x%04X detected. "
+                    "Please report this to https://github.com/JohnnyVicious/hacs_sungrow_modbus/issues "
+                    "with your inverter model.",
+                    device_type_code,
+                )
+                model = f"Unknown (0x{device_type_code:04X}) - Please report this device type"
 
             # Read nominal power (register 5000)
             result = await client.read_input_registers(address=5000, count=1, device_id=slave_id)
