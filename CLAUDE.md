@@ -26,6 +26,20 @@ This is a Home Assistant custom integration for Sungrow SHx hybrid inverters. It
 ### Commit Hygiene
 - Fix **one issue per commit**. Do not batch multiple bug fixes into a single commit; each issue should have its own commit to keep history and rollbacks clear.
 
+### Issue Tracking (ISSUES.md)
+
+**NEVER delete ISSUES.md.** This file tracks known issues and technical debt. When issues are resolved, remove them from the file but keep the scaffolding structure intact for future issues.
+
+When discovering new issues during code review:
+1. Add them to the appropriate section (Critical, Important, or Minor)
+2. Use the template format provided in the file
+3. Include: severity, file, line, symptom, current code, root cause, suggested fix, and impact
+
+When fixing issues:
+1. Remove the resolved issue from ISSUES.md
+2. Add the fix to CHANGELOG.md
+3. Keep one issue per commit
+
 ### Changelog Maintenance (REQUIRED)
 
 **ALWAYS update CHANGELOG.md when making fixes or changes.** This prevents regression by tracking what was fixed and why.
