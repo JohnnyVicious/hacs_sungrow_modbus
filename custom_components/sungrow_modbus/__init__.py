@@ -58,6 +58,23 @@ SCHEME_HOLDING_REGISTER = vol.Schema(
 SCHEME_TIME_SET = vol.Schema({vol.Required("entity_id"): vol.Coerce(str), vol.Required("time"): vol.Coerce(str)})
 
 
+# Known safe writable Sungrow holding register ranges
+# These are registers documented as writable in the Sungrow Modbus protocol
+SAFE_HOLDING_REGISTER_RANGES = [
+    (13049, 13100),  # EMS control, SoC limits, export limits
+    (33046, 33150),  # Battery power settings
+    (43003, 43010),  # Clock/time settings
+    (43013, 43020),  # Additional control registers
+    (43074, 43090),  # Power control registers
+    (43110, 43120),  # Extended control registers
+]
+
+
+def _is_safe_register(address: int) -> bool:
+    """Check if a register address is in known safe writable ranges."""
+    return any(start <= address <= end for start, end in SAFE_HOLDING_REGISTER_RANGES)
+
+
 async def async_setup(hass: HomeAssistant, entry: ConfigEntry):
     """Set up the Modbus integration."""
 
@@ -76,6 +93,14 @@ async def async_setup(hass: HomeAssistant, entry: ConfigEntry):
         if not (0 <= value <= 65535):
             _LOGGER.error("Invalid register value %s: must be 0-65535", value)
             return
+
+        # Warn about unvalidated registers (but still allow the write)
+        if not _is_safe_register(address):
+            _LOGGER.warning(
+                "Writing to register %s which is not in the known safe register list. "
+                "Ensure this register is writable to avoid potential issues.",
+                address,
+            )
 
         async def write_with_logging(ctrl, addr, val):
             """Write to register with error logging."""
