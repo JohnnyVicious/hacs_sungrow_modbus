@@ -39,6 +39,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Magic register numbers without constants** (`sensors/sungrow_derived_sensor.py`) - Hardcoded register numbers (0, 1, 90006, 90007, 33095, 33135, 33263, etc.) made code hard to understand and maintain. Root cause: no named constants existed. Fixed by adding descriptive constants at the top of the file: `REGISTER_PLACEHOLDER_0`, `REGISTER_PLACEHOLDER_1`, `REGISTER_CLOCK_DRIFT`, `REGISTER_LAST_SUCCESS`, `REGISTER_RUNNING_STATUS`, `REGISTER_PROTOCOL_VERSION`, `REGISTERS_PHASE_POWER`, `REGISTERS_POWER_FACTOR`, `REGISTER_BATTERY_POWER`, `REGISTER_POWER_TO_GRID`, `REGISTER_POWER_FROM_GRID`, `REGISTER_SIGN_INVERSION`.
 
+- **Empty callback function (dead code)** (`sensor.py:67-70`) - An unused `update()` callback function with empty body was defined but never called. Root cause: leftover from a previous implementation. Fixed by removing the dead code and the now-unused `callback` import.
+
 ## [0.1.15] - 2024-12-XX
 
 ### Fixed

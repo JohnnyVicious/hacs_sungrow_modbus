@@ -2,7 +2,7 @@ import logging
 
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import HomeAssistant
 
 from custom_components.sungrow_modbus import ModbusController
 from custom_components.sungrow_modbus.const import (
@@ -63,9 +63,5 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry, asyn
             len(status_sensors) + len(diagnostic_sensors),
             len(battery_controllers),
         )
-
-    @callback
-    def update(now):
-        """Update Modbus data periodically."""
 
     return True
