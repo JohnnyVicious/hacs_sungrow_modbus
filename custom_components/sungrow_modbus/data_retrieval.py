@@ -332,12 +332,11 @@ class DataRetrieval:
                     if sensor_group.poll_speed == PollSpeed.ONCE:
                         marked_for_removal.append(sensor_group)
 
-                    self.controller._data_received = True
+                    self.controller.mark_data_received()
 
                 # Remove "ONCE" poll speed groups
-                self.controller._sensor_groups = [
-                    g for g in self.controller.sensor_groups if g not in marked_for_removal
-                ]
+                if marked_for_removal:
+                    self.controller.remove_sensor_groups(marked_for_removal)
 
                 total_duration = time.perf_counter() - total_start_time
                 _LOGGER.debug(f"✅ {speed.name} update completed in {total_duration:.4f}s")

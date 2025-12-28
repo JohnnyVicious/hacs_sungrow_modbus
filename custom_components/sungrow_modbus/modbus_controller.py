@@ -516,6 +516,23 @@ class ModbusController:
         return self._sensor_groups
 
     @property
+    def data_received(self):
+        """Returns whether any data has been received from the device."""
+        return self._data_received
+
+    def mark_data_received(self):
+        """Mark that data has been successfully received from the device."""
+        self._data_received = True
+
+    def remove_sensor_groups(self, groups_to_remove: list):
+        """Remove sensor groups from the controller.
+
+        Args:
+            groups_to_remove: List of SungrowSensorGroup instances to remove.
+        """
+        self._sensor_groups = [g for g in self._sensor_groups if g not in groups_to_remove]
+
+    @property
     def derived_sensors(self):
         """Returns the list of derived sensors."""
         return self._derived_sensors

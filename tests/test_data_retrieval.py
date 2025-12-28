@@ -257,21 +257,24 @@ class TestDataRetrieval:
         normal_group.registrar_count = 10
 
         # Use a real list for sensor_groups (the implementation reads sensor_groups
-        # but writes to _sensor_groups, so we need to set up both)
+        # but uses remove_sensor_groups() method, so we need to track calls)
         sensor_groups_list = [once_group, normal_group]
         self.controller.sensor_groups = sensor_groups_list
         self.controller.enabled = True
         self.controller.connected.return_value = True
         self.controller.async_read_holding_register = AsyncMock(return_value=[1] * 10)
         self.controller.async_read_input_register = AsyncMock(return_value=[1] * 10)
+        self.controller.mark_data_received = MagicMock()
+        self.controller.remove_sensor_groups = MagicMock()
 
         await self.data_retrieval.get_modbus_updates([once_group], PollSpeed.NORMAL)
 
-        # The implementation writes to _sensor_groups after filtering out ONCE groups
-        # Check that _sensor_groups was updated to exclude once_group
-        assert hasattr(self.controller, "_sensor_groups")
-        assert once_group not in self.controller._sensor_groups
-        assert normal_group in self.controller._sensor_groups
+        # The implementation calls remove_sensor_groups() to remove ONCE groups
+        # Verify that remove_sensor_groups was called with the once_group
+        self.controller.remove_sensor_groups.assert_called_once()
+        removed_groups = self.controller.remove_sensor_groups.call_args[0][0]
+        assert once_group in removed_groups
+        assert normal_group not in removed_groups
 
 
 class TestDataRetrievalBatteryPolling:
