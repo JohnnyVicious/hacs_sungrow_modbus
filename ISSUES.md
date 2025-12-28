@@ -14,37 +14,7 @@ This document tracks remaining issues identified during code review that have no
 
 ## Important Issues
 
-### 1. Writes Dropped When Controller Disconnected
-
-**Severity:** Important
-**Files:**
-- `custom_components/sungrow_modbus/sensors/sungrow_binary_sensor.py:157`
-- `custom_components/sungrow_modbus/sensors/sungrow_select_entity.py:160`
-
-**Symptom:** When the controller is disconnected, user commands (switch toggles, select changes) are silently dropped. However, the entity's local state is still updated, giving users false confirmation that their action succeeded.
-
-**Current Code (binary_sensor.py:157):**
-```python
-if current_register_value != new_register_value and controller.connected():
-    target_register = self._write_register
-    self._hass.create_task(controller.async_write_holding_register(target_register, new_register_value))
-
-self._attr_is_on = value  # State updated even if write was skipped
-self._attr_available = True
-```
-
-**Root Cause:** The `controller.connected()` check gates the write, but the local state update happens unconditionally afterward.
-
-**Suggested Fix:**
-```python
-if current_register_value != new_register_value:
-    # Always queue the write - controller handles reconnection
-    self._hass.create_task(controller.async_write_holding_register(target_register, new_register_value))
-    self._attr_is_on = value
-    self._attr_available = True
-```
-
-**Impact:** Medium - Users see false success when inverter is offline; commands are lost.
+*No important issues at this time.*
 
 ---
 
@@ -170,7 +140,6 @@ When adding new issues, use this format:
 
 | Issue | Severity | Effort | Priority |
 |-------|----------|--------|----------|
-| Writes dropped when disconnected | Important | Medium | Medium |
 | Missing async_write_ha_state for 90005 | Minor | Low | Low |
 
-**Recommendation:** Address the "writes dropped when disconnected" issue to prevent false success feedback in the UI.
+**Recommendation:** The remaining issue is minor and cosmetic - the connection toggle UI may be slightly stale until the next poll.

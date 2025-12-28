@@ -155,8 +155,9 @@ class SungrowSelectEntity(RestoreEntity, SelectEntity):
         _LOGGER.debug(
             f"Attempting bit {bit_position} to {True} in register {self._register}. New value for register {new_register_value}"
         )
-        # we only want to write when values has changed. After, we read the register again to make sure it applied.
+        # We only want to write when value has changed
+        # Always queue the write - controller handles connection state
         # Note: cache_save is handled by ModbusController on successful write
-        if current_register_value != new_register_value and controller.connected():
+        if current_register_value != new_register_value:
             self._hass.create_task(controller.async_write_holding_register(self._register, new_register_value))
-        self._attr_available = True
+            self._attr_available = True

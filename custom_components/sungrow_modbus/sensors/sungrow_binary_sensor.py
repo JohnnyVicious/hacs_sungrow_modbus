@@ -154,13 +154,13 @@ class SungrowBinaryEntity(RestoreEntity, SwitchEntity):
             f"Attempting bit {self._bit_position} to {value} in register {self._register}. New value for register {new_register_value}"
         )
 
-        if current_register_value != new_register_value and controller.connected():
+        if current_register_value != new_register_value:
             target_register = self._write_register
-            # Note: cache_save is handled by ModbusController on successful write
+            # Always queue the write - controller handles connection state
+            # Only update local state if we actually queued a write
             self._hass.create_task(controller.async_write_holding_register(target_register, new_register_value))
-
-        self._attr_is_on = value
-        self._attr_available = True
+            self._attr_is_on = value
+            self._attr_available = True
 
     @property
     def device_info(self):
