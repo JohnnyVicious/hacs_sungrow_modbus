@@ -30,7 +30,7 @@ class InverterConfig:
         self.type = type
         self.options = options
         self.connection = connection
-        self.features: [InverterFeature] = features
+        self.features: list[InverterFeature] = features
         self.wattage_chosen = max(wattage)
 
         self._rebuild_features()

@@ -33,6 +33,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Removed duplicate TCP/Serial code** (`modbus_controller.py`) - Eliminated redundant if/else branching in 4 methods where TCP and Serial code paths were identical. Root cause: historical code from pymodbus 2.x migration where APIs differed. In pymodbus 3.x, both use the same `device_id` parameter. Affected methods: `_execute_write_holding_register`, `_execute_write_holding_registers`, `_async_read_input_register_raw`, `async_read_holding_register`.
 
+#### Minor Fixes
+
+- **Invalid type annotation syntax** (`data/sungrow_config.py:33`) - Static type checkers flagged `[InverterFeature]` as an error. Root cause: `[InverterFeature]` creates a list literal, not a type hint. Fixed by changing to `list[InverterFeature]`.
+
 ## [0.1.15] - 2024-12-XX
 
 ### Fixed
