@@ -40,6 +40,9 @@ def assert_called_with_write_task(mock_hass, expected_register, expected_value):
     coro_func = task.cr_code.co_name
     assert "async_write_holding_register" in coro_func or "_execute_mock_call" in coro_func
 
+    # Close the coroutine to prevent "coroutine was never awaited" warning
+    task.close()
+
 
 @pytest.mark.asyncio
 async def test_conflicts_self_use_mode(mock_hass, controller):

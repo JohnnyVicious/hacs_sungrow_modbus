@@ -36,7 +36,7 @@ async def test_select_bit_position_requires_combinations_are_unique():
 
     captured_entities = []
 
-    async def capture_add_devices(entities, update_immediately):
+    def capture_add_devices(entities, update_immediately):
         captured_entities.extend(entities)
 
     await async_setup_entry(hass, config_entry, capture_add_devices)
