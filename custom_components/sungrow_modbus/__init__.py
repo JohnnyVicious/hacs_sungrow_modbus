@@ -126,7 +126,12 @@ async def async_setup(hass: HomeAssistant, entry: ConfigEntry):
             if not controllers:
                 _LOGGER.error("No controllers available for write operation")
                 return
-            for controller in controllers.values():
+            # Filter by slave ID when host is not provided
+            targets = [c for c in controllers.values() if c.device_id == slave]
+            if not targets:
+                _LOGGER.error("No controller found for slave %s", slave)
+                return
+            for controller in targets:
                 await write_with_logging(controller, address, value)
 
     # @Ian-Johnston

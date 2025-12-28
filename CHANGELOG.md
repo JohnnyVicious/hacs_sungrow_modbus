@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **Service writes to all controllers when host omitted** (`__init__.py:118-135`) - The `sungrow_write_holding_register` service ignored the `slave` parameter when `host` was not specified, writing to ALL registered controllers instead of filtering by slave ID. In multi-inverter setups, this could write values to unintended devices. Root cause: The else branch iterated through all controllers without filtering by `device_id`. Fixed by adding a filter `[c for c in controllers.values() if c.device_id == slave]` to target only controllers matching the specified slave ID.
+
 ## [0.3.0] - 2025-12-28
 
 ### Added

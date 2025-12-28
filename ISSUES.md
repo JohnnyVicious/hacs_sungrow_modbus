@@ -8,19 +8,76 @@ This document tracks remaining issues identified during code review that have no
 
 ## Critical Issues
 
-_No critical issues at this time._
+*No critical issues at this time.*
 
 ---
 
 ## Important Issues
 
-_No important issues at this time._
+### 1. Writes Dropped When Controller Disconnected
+
+**Severity:** Important
+**Files:**
+- `custom_components/sungrow_modbus/sensors/sungrow_binary_sensor.py:157`
+- `custom_components/sungrow_modbus/sensors/sungrow_select_entity.py:160`
+
+**Symptom:** When the controller is disconnected, user commands (switch toggles, select changes) are silently dropped. However, the entity's local state is still updated, giving users false confirmation that their action succeeded.
+
+**Current Code (binary_sensor.py:157):**
+```python
+if current_register_value != new_register_value and controller.connected():
+    target_register = self._write_register
+    self._hass.create_task(controller.async_write_holding_register(target_register, new_register_value))
+
+self._attr_is_on = value  # State updated even if write was skipped
+self._attr_available = True
+```
+
+**Root Cause:** The `controller.connected()` check gates the write, but the local state update happens unconditionally afterward.
+
+**Suggested Fix:**
+```python
+if current_register_value != new_register_value:
+    # Always queue the write - controller handles reconnection
+    self._hass.create_task(controller.async_write_holding_register(target_register, new_register_value))
+    self._attr_is_on = value
+    self._attr_available = True
+```
+
+**Impact:** Medium - Users see false success when inverter is offline; commands are lost.
 
 ---
 
 ## Minor Issues
 
-_No minor issues at this time._
+### 1. Missing async_write_ha_state for Register 90005
+
+**Severity:** Minor
+**File:** `custom_components/sungrow_modbus/sensors/sungrow_binary_sensor.py`
+**Lines:** 74-77
+
+**Symptom:** The connection toggle entity (register 90005) updates its internal state but never pushes the update to Home Assistant, so the UI doesn't reflect the actual enabled/disabled status.
+
+**Current Code:**
+```python
+if self._register == 90005:
+    self._attr_is_on = self._modbus_controller.enabled
+    self._attr_available = True
+    return self._attr_is_on  # Early return without async_write_ha_state()
+```
+
+**Root Cause:** The early `return` bypasses the `self.async_write_ha_state()` call that other code paths use (line 92).
+
+**Suggested Fix:**
+```python
+if self._register == 90005:
+    self._attr_is_on = self._modbus_controller.enabled
+    self._attr_available = True
+    self.async_write_ha_state()
+    return self._attr_is_on
+```
+
+**Impact:** Low - UI state for connection toggle may be stale until next poll.
 
 ---
 
@@ -113,6 +170,7 @@ When adding new issues, use this format:
 
 | Issue | Severity | Effort | Priority |
 |-------|----------|--------|----------|
-| _None_ | - | - | - |
+| Writes dropped when disconnected | Important | Medium | Medium |
+| Missing async_write_ha_state for 90005 | Minor | Low | Low |
 
-**Recommendation:** No active issues. Always check CHANGELOG.md for related historical fixes before implementing new changes.
+**Recommendation:** Address the "writes dropped when disconnected" issue to prevent false success feedback in the UI.
