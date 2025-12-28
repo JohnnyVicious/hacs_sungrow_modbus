@@ -1,18 +1,24 @@
 # Sungrow Modbus Integration for Home Assistant
 
-> **Warning**: This integration is under active development. Use at your own risk.
+[![GitHub Release](https://img.shields.io/github/v/release/JohnnyVicious/hacs_sungrow_modbus?style=flat-square)](https://github.com/JohnnyVicious/hacs_sungrow_modbus/releases)
+[![HACS](https://img.shields.io/badge/HACS-Custom-orange.svg?style=flat-square)](https://hacs.xyz)
+[![License](https://img.shields.io/github/license/JohnnyVicious/hacs_sungrow_modbus?style=flat-square)](LICENSE)
 
 ## Overview
 
-A Home Assistant custom integration for Sungrow inverters via Modbus TCP or Serial connection. Supports hybrid, string, and grid-connected inverters with automatic model-specific register mapping.
+A Home Assistant custom integration for Sungrow inverters via Modbus TCP or Serial connection. Supports hybrid, string, and grid-connected inverters with automatic model detection and register mapping.
 
 ## Features
 
-- **Modbus TCP and Serial** connection support
+- **Modbus TCP and Serial (RS485)** connection support
+- **Auto-detection** - automatically detects inverter model, serial number, and firmware
+- **Multi-inverter support** - configure multiple inverters with proper entity namespacing
 - **Model-specific register overrides** - automatic adjustment for different inverter register layouts
 - **Configurable poll intervals** - fast/normal/slow polling for different sensor types
 - **Hybrid inverter support** - PV, battery, grid, and load monitoring
 - **String inverter support** - PV and grid monitoring
+- **Multi-battery monitoring** - optional support for battery stack diagnostics (TCP only)
+- **Writable entities** - control EMS mode, charge/discharge limits, and schedules
 - **Example dashboards** - ready-to-use Lovelace dashboard templates
 
 ## Why a Native Integration?
@@ -31,18 +37,30 @@ The semantic feature system means adding support for a new inverter family often
 
 ## Supported Inverters
 
-### Tested
+### Hybrid Inverters (with battery storage)
 
-| Model | Connection    | Notes                                      |
-|-------|---------------|--------------------------------------------|
-| SH25T | TCP (WiNet-S) | Register offset -1 vs residential hybrids  |
+| Series | Models | Notes |
+|--------|--------|-------|
+| **SH-RS** | SH3.0RS, SH3.6RS, SH4.0RS, SH4.6RS, SH5.0RS, SH6.0RS, SH8.0RS, SH10RS | Single-phase residential |
+| **SH-RT** | SH5.0RT, SH6.0RT, SH8.0RT, SH10RT | Three-phase residential |
+| **SH-RT-20** | SH5.0RT-20, SH6.0RT-20, SH8.0RT-20, SH10RT-20 | Three-phase with updated firmware |
+| **SH-RT-V112/V122** | SH5.0RT-V112, SH8.0RT-V112, SH10RT-V112, SH10RT-V122 | Three-phase variants |
+| **SH-T** | SH5T, SH10T, SH15T, SH20T, SH25T | Three-phase commercial |
 
-### Expected Compatible
+### String Inverters (grid-tied, no battery)
 
-- **SH-RT series**: SH5.0RT, SH6.0RT, SH8.0RT, SH10RT, SH10RT-V112
-- **SH-RS series**: SH3.6RS, SH4.6RS, SH5.0RS, SH6.0RS
-- **SH-K series**: SH3K6, SH4K6, SH5K-20, SH5K-30
-- **SG-RT series**: SG3.0RT - SG20RT (string inverters)
+| Series | Models | Notes |
+|--------|--------|-------|
+| **SG-RS** | SG3.0RS, SG3.6RS, SG4.0RS, SG5.0RS, SG6.0RS, SG10RS | Single-phase residential |
+| **SG-RT** | SG3.0RT - SG20RT | Three-phase residential |
+
+### Tested Models
+
+| Model | Connection | Status |
+|-------|------------|--------|
+| SH25T | TCP (WiNet-S) | ✅ Verified |
+
+> **Note**: Most Sungrow hybrid and string inverters using the standard Modbus protocol should work. The integration auto-detects the model during setup.
 
 ## Installation
 
@@ -110,6 +128,28 @@ MODEL_OVERRIDES = {
 ## Register Reference
 
 Register definitions are based on the [SunGather register map](https://raw.githubusercontent.com/bohdan-s/SunGather/refs/heads/main/SunGather/registers-sungrow.yaml) by [@bohdan-s](https://github.com/bohdan-s). Thank you for the comprehensive Sungrow register documentation.
+
+## Recent Changes
+
+### v0.1.4 (December 2024)
+
+**Stability & Robustness Improvements**
+
+- Thread-safe connection management with proper locking
+- Input validation for service calls (register/value bounds checking)
+- Fixed race conditions in derived sensor calculations
+- Fixed premature cache updates before write confirmation
+- Defensive programming for edge cases (null checks, index guards)
+
+### v0.1.0
+
+- Initial release with hybrid and string inverter support
+- Auto-detection of inverter model and serial number
+- Multi-speed polling (fast/normal/slow)
+- Model-specific register overrides
+- Example Lovelace dashboards
+
+See [Releases](https://github.com/JohnnyVicious/hacs_sungrow_modbus/releases) for full changelog.
 
 ## Acknowledgments
 

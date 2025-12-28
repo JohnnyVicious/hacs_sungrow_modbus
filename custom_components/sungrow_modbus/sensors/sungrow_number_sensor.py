@@ -104,7 +104,9 @@ class SungrowNumberEntity(RestoreNumber, NumberEntity):
                 _LOGGER.debug(f"not all values received yet = {self._received_values}")
                 return
 
-            new_value = self.base_sensor.convert_value([updated_value])
+            # Use all received register values in correct order
+            values = [self._received_values[reg] for reg in self._register]
+            new_value = self.base_sensor.convert_value(values)
 
             # Clear received values after update
             self._received_values.clear()

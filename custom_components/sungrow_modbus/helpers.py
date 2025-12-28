@@ -190,11 +190,28 @@ def get_controller(hass: HomeAssistant, controller_host: str, controller_slave: 
     return None
 
 def split_s32(s32_values: List[int]):
-    high_word = s32_values[0] - (1 << 16) if s32_values[0] & (1 << 15) else s32_values[0]
-    low_word = s32_values[1] - (1 << 16) if s32_values[1] & (1 << 15) else s32_values[1]
+    """Combine two 16-bit registers into a signed 32-bit integer.
 
-    # Combine the high and low words to form a 32-bit signed/unsigned integer
-    return  (high_word << 16) | (low_word & 0xFFFF)
+    Args:
+        s32_values: List of two 16-bit register values [high_word, low_word]
+
+    Returns:
+        Signed 32-bit integer
+    """
+    if len(s32_values) < 2:
+        return 0
+
+    # High word determines sign, low word is always unsigned
+    high_word = s32_values[0]
+    low_word = s32_values[1]
+
+    # Combine as unsigned 32-bit first
+    unsigned_value = (high_word << 16) | (low_word & 0xFFFF)
+
+    # Convert to signed if high bit is set
+    if unsigned_value >= (1 << 31):
+        return unsigned_value - (1 << 32)
+    return unsigned_value
 
 def _any_in(target: List[int], collection: set[int]) -> bool:
     return any(item in collection for item in target)
