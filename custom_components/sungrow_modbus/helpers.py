@@ -193,31 +193,36 @@ def get_controller_from_entry(hass: HomeAssistant, config_entry: ConfigEntry):
     """Get controller from config entry (works for both TCP and Serial)."""
     config = {**config_entry.data, **config_entry.options}
     key = get_controller_key_from_config(config)
-    return hass.data[DOMAIN][CONTROLLER].get(key)
+    controllers = hass.data.get(DOMAIN, {}).get(CONTROLLER, {})
+    return controllers.get(key)
 
 
 def get_controller(hass: HomeAssistant, controller_host: str, controller_slave: int):
     """Get controller by host/port and slave (legacy function for backwards compatibility)."""
+    controllers = hass.data.get(DOMAIN, {}).get(CONTROLLER, {})
+    if not controllers:
+        return None
+
     if controller_host is None:
         # This is a serial connection, but we don't have the port info here
         # Return the first controller with matching slave
-        for _key, controller in hass.data[DOMAIN][CONTROLLER].items():
+        for _key, controller in controllers.items():
             if controller.device_id == controller_slave:
                 return controller
         return None
 
     # Try exact match first (for backwards compatibility with host_slave format)
-    controller = hass.data[DOMAIN][CONTROLLER].get(f"{controller_host}_{controller_slave}")
+    controller = controllers.get(f"{controller_host}_{controller_slave}")
     if controller:
         return controller
 
     # Try with default port for TCP
-    controller = hass.data[DOMAIN][CONTROLLER].get(f"{controller_host}:502_{controller_slave}")
+    controller = controllers.get(f"{controller_host}:502_{controller_slave}")
     if controller:
         return controller
 
     # Search all controllers for matching host and slave
-    for _key, ctrl in hass.data[DOMAIN][CONTROLLER].items():
+    for _key, ctrl in controllers.items():
         if ctrl.host == controller_host and ctrl.device_id == controller_slave:
             return ctrl
 
