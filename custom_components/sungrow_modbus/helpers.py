@@ -237,8 +237,18 @@ def _any_in(target: list[int], collection: set[int]) -> bool:
     return any(item in collection for item in target)
 
 
-def is_correct_controller(controller, host: str, slave: int):
-    return controller.host == host and controller.device_id == slave
+def is_correct_controller(controller, connection_id: str, slave: int):
+    """Check if an event is for the correct controller.
+
+    Args:
+        controller: The ModbusController instance
+        connection_id: The connection identifier (host:port for TCP, serial path for serial)
+        slave: The Modbus slave/device ID
+
+    Returns:
+        bool: True if the event is for this controller
+    """
+    return controller.connection_id == connection_id and controller.device_id == slave
 
 
 def get_bit_bool(modbus_value: int, bit_position: int) -> bool:

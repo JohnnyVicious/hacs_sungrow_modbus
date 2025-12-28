@@ -10,13 +10,15 @@ from custom_components.sungrow_modbus.data.enums import InverterFeature, Inverte
 from custom_components.sungrow_modbus.time import SungrowTimeEntity, async_setup_entry
 
 
-def create_mock_controller(host="10.0.0.1", slave=1, inverter_type=InverterType.HYBRID, features=None):
+def create_mock_controller(host="10.0.0.1", port=502, slave=1, inverter_type=InverterType.HYBRID, features=None):
     """Create a mock controller."""
     if features is None:
         features = {InverterFeature.BATTERY}
 
     controller = MagicMock()
     controller.host = host
+    controller.port = port
+    controller.connection_id = f"{host}:{port}"
     controller.device_id = slave
     controller.slave = slave
     controller.connected.return_value = True
@@ -224,7 +226,7 @@ class TestSungrowTimeEntity:
         hass.data[DOMAIN][VALUES]["13004"] = 30  # minute
 
         event = MagicMock()
-        event.data = {REGISTER: 13003, VALUE: 14, CONTROLLER: "10.0.0.1", SLAVE: 1}
+        event.data = {REGISTER: 13003, VALUE: 14, CONTROLLER: "10.0.0.1:502", SLAVE: 1}
 
         with patch("custom_components.sungrow_modbus.time.cache_get") as mock_cache:
             # cache_get takes 3 args: hass, register, controller_key
@@ -248,7 +250,7 @@ class TestSungrowTimeEntity:
         event.data = {
             REGISTER: 13003,
             VALUE: 25,  # Invalid hour (> 23)
-            CONTROLLER: "10.0.0.1",
+            CONTROLLER: "10.0.0.1:502",
             SLAVE: 1,
         }
 
@@ -269,7 +271,7 @@ class TestSungrowTimeEntity:
         entity.schedule_update_ha_state = MagicMock()
 
         event = MagicMock()
-        event.data = {REGISTER: 13003, VALUE: 14, CONTROLLER: "10.0.0.1", SLAVE: 1}
+        event.data = {REGISTER: 13003, VALUE: 14, CONTROLLER: "10.0.0.1:502", SLAVE: 1}
 
         with patch("custom_components.sungrow_modbus.time.cache_get") as mock_cache:
             mock_cache.side_effect = lambda h, r, k: {13003: 14, 13004: 70}.get(r)  # 70 is invalid minute
@@ -288,7 +290,7 @@ class TestSungrowTimeEntity:
         entity.schedule_update_ha_state = MagicMock()
 
         event = MagicMock()
-        event.data = {REGISTER: 13003, VALUE: 14, CONTROLLER: "10.0.0.1", SLAVE: 1}
+        event.data = {REGISTER: 13003, VALUE: 14, CONTROLLER: "10.0.0.1:502", SLAVE: 1}
 
         with patch("custom_components.sungrow_modbus.time.cache_get") as mock_cache:
             mock_cache.side_effect = lambda h, r, k: {13003: 14}.get(r)  # minute not in cache
@@ -310,7 +312,7 @@ class TestSungrowTimeEntity:
         event.data = {
             REGISTER: 13003,
             VALUE: 14,
-            CONTROLLER: "10.0.0.2",  # Different host
+            CONTROLLER: "10.0.0.2:502",  # Different host
             SLAVE: 1,
         }
 
@@ -333,7 +335,7 @@ class TestSungrowTimeEntity:
         event.data = {
             REGISTER: 13999,  # Different register
             VALUE: 14,
-            CONTROLLER: "10.0.0.1",
+            CONTROLLER: "10.0.0.1:502",
             SLAVE: 1,
         }
 

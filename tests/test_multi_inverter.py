@@ -145,18 +145,23 @@ class TestMultiInverterIsolation:
 
     def test_is_correct_controller_matches(self):
         """Test is_correct_controller returns True for matching controller."""
-        controller = create_mock_controller(host="192.168.1.100", slave=1)
-        assert is_correct_controller(controller, "192.168.1.100", 1) is True
+        controller = create_mock_controller(host="192.168.1.100", port=502, slave=1)
+        assert is_correct_controller(controller, "192.168.1.100:502", 1) is True
 
     def test_is_correct_controller_wrong_host(self):
         """Test is_correct_controller returns False for wrong host."""
-        controller = create_mock_controller(host="192.168.1.100", slave=1)
-        assert is_correct_controller(controller, "192.168.1.101", 1) is False
+        controller = create_mock_controller(host="192.168.1.100", port=502, slave=1)
+        assert is_correct_controller(controller, "192.168.1.101:502", 1) is False
+
+    def test_is_correct_controller_wrong_port(self):
+        """Test is_correct_controller returns False for wrong port."""
+        controller = create_mock_controller(host="192.168.1.100", port=502, slave=1)
+        assert is_correct_controller(controller, "192.168.1.100:8502", 1) is False
 
     def test_is_correct_controller_wrong_slave(self):
         """Test is_correct_controller returns False for wrong slave."""
-        controller = create_mock_controller(host="192.168.1.100", slave=1)
-        assert is_correct_controller(controller, "192.168.1.100", 2) is False
+        controller = create_mock_controller(host="192.168.1.100", port=502, slave=1)
+        assert is_correct_controller(controller, "192.168.1.100:502", 2) is False
 
     def test_multi_inverter_cache_isolation(self):
         """Test cache values are isolated per controller."""

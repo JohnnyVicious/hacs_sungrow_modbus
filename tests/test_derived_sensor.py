@@ -11,6 +11,8 @@ from custom_components.sungrow_modbus.sensors.sungrow_derived_sensor import Sung
 def mock_controller():
     controller = MagicMock()
     controller.host = "1.2.3.4"
+    controller.port = 502
+    controller.connection_id = "1.2.3.4:502"
     controller.slave = 1
     controller.model = "TestModel"
     controller.device_id = 1
@@ -38,7 +40,7 @@ def test_derived_sensor_status(hass: HomeAssistant, mock_base_sensor):
     # Simulate status update (33095)
     # 3 = "Generating"
     mock_base_sensor.get_value = 3
-    event_data = {REGISTER: 33095, VALUE: 3, CONTROLLER: "1.2.3.4", SLAVE: 1}
+    event_data = {REGISTER: 33095, VALUE: 3, CONTROLLER: "1.2.3.4:502", SLAVE: 1}
 
     with patch.object(sensor, "schedule_update_ha_state"):
         sensor.handle_modbus_update(Event(DOMAIN, data=event_data))
@@ -53,7 +55,7 @@ def test_derived_sensor_dc_power(hass: HomeAssistant, mock_base_sensor):
     # Prime first value
     sensor._received_values[33049] = 200
 
-    event_data = {REGISTER: 33050, VALUE: 10, CONTROLLER: "1.2.3.4", SLAVE: 1}
+    event_data = {REGISTER: 33050, VALUE: 10, CONTROLLER: "1.2.3.4:502", SLAVE: 1}
 
     with patch.object(sensor, "schedule_update_ha_state"):
         sensor.handle_modbus_update(Event(DOMAIN, data=event_data))
@@ -67,7 +69,7 @@ def test_derived_sensor_wrong_controller(hass: HomeAssistant, mock_base_sensor):
     event_data = {
         REGISTER: 33095,
         VALUE: 3,
-        CONTROLLER: "9.9.9.9",  # Wrong IP
+        CONTROLLER: "9.9.9.9:502",  # Wrong IP
         SLAVE: 1,
     }
 
@@ -82,7 +84,7 @@ def test_derived_sensor_incomplete_data(hass: HomeAssistant, mock_base_sensor):
     sensor = SungrowDerivedSensor(hass, mock_base_sensor)
 
     # Only send one value, missing the other
-    event_data = {REGISTER: 33050, VALUE: 10, CONTROLLER: "1.2.3.4", SLAVE: 1}
+    event_data = {REGISTER: 33050, VALUE: 10, CONTROLLER: "1.2.3.4:502", SLAVE: 1}
 
     with patch.object(sensor, "schedule_update_ha_state"):
         sensor.handle_modbus_update(Event(DOMAIN, data=event_data))

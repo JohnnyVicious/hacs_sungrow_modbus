@@ -96,7 +96,7 @@ class DataRetrieval:
                 {
                     REGISTER: 90005,
                     VALUE: self.controller.enabled,
-                    CONTROLLER: self.controller.host,
+                    CONTROLLER: self.controller.connection_id,
                     SLAVE: self.controller.slave,
                 },
             )
@@ -201,7 +201,7 @@ class DataRetrieval:
             {
                 REGISTER: 90006,
                 VALUE: self.controller.last_modbus_success,
-                CONTROLLER: self.controller.host,
+                CONTROLLER: self.controller.connection_id,
                 SLAVE: self.controller.slave,
             },
         )
@@ -315,7 +315,7 @@ class DataRetrieval:
                             {
                                 REGISTER: reg,
                                 VALUE: corrected_value,
-                                CONTROLLER: self.controller.host,
+                                CONTROLLER: self.controller.connection_id,
                                 SLAVE: self.controller.slave,
                             },
                         )

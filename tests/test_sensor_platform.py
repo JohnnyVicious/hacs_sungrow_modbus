@@ -21,10 +21,12 @@ from custom_components.sungrow_modbus.sensors.sungrow_base_sensor import Sungrow
 from custom_components.sungrow_modbus.sensors.sungrow_sensor import SungrowSensor
 
 
-def create_mock_controller(host="10.0.0.1", slave=1, inverter_type=InverterType.HYBRID):
+def create_mock_controller(host="10.0.0.1", port=502, slave=1, inverter_type=InverterType.HYBRID):
     """Create a mock controller with common defaults."""
     controller = MagicMock()
     controller.host = host
+    controller.port = port
+    controller.connection_id = f"{host}:{port}"
     controller.device_id = slave
     controller.slave = slave
     controller.connected.return_value = True
@@ -182,7 +184,7 @@ class TestSungrowSensor:
 
         # Create event with matching controller
         event = MagicMock()
-        event.data = {REGISTER: 33000, VALUE: 1000, CONTROLLER: "10.0.0.1", SLAVE: 1}
+        event.data = {REGISTER: 33000, VALUE: 1000, CONTROLLER: "10.0.0.1:502", SLAVE: 1}
 
         sensor.handle_modbus_update(event)
 
@@ -204,14 +206,14 @@ class TestSungrowSensor:
 
         # First register event - should wait
         event1 = MagicMock()
-        event1.data = {REGISTER: 33000, VALUE: 100, CONTROLLER: "10.0.0.1", SLAVE: 1}
+        event1.data = {REGISTER: 33000, VALUE: 100, CONTROLLER: "10.0.0.1:502", SLAVE: 1}
 
         sensor.handle_modbus_update(event1)
         assert sensor._attr_native_value is None  # Not yet updated
 
         # Second register event - should process both
         event2 = MagicMock()
-        event2.data = {REGISTER: 33001, VALUE: 200, CONTROLLER: "10.0.0.1", SLAVE: 1}
+        event2.data = {REGISTER: 33001, VALUE: 200, CONTROLLER: "10.0.0.1:502", SLAVE: 1}
 
         sensor.handle_modbus_update(event2)
         # convert_value was called with [100, 200], returns sum * multiplier = 300
@@ -233,7 +235,7 @@ class TestSungrowSensor:
         event.data = {
             REGISTER: 33000,
             VALUE: 1000,
-            CONTROLLER: "10.0.0.2",  # Different host
+            CONTROLLER: "10.0.0.2:502",  # Different host
             SLAVE: 1,
         }
 
@@ -257,7 +259,7 @@ class TestSungrowSensor:
         event.data = {
             REGISTER: 33999,  # Different register
             VALUE: 1000,
-            CONTROLLER: "10.0.0.1",
+            CONTROLLER: "10.0.0.1:502",
             SLAVE: 1,
         }
 
@@ -377,7 +379,7 @@ class TestSensorMultiplier:
         sensor.schedule_update_ha_state = MagicMock()
 
         event = MagicMock()
-        event.data = {REGISTER: 33000, VALUE: 123, CONTROLLER: "10.0.0.1", SLAVE: 1}
+        event.data = {REGISTER: 33000, VALUE: 123, CONTROLLER: "10.0.0.1:502", SLAVE: 1}
 
         sensor.handle_modbus_update(event)
         assert sensor._attr_native_value == 123
@@ -394,7 +396,7 @@ class TestSensorMultiplier:
         sensor.schedule_update_ha_state = MagicMock()
 
         event = MagicMock()
-        event.data = {REGISTER: 33000, VALUE: 123, CONTROLLER: "10.0.0.1", SLAVE: 1}
+        event.data = {REGISTER: 33000, VALUE: 123, CONTROLLER: "10.0.0.1:502", SLAVE: 1}
 
         sensor.handle_modbus_update(event)
         assert sensor._attr_native_value == 12.3
@@ -411,7 +413,7 @@ class TestSensorMultiplier:
         sensor.schedule_update_ha_state = MagicMock()
 
         event = MagicMock()
-        event.data = {REGISTER: 33000, VALUE: 5, CONTROLLER: "10.0.0.1", SLAVE: 1}
+        event.data = {REGISTER: 33000, VALUE: 5, CONTROLLER: "10.0.0.1:502", SLAVE: 1}
 
         sensor.handle_modbus_update(event)
         assert sensor._attr_native_value == 5000

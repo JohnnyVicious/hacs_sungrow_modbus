@@ -19,10 +19,12 @@ def close_create_task_coroutine(hass_mock):
                 task.close()
 
 
-def create_mock_controller(host="10.0.0.1", slave=1):
+def create_mock_controller(host="10.0.0.1", port=502, slave=1):
     """Create a mock controller."""
     controller = MagicMock()
     controller.host = host
+    controller.port = port
+    controller.connection_id = f"{host}:{port}"
     controller.device_id = slave
     controller.slave = slave
     controller.connected.return_value = True
@@ -348,7 +350,7 @@ class TestSungrowBinaryEntityUpdate:
         event.data = {
             REGISTER: 43110,
             VALUE: 1,  # Bit 0 is set
-            CONTROLLER: "10.0.0.1",
+            CONTROLLER: "10.0.0.1:502",
             SLAVE: 1,
         }
 
@@ -372,7 +374,7 @@ class TestSungrowBinaryEntityUpdate:
         event.data = {
             REGISTER: 43110,
             VALUE: 2,  # Bit 0 is clear, bit 1 is set
-            CONTROLLER: "10.0.0.1",
+            CONTROLLER: "10.0.0.1:502",
             SLAVE: 1,
         }
 
@@ -392,7 +394,7 @@ class TestSungrowBinaryEntityUpdate:
         entity.async_write_ha_state = MagicMock()  # Mock HA state update
 
         event = MagicMock()
-        event.data = {REGISTER: 43007, VALUE: 190, CONTROLLER: "10.0.0.1", SLAVE: 1}
+        event.data = {REGISTER: 43007, VALUE: 190, CONTROLLER: "10.0.0.1:502", SLAVE: 1}
 
         entity.handle_modbus_update(event)
 
@@ -410,7 +412,7 @@ class TestSungrowBinaryEntityUpdate:
         entity.async_write_ha_state = MagicMock()  # Mock HA state update
 
         event = MagicMock()
-        event.data = {REGISTER: 43007, VALUE: 222, CONTROLLER: "10.0.0.1", SLAVE: 1}
+        event.data = {REGISTER: 43007, VALUE: 222, CONTROLLER: "10.0.0.1:502", SLAVE: 1}
 
         entity.handle_modbus_update(event)
 
@@ -431,7 +433,7 @@ class TestSungrowBinaryEntityUpdate:
         event.data = {
             REGISTER: 43110,
             VALUE: 0,
-            CONTROLLER: "10.0.0.2",  # Different host
+            CONTROLLER: "10.0.0.2:502",  # Different host
             SLAVE: 1,
         }
 
@@ -454,7 +456,7 @@ class TestSungrowBinaryEntityUpdate:
         event.data = {
             REGISTER: 43111,  # Different register
             VALUE: 0,
-            CONTROLLER: "10.0.0.1",
+            CONTROLLER: "10.0.0.1:502",
             SLAVE: 1,
         }
 

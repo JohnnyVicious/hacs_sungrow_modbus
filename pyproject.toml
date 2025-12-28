@@ -1,6 +1,6 @@
 [project]
 name = "sungrow_modbus"
-version = "0.1.14"
+version = "0.1.15"
 description = "Home Assistant custom integration for Sungrow inverters via Modbus"
 requires-python = ">=3.12"
 
