@@ -73,7 +73,6 @@ dmypy.json
 
 # Coding tools
 AGENTS.md
-CLAUDE.md
 **/.claude
 **/.vscode
 **/.codex
