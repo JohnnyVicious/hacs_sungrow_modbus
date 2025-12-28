@@ -20,34 +20,7 @@ This document tracks remaining issues identified during code review that have no
 
 ## Minor Issues
 
-### 1. Missing async_write_ha_state for Register 90005
-
-**Severity:** Minor
-**File:** `custom_components/sungrow_modbus/sensors/sungrow_binary_sensor.py`
-**Lines:** 74-77
-
-**Symptom:** The connection toggle entity (register 90005) updates its internal state but never pushes the update to Home Assistant, so the UI doesn't reflect the actual enabled/disabled status.
-
-**Current Code:**
-```python
-if self._register == 90005:
-    self._attr_is_on = self._modbus_controller.enabled
-    self._attr_available = True
-    return self._attr_is_on  # Early return without async_write_ha_state()
-```
-
-**Root Cause:** The early `return` bypasses the `self.async_write_ha_state()` call that other code paths use (line 92).
-
-**Suggested Fix:**
-```python
-if self._register == 90005:
-    self._attr_is_on = self._modbus_controller.enabled
-    self._attr_available = True
-    self.async_write_ha_state()
-    return self._attr_is_on
-```
-
-**Impact:** Low - UI state for connection toggle may be stale until next poll.
+*No minor issues at this time.*
 
 ---
 
@@ -138,8 +111,6 @@ When adding new issues, use this format:
 
 ## Summary
 
-| Issue | Severity | Effort | Priority |
-|-------|----------|--------|----------|
-| Missing async_write_ha_state for 90005 | Minor | Low | Low |
+*No open issues at this time.* All issues from the code review have been resolved.
 
-**Recommendation:** The remaining issue is minor and cosmetic - the connection toggle UI may be slightly stale until the next poll.
+See the Ignored/Deferred Issues section above for items that were reviewed but intentionally not fixed.

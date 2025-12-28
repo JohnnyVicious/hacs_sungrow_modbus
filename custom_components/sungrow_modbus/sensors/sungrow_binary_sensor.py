@@ -74,6 +74,7 @@ class SungrowBinaryEntity(RestoreEntity, SwitchEntity):
             if self._register == 90005:
                 self._attr_is_on = self._modbus_controller.enabled
                 self._attr_available = True
+                self.async_write_ha_state()
                 return self._attr_is_on
 
             value = updated_value

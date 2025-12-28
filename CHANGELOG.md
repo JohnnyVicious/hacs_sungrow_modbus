@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Writes silently dropped when controller disconnected** (`sensors/sungrow_binary_sensor.py:157-163`, `sensors/sungrow_select_entity.py:160-163`) - When the controller was disconnected, switch toggles and select changes were silently dropped, but the entity's local state was still updated, giving users false confirmation that their action succeeded. Root cause: The `controller.connected()` check gated the write, but local state updates happened unconditionally afterward. Fixed by removing the connected check (controller handles connection state internally) and only updating local state when a write is actually queued.
 
+- **Missing async_write_ha_state for connection toggle** (`sensors/sungrow_binary_sensor.py:74-78`) - The connection toggle entity (register 90005) updated its internal state but never pushed the update to Home Assistant, so the UI didn't reflect the actual enabled/disabled status until the next poll. Root cause: The early `return` for register 90005 bypassed the `async_write_ha_state()` call. Fixed by adding the call before the return.
+
 ## [0.3.0] - 2025-12-28
 
 ### Added
