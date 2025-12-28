@@ -212,7 +212,7 @@ class TestBatteryControllerProbe:
         assert result is True
         assert controller._available is True
         assert controller.battery.available is True
-        self.mock_client.read_input_registers.assert_called_once_with(address=10740, count=1, slave=200)
+        self.mock_client.read_input_registers.assert_called_once_with(address=10740, count=1, device_id=200)
 
     @pytest.mark.asyncio
     async def test_probe_error_response(self):
@@ -376,7 +376,7 @@ class TestBatteryControllerReadSerial:
             result.registers = registers
             return result
 
-        async def mock_read(address, count, slave):
+        async def mock_read(address, count, device_id):
             nonlocal call_count
             call_count += 1
             if address == 10710:
@@ -431,7 +431,7 @@ class TestBatteryControllerReadModules:
             result.registers = registers
             return result
 
-        async def mock_read(address, count, slave):
+        async def mock_read(address, count, device_id):
             if address == 10821:  # Module 0
                 return create_result(mod1_registers)
             elif address == 10830:  # Module 1
@@ -499,12 +499,12 @@ class TestDetectBatteryStacks:
             result.isError.return_value = True
             return result
 
-        async def mock_read(address, count, slave):
+        async def mock_read(address, count, device_id):
             nonlocal call_count
             call_count += 1
 
-            # First battery (slave 200) succeeds
-            if slave == 200:
+            # First battery (device_id 200) succeeds
+            if device_id == 200:
                 if address == 10740:  # voltage probe
                     return create_success_result([512])
                 elif address == 10710:  # serial
@@ -519,7 +519,7 @@ class TestDetectBatteryStacks:
                     return create_success_result([0x0000] * count)
                 return create_success_result([0] * count)
             else:
-                # Second battery (slave 201) fails
+                # Second battery (device_id 201) fails
                 return create_error_result()
 
         self.mock_client.read_input_registers = mock_read
@@ -546,13 +546,13 @@ class TestDetectBatteryStacks:
             result.isError.return_value = True
             return result
 
-        async def mock_read(address, count, slave):
+        async def mock_read(address, count, device_id):
             # First two batteries succeed, third fails
-            if slave in [200, 201]:
+            if device_id in [200, 201]:
                 if address == 10740:
                     return create_success_result([512])
                 elif address == 10710:
-                    serial_num = str(slave - 199)  # "1" or "2"
+                    serial_num = str(device_id - 199)  # "1" or "2"
                     return create_success_result(
                         [
                             0x4241,

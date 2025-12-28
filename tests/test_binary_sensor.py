@@ -445,26 +445,26 @@ class TestSungrowBinaryEntityUpdate:
 
 
 class TestConnectionToggle:
-    """Test special register 5 for connection toggle."""
+    """Test special register 90005 for connection toggle."""
 
-    def test_turn_on_register_5_enables_connection(self):
-        """Test register 5 enables modbus connection."""
+    def test_turn_on_register_90005_enables_connection(self):
+        """Test register 90005 enables modbus connection."""
         hass = MagicMock()
         controller = create_mock_controller()
 
-        entity_def = {"name": "Modbus Enabled", "register": 5, "bit_position": 0}
+        entity_def = {"name": "Modbus Enabled", "register": 90005, "bit_position": 0}
 
         entity = SungrowBinaryEntity(hass, controller, entity_def)
         entity.turn_on()
 
         controller.enable_connection.assert_called_once()
 
-    def test_turn_off_register_5_disables_connection(self):
-        """Test register 5 disables modbus connection."""
+    def test_turn_off_register_90005_disables_connection(self):
+        """Test register 90005 disables modbus connection."""
         hass = MagicMock()
         controller = create_mock_controller()
 
-        entity_def = {"name": "Modbus Enabled", "register": 5, "bit_position": 0}
+        entity_def = {"name": "Modbus Enabled", "register": 90005, "bit_position": 0}
 
         entity = SungrowBinaryEntity(hass, controller, entity_def)
         entity.turn_off()

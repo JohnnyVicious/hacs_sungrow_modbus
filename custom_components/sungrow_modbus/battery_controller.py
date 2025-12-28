@@ -167,7 +167,7 @@ class BatteryController:
                 result = await self.inverter.client.read_input_registers(
                     address=address,
                     count=count,
-                    slave=self.slave_id,
+                    device_id=self.slave_id,
                 )
                 if result.isError():
                     _LOGGER.debug("Error reading battery registers %d-%d: %s", address, address + count, result)

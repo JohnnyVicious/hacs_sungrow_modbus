@@ -13,6 +13,7 @@ from homeassistant.exceptions import ConfigEntryError
 
 from .const import (
     BATTERY_CONTROLLER,
+    BATTERY_SENSORS,
     CONF_BAUDRATE,
     CONF_BYTESIZE,
     CONF_CONNECTION_TYPE,
@@ -29,7 +30,10 @@ from .const import (
     DEFAULT_PARITY,
     DEFAULT_STOPBITS,
     DOMAIN,
+    SENSOR_DERIVED_ENTITIES,
+    SENSOR_ENTITIES,
     TIME_ENTITIES,
+    VALUES,
 )
 from .data.enums import InverterFeature
 from .data.sungrow_config import SUNGROW_INVERTERS, InverterConfig, InverterType
@@ -356,6 +360,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
 
         # Close only this entry's controller, not all controllers
         controller = get_controller_from_entry(hass, entry)
+        controller_key = None
         if controller:
             controller.close_connection()
             # Remove from controller registry using proper key
@@ -366,6 +371,23 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
         battery_controllers = hass.data[DOMAIN].get(BATTERY_CONTROLLER, {}).pop(entry.entry_id, None)
         if battery_controllers:
             _LOGGER.debug("Cleaned up %d battery controller(s)", len(battery_controllers))
+
+        # Clean up entity caches to prevent stale references
+        if SENSOR_ENTITIES in hass.data[DOMAIN]:
+            hass.data[DOMAIN][SENSOR_ENTITIES].pop(entry.entry_id, None)
+        if SENSOR_DERIVED_ENTITIES in hass.data[DOMAIN]:
+            hass.data[DOMAIN][SENSOR_DERIVED_ENTITIES].pop(entry.entry_id, None)
+        if BATTERY_SENSORS in hass.data[DOMAIN]:
+            hass.data[DOMAIN][BATTERY_SENSORS].pop(entry.entry_id, None)
+        if TIME_ENTITIES in hass.data[DOMAIN] and controller_key:
+            hass.data[DOMAIN][TIME_ENTITIES].pop(controller_key, None)
+
+        # Clean up cached register values for this controller
+        if VALUES in hass.data[DOMAIN] and controller_key:
+            values = hass.data[DOMAIN][VALUES]
+            keys_to_remove = [k for k in values if k.startswith(f"{controller_key}:")]
+            for key in keys_to_remove:
+                values.pop(key, None)
 
         # Clean up entry data
         hass.data[DOMAIN].pop(entry.entry_id, None)

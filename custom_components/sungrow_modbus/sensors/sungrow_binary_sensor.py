@@ -71,7 +71,7 @@ class SungrowBinaryEntity(RestoreEntity, SwitchEntity):
                     f"Sensor update received, register = {updated_register}, value = {updated_value}, on_value = {self._on_value}, is_on = {self._on_value == updated_value}, "
                 )
 
-            if self._register == 5:
+            if self._register == 90005:
                 self._attr_is_on = self._modbus_controller.enabled
                 self._attr_available = True
                 return self._attr_is_on
@@ -98,14 +98,14 @@ class SungrowBinaryEntity(RestoreEntity, SwitchEntity):
 
     def turn_on(self, **kwargs: Any) -> None:
         _LOGGER.debug(f"{self._register}-{self._bit_position} turn on called ")
-        if self._register == 5:
+        if self._register == 90005:
             self._modbus_controller.enable_connection()
         else:
             self.set_register_bit(True)
 
     def turn_off(self, **kwargs: Any) -> None:
         _LOGGER.debug(f"{self._register}-{self._bit_position} turn off called ")
-        if self._register == 5:
+        if self._register == 90005:
             self._modbus_controller.disable_connection()
         else:
             self.set_register_bit(False)
