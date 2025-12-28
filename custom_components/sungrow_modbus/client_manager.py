@@ -29,13 +29,13 @@ class ModbusClientManager:
     def get_tcp_client(self, host: str, port: int) -> AsyncModbusTcpClient:
         """Get or create a TCP Modbus client."""
         key = f"{host}:{port}"
-        # Create lock outside threading context to avoid event loop binding issues
-        new_lock = asyncio.Lock()
         with self._clients_lock:
             if key not in self._clients:
                 _LOGGER.debug(f"Creating new Modbus TCP client for {host}:{port}")
                 client = AsyncModbusTcpClient(host=host, port=port, timeout=5, retries=5)
-                self._clients[key] = {"client": client, "ref_count": 0, "lock": new_lock, "type": CONN_TYPE_TCP}
+                # Lock is None initially; created lazily in get_client_lock() to ensure
+                # it's bound to the correct event loop when first used from async context
+                self._clients[key] = {"client": client, "ref_count": 0, "lock": None, "type": CONN_TYPE_TCP}
 
             self._clients[key]["ref_count"] += 1
             _LOGGER.debug(f"TCP client ref count for {host}:{port} is now {self._clients[key]['ref_count']}")
@@ -46,18 +46,18 @@ class ModbusClientManager:
     ) -> AsyncModbusSerialClient:
         """Get or create a Serial Modbus client."""
         key = serial_port  # Use serial_port as the key
-        # Create lock outside threading context to avoid event loop binding issues
-        new_lock = asyncio.Lock()
         with self._clients_lock:
             if key not in self._clients:
                 _LOGGER.debug(f"Creating new Modbus Serial client for {serial_port} (baudrate={baudrate})")
                 client = AsyncModbusSerialClient(
                     port=serial_port, baudrate=baudrate, bytesize=bytesize, parity=parity, stopbits=stopbits, timeout=5
                 )
+                # Lock is None initially; created lazily in get_client_lock() to ensure
+                # it's bound to the correct event loop when first used from async context
                 self._clients[key] = {
                     "client": client,
                     "ref_count": 0,
-                    "lock": new_lock,
+                    "lock": None,
                     "type": CONN_TYPE_SERIAL,
                 }
 
@@ -87,11 +87,18 @@ class ModbusClientManager:
             raise ValueError("Either host (for TCP) or serial_port (for Serial) must be provided")
 
     def get_client_lock(self, connection_id: str) -> asyncio.Lock:
-        """Get the lock for a specific client connection."""
+        """Get the lock for a specific client connection.
+
+        The lock is created lazily on first access to ensure it's bound to the
+        correct event loop when used from an async context.
+        """
         with self._clients_lock:
-            if connection_id in self._clients:
-                return self._clients[connection_id]["lock"]
-            return None
+            if connection_id not in self._clients:
+                return None
+            # Create lock lazily to ensure it's bound to the correct event loop
+            if self._clients[connection_id]["lock"] is None:
+                self._clients[connection_id]["lock"] = asyncio.Lock()
+            return self._clients[connection_id]["lock"]
 
     def release_client(self, connection_id: str):
         """Release a client and clean up if no more references."""
