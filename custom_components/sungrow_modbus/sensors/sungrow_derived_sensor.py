@@ -42,7 +42,7 @@ class SungrowDerivedSensor(RestoreSensor, SensorEntity):
     """Representation of a Modbus derived/calculated sensor."""
 
     def __init__(self, hass: HomeAssistant, sensor: SungrowBaseSensor):
-        self._hass = hass if hass else sensor.hass
+        self._hass = hass
         self.base_sensor = sensor
 
         self._attr_name = sensor.name

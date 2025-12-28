@@ -41,6 +41,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Empty callback function (dead code)** (`sensor.py:67-70`) - An unused `update()` callback function with empty body was defined but never called. Root cause: leftover from a previous implementation. Fixed by removing the dead code and the now-unused `callback` import.
 
+- **Defensive code with unclear purpose** (`sensors/sungrow_derived_sensor.py:44-45`) - Unnecessary fallback `hass if hass else sensor.hass` when `hass` parameter is typed as `HomeAssistant` (not Optional). Root cause: historical usage patterns that no longer exist. Fixed by simplifying to direct assignment `self._hass = hass`.
+
 ## [0.1.15] - 2024-12-XX
 
 ### Fixed
