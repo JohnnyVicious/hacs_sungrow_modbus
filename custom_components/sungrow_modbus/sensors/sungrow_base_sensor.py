@@ -283,7 +283,7 @@ class SungrowSensorGroup:
         for i in range(len(all_registrars) - 1):
             if all_registrars[i + 1] != all_registrars[i] + 1:
                 _LOGGER.error(
-                    f"🚨 Registrar sequence error! Found gap between {all_registrars[i]} and {all_registrars[i + 1]} in sensor group."
+                    f"Registrar sequence error! Found gap between {all_registrars[i]} and {all_registrars[i + 1]} in sensor group."
                 )
 
     @property

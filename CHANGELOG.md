@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **KeyError in get_controller when service called during startup** (`helpers.py:200-229`, `helpers.py:192-197`) - `get_controller()` and `get_controller_from_entry()` accessed `hass.data[DOMAIN][CONTROLLER]` without checking if keys exist, causing `KeyError` if the write service was called before any controllers were registered (e.g., during HA startup or if integration failed to load). Fixed by using `hass.data.get(DOMAIN, {}).get(CONTROLLER, {})` to safely retrieve the controllers dict, returning `None` early if empty.
 
+- **Emoji in error log message** (`sensors/sungrow_base_sensor.py:286`) - Removed emoji character from registrar sequence error log message. Emojis may not render correctly in all logging environments (journald, Docker logs, syslog).
+
 ## [0.2.0] - 2025-12-28
 
 ### Fixed
