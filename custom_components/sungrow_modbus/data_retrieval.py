@@ -108,21 +108,30 @@ class DataRetrieval:
                 return
 
             retry_delay = 0.5
-            while not self.controller.connected():
+            max_retries = 20  # Stop after ~10 minutes of retries (with exponential backoff)
+            retry_count = 0
+            while not self.controller.connected() and retry_count < max_retries:
                 try:
                     if await self.controller.connect():
                         _LOGGER.info(
-                            f"✅({self.controller.host}.{self.controller.slave}) Modbus controller connected successfully."
+                            f"({self.controller.host}.{self.controller.slave}) Modbus controller connected successfully."
                         )
                         break
                     _LOGGER.debug(
-                        f"⚠️({self.controller.host}.{self.controller.slave}) Modbus connection failed, retrying in {retry_delay:.2f} seconds..."
+                        f"({self.controller.host}.{self.controller.slave}) Modbus connection failed, retrying in {retry_delay:.2f} seconds..."
                     )
                 except Exception as e:
-                    _LOGGER.error(f"❌({self.controller.host}.{self.controller.slave}) Connection error : {e}")
+                    _LOGGER.error(f"({self.controller.host}.{self.controller.slave}) Connection error: {e}")
 
                 await asyncio.sleep(retry_delay)
                 retry_delay = min(retry_delay * 2, 30)
+                retry_count += 1
+
+            if retry_count >= max_retries and not self.controller.connected():
+                _LOGGER.warning(
+                    f"({self.controller.host}.{self.controller.slave}) Max connection retries ({max_retries}) exceeded, "
+                    "waiting for next check_connection cycle"
+                )
         finally:
             self.connection_check = False
 
@@ -333,7 +342,7 @@ class DataRetrieval:
                 total_duration = time.perf_counter() - total_start_time
                 _LOGGER.debug(f"✅ {speed.name} update completed in {total_duration:.4f}s")
         except Exception as e:
-            _LOGGER.debug("exception caught: %s", e)
+            _LOGGER.warning("Error during Modbus polling: %s", e, exc_info=True)
         finally:
             del self.poll_updating[speed][group_hash]  # ✅ Reset only this group set
 
