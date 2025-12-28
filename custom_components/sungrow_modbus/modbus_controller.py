@@ -203,7 +203,12 @@ class ModbusController:
                 cache_save(self.hass, int_register, written_value, self.controller_key)
                 self.hass.bus.async_fire(
                     DOMAIN,
-                    {REGISTER: int_register, VALUE: written_value, CONTROLLER: self.connection_id, SLAVE: self.device_id},
+                    {
+                        REGISTER: int_register,
+                        VALUE: written_value,
+                        CONTROLLER: self.connection_id,
+                        SLAVE: self.device_id,
+                    },
                 )
 
                 return result
@@ -251,7 +256,12 @@ class ModbusController:
                     cache_save(self.hass, start_register + i, value, self.controller_key)
                     self.hass.bus.async_fire(
                         DOMAIN,
-                        {REGISTER: start_register + i, VALUE: value, CONTROLLER: self.connection_id, SLAVE: self.device_id},
+                        {
+                            REGISTER: start_register + i,
+                            VALUE: value,
+                            CONTROLLER: self.connection_id,
+                            SLAVE: self.device_id,
+                        },
                     )
                 return result
         except Exception as e:
