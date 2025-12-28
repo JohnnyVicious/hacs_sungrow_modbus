@@ -51,9 +51,7 @@ class TestDataRetrieval:
         self.controller.sensor_groups = [self.fast_group, self.normal_group, self.slow_group, self.once_group]
 
         # Create the DataRetrieval instance with patched time tracking
-        self.track_time_patcher = patch(
-            "custom_components.sungrow_modbus.data_retrieval.async_track_time_interval"
-        )
+        self.track_time_patcher = patch("custom_components.sungrow_modbus.data_retrieval.async_track_time_interval")
         self.mock_track_time = self.track_time_patcher.start()
         self.data_retrieval = DataRetrieval(self.hass, self.controller)
 
