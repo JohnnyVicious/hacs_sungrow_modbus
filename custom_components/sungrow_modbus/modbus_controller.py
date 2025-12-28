@@ -132,31 +132,53 @@ class ModbusController:
     async def process_write_queue(self):
         """Process queued Modbus write requests sequentially.
 
-        This method runs in an infinite loop, processing write requests from the queue.
+        This method runs in a loop, processing write requests from the queue.
         It ensures that write operations are executed one at a time, with appropriate
         delays between operations to avoid overwhelming the Modbus device.
+
+        The loop exits gracefully when cancelled, processing any pending writes first.
 
         Returns:
             None
         """
-        while True:
-            if not self.connected():
-                await asyncio.sleep(5)
-                continue
+        try:
+            while True:
+                if not self.connected():
+                    await asyncio.sleep(5)
+                    continue
 
-            if self.write_queue.empty():
-                await asyncio.sleep(0.2)
-                continue
+                if self.write_queue.empty():
+                    await asyncio.sleep(0.2)
+                    continue
 
-            write_request = await self.write_queue.get()
-            register, value, multiple = write_request
+                write_request = await self.write_queue.get()
+                register, value, multiple = write_request
 
-            if multiple:
-                await self._execute_write_holding_registers(register, value)
-            else:
-                await self._execute_write_holding_register(register, value)
+                if multiple:
+                    await self._execute_write_holding_registers(register, value)
+                else:
+                    await self._execute_write_holding_register(register, value)
 
-            self.write_queue.task_done()
+                self.write_queue.task_done()
+        except asyncio.CancelledError:
+            _LOGGER.debug(f"({self.host}.{self.device_id}) Write queue processor cancelled, draining pending writes")
+            # Process any remaining items in the queue before exiting
+            while not self.write_queue.empty():
+                try:
+                    write_request = self.write_queue.get_nowait()
+                    register, value, multiple = write_request
+                    if multiple:
+                        await self._execute_write_holding_registers(register, value)
+                    else:
+                        await self._execute_write_holding_register(register, value)
+                    self.write_queue.task_done()
+                except asyncio.QueueEmpty:
+                    break
+                except Exception as e:
+                    _LOGGER.warning(
+                        f"({self.host}.{self.device_id}) Error processing queued write during shutdown: {e}"
+                    )
+            raise  # Re-raise CancelledError for proper cleanup
 
     async def _execute_write_holding_register(self, register, value):
         """Executes a single register write with interframe delay.
@@ -178,16 +200,9 @@ class ModbusController:
                 int_value = int(value)
                 int_register = register if is_number(register) else int(register)
 
-                # Different pymodbus APIs for TCP vs Serial
-                if self.connection_type == CONN_TYPE_TCP:
-                    result = await self.client.write_register(
-                        address=int_register, value=int_value, device_id=self.device_id
-                    )
-                else:
-                    # Serial: pass device_id explicitly (pymodbus 3.x requires this)
-                    result = await self.client.write_register(
-                        address=int_register, value=int_value, device_id=self.device_id
-                    )
+                result = await self.client.write_register(
+                    address=int_register, value=int_value, device_id=self.device_id
+                )
                 _LOGGER.debug(
                     f"({self.host}.{self.device_id}) Write Holding Register register = {int_register}, value = {value}, int_value = {int_value}: {result}"
                 )
@@ -234,16 +249,9 @@ class ModbusController:
             async with self.poll_lock:
                 await self.inter_frame_wait(is_write=True)  # Delay before write
 
-                # Different pymodbus APIs for TCP vs Serial
-                if self.connection_type == CONN_TYPE_TCP:
-                    result = await self.client.write_registers(
-                        address=start_register, values=values, device_id=self.device_id
-                    )
-                else:
-                    # Serial: pass device_id explicitly (pymodbus 3.x requires this)
-                    result = await self.client.write_registers(
-                        address=start_register, values=values, device_id=self.device_id
-                    )
+                result = await self.client.write_registers(
+                    address=start_register, values=values, device_id=self.device_id
+                )
                 _LOGGER.debug(
                     f"({self.host}.{self.device_id}) Write Holding Register block for {len(values)} registers starting at register = {start_register}"
                 )
@@ -324,17 +332,7 @@ class ModbusController:
         async with self.poll_lock:
             await self.inter_frame_wait()
 
-            # Different pymodbus APIs for TCP vs Serial
-            if self.connection_type == CONN_TYPE_TCP:
-                # TCP: pass slave as parameter
-                result = await self.client.read_input_registers(
-                    address=register, count=count, device_id=self.device_id
-                )
-            else:
-                # Serial: pass device_id explicitly (pymodbus 3.x requires this)
-                result = await self.client.read_input_registers(
-                    address=register, count=count, device_id=self.device_id
-                )
+            result = await self.client.read_input_registers(address=register, count=count, device_id=self.device_id)
 
             _LOGGER.debug(
                 f"({self.host}.{self.device_id}) Read Input Registers: register = {register}, count = {count}"
@@ -389,17 +387,9 @@ class ModbusController:
             async with self.poll_lock:
                 await self.inter_frame_wait()
 
-                # Different pymodbus APIs for TCP vs Serial
-                if self.connection_type == CONN_TYPE_TCP:
-                    # TCP: pass slave as parameter
-                    result = await self.client.read_holding_registers(
-                        address=register, count=count, device_id=self.device_id
-                    )
-                else:
-                    # Serial: pass device_id explicitly (pymodbus 3.x requires this)
-                    result = await self.client.read_holding_registers(
-                        address=register, count=count, device_id=self.device_id
-                    )
+                result = await self.client.read_holding_registers(
+                    address=register, count=count, device_id=self.device_id
+                )
 
                 _LOGGER.debug(
                     f"({self.host}.{self.device_id}) Read Holding Registers: register = {register}, count = {count}"
