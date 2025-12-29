@@ -10,5 +10,5 @@
   "issue_tracker": "https://github.com/JohnnyVicious/hacs_sungrow_modbus/issues",
   "quality_scale": "silver",
   "requirements": ["pymodbus>=3.11.1"],
-  "version": "0.3.1"
+  "version": "0.3.2"
 }

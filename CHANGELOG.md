@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.2] - 2025-12-29
+
 ### Fixed
 
 - **Clock drift counters not namespaced per controller** (`helpers.py`, `16cc6c5`) - In multi-inverter setups, clock drift detection and correction interfered across inverters because `DRIFT_COUNTER` and `LAST_CLOCK_CORRECTION` were stored globally. One inverter hitting the drift threshold could trigger or suppress corrections on another. Root cause: counters stored in `hass.data[DOMAIN]` without namespacing by controller. Fixed by using `{DRIFT_COUNTER}_{controller_key}` and `{LAST_CLOCK_CORRECTION}_{controller_key}` keys.
