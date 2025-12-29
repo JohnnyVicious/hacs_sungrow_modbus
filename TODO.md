@@ -356,7 +356,7 @@ Move items here when done, with date and commit reference:
 ```
 - [x] 2025-12-29 (e7cb90e) - Write queue API returns actual result via Future
 - [x] 2025-12-29 (044a0a5) - Circuit breaker pattern for connection management
-- [x] 2025-12-29 (c1a163e) - Specific exception handling with pymodbus-specific exceptions
+- [x] 2025-12-29 (8e6743c) - Specific exception handling with pymodbus-specific exceptions
 ```
 
 ---
