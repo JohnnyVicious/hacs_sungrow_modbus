@@ -122,7 +122,7 @@ class SungrowDerivedSensor(RestoreSensor, SensorEntity):
                 if is_adjusted:
                     self._attr_available = True
                     self._attr_native_value = datetime.now(UTC)
-                    self.schedule_update_ha_state()
+                    self.async_write_ha_state()
                     self._received_values.clear()
 
             if REGISTER_LAST_SUCCESS in self._register:
@@ -131,7 +131,7 @@ class SungrowDerivedSensor(RestoreSensor, SensorEntity):
                     return
                 self._attr_available = True
                 self._attr_native_value = new_value
-                self.schedule_update_ha_state()
+                self.async_write_ha_state()
                 self._received_values.clear()
                 return
 
@@ -212,7 +212,7 @@ class SungrowDerivedSensor(RestoreSensor, SensorEntity):
                 self._attr_available = True
                 self._attr_native_value = new_value
                 self._state = new_value
-                self.schedule_update_ha_state()
+                self.async_write_ha_state()
 
             # Clear received values after update
             self._received_values.clear()

@@ -180,7 +180,7 @@ class TestSungrowSensor:
 
         sensor = SungrowSensor(hass, base_sensor)
         sensor.is_added_to_hass = True
-        sensor.schedule_update_ha_state = MagicMock()  # Mock this to avoid hass dependency
+        sensor.async_write_ha_state = MagicMock()  # Mock this to avoid hass dependency
 
         # Create event with matching controller
         event = MagicMock()
@@ -202,7 +202,7 @@ class TestSungrowSensor:
 
         sensor = SungrowSensor(hass, base_sensor)
         sensor.is_added_to_hass = True
-        sensor.schedule_update_ha_state = MagicMock()
+        sensor.async_write_ha_state = MagicMock()
 
         # First register event - should wait
         event1 = MagicMock()
@@ -278,7 +278,7 @@ class TestSungrowSensor:
         sensor = SungrowSensor(hass, base_sensor)
         sensor.is_added_to_hass = True
         sensor._attr_available = True
-        sensor.schedule_update_ha_state = MagicMock()
+        sensor.async_write_ha_state = MagicMock()
 
         # Set last update to 30 minutes ago (exceeds timeout of ~25 min for NORMAL)
         sensor._last_update = datetime.now(UTC).astimezone() - timedelta(minutes=30)
@@ -376,7 +376,7 @@ class TestSensorMultiplier:
 
         sensor = SungrowSensor(hass, base_sensor)
         sensor.is_added_to_hass = True
-        sensor.schedule_update_ha_state = MagicMock()
+        sensor.async_write_ha_state = MagicMock()
 
         event = MagicMock()
         event.data = {REGISTER: 33000, VALUE: 123, CONTROLLER: "10.0.0.1:502", SLAVE: 1}
@@ -393,7 +393,7 @@ class TestSensorMultiplier:
 
         sensor = SungrowSensor(hass, base_sensor)
         sensor.is_added_to_hass = True
-        sensor.schedule_update_ha_state = MagicMock()
+        sensor.async_write_ha_state = MagicMock()
 
         event = MagicMock()
         event.data = {REGISTER: 33000, VALUE: 123, CONTROLLER: "10.0.0.1:502", SLAVE: 1}
@@ -410,7 +410,7 @@ class TestSensorMultiplier:
 
         sensor = SungrowSensor(hass, base_sensor)
         sensor.is_added_to_hass = True
-        sensor.schedule_update_ha_state = MagicMock()
+        sensor.async_write_ha_state = MagicMock()
 
         event = MagicMock()
         event.data = {REGISTER: 33000, VALUE: 5, CONTROLLER: "10.0.0.1:502", SLAVE: 1}

@@ -219,7 +219,7 @@ class TestSungrowTimeEntity:
 
         entity_def = {"name": "Test", "register": 13003, "enabled": True}
         entity = SungrowTimeEntity(hass, controller, entity_def)
-        entity.schedule_update_ha_state = MagicMock()
+        entity.async_write_ha_state = MagicMock()
 
         # Simulate cache values for hour and minute
         hass.data[DOMAIN][VALUES]["13003"] = 14  # hour
@@ -244,7 +244,7 @@ class TestSungrowTimeEntity:
 
         entity_def = {"name": "Test", "register": 13003, "enabled": True}
         entity = SungrowTimeEntity(hass, controller, entity_def)
-        entity.schedule_update_ha_state = MagicMock()
+        entity.async_write_ha_state = MagicMock()
 
         event = MagicMock()
         event.data = {
@@ -268,7 +268,7 @@ class TestSungrowTimeEntity:
 
         entity_def = {"name": "Test", "register": 13003, "enabled": True}
         entity = SungrowTimeEntity(hass, controller, entity_def)
-        entity.schedule_update_ha_state = MagicMock()
+        entity.async_write_ha_state = MagicMock()
 
         event = MagicMock()
         event.data = {REGISTER: 13003, VALUE: 14, CONTROLLER: "10.0.0.1:502", SLAVE: 1}
@@ -287,7 +287,7 @@ class TestSungrowTimeEntity:
 
         entity_def = {"name": "Test", "register": 13003, "enabled": True}
         entity = SungrowTimeEntity(hass, controller, entity_def)
-        entity.schedule_update_ha_state = MagicMock()
+        entity.async_write_ha_state = MagicMock()
 
         event = MagicMock()
         event.data = {REGISTER: 13003, VALUE: 14, CONTROLLER: "10.0.0.1:502", SLAVE: 1}

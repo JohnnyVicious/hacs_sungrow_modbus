@@ -304,7 +304,7 @@ class TestSungrowNumberEntity:
         base_sensor = create_mock_base_sensor(registers=[33000], multiplier=1, controller=controller)
 
         entity = SungrowNumberEntity(hass, base_sensor)
-        entity.schedule_update_ha_state = MagicMock()
+        entity.async_write_ha_state = MagicMock()
 
         # Simulate Modbus update event
         event = MagicMock()
@@ -313,7 +313,7 @@ class TestSungrowNumberEntity:
         entity.handle_modbus_update(event)
 
         assert entity._attr_native_value == 150
-        entity.schedule_update_ha_state.assert_called_once()
+        entity.async_write_ha_state.assert_called_once()
 
     def test_handle_modbus_update_ignores_wrong_register(self):
         """Test handle_modbus_update ignores updates for other registers."""
@@ -324,7 +324,7 @@ class TestSungrowNumberEntity:
 
         entity = SungrowNumberEntity(hass, base_sensor)
         entity._attr_native_value = 100
-        entity.schedule_update_ha_state = MagicMock()
+        entity.async_write_ha_state = MagicMock()
 
         # Event for different register
         event = MagicMock()
@@ -339,7 +339,7 @@ class TestSungrowNumberEntity:
 
         # Value should not change
         assert entity._attr_native_value == 100
-        entity.schedule_update_ha_state.assert_not_called()
+        entity.async_write_ha_state.assert_not_called()
 
     def test_handle_modbus_update_ignores_wrong_controller(self):
         """Test handle_modbus_update ignores updates for other controllers."""
@@ -350,7 +350,7 @@ class TestSungrowNumberEntity:
 
         entity = SungrowNumberEntity(hass, base_sensor)
         entity._attr_native_value = 100
-        entity.schedule_update_ha_state = MagicMock()
+        entity.async_write_ha_state = MagicMock()
 
         # Event for different controller
         event = MagicMock()
@@ -365,7 +365,7 @@ class TestSungrowNumberEntity:
 
         # Value should not change
         assert entity._attr_native_value == 100
-        entity.schedule_update_ha_state.assert_not_called()
+        entity.async_write_ha_state.assert_not_called()
 
     def test_handle_modbus_update_waits_for_all_registers(self):
         """Test handle_modbus_update waits for all registers before updating."""
@@ -378,7 +378,7 @@ class TestSungrowNumberEntity:
         )
 
         entity = SungrowNumberEntity(hass, base_sensor)
-        entity.schedule_update_ha_state = MagicMock()
+        entity.async_write_ha_state = MagicMock()
 
         # First register update
         event1 = MagicMock()
@@ -387,7 +387,7 @@ class TestSungrowNumberEntity:
         entity.handle_modbus_update(event1)
 
         # Should not update yet - waiting for second register
-        entity.schedule_update_ha_state.assert_not_called()
+        entity.async_write_ha_state.assert_not_called()
 
         # Second register update
         event2 = MagicMock()
@@ -396,7 +396,7 @@ class TestSungrowNumberEntity:
         entity.handle_modbus_update(event2)
 
         # Now should update
-        entity.schedule_update_ha_state.assert_called_once()
+        entity.async_write_ha_state.assert_called_once()
 
     def test_device_info_returns_controller_info(self):
         """Test device_info returns controller's device info."""

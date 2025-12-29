@@ -116,7 +116,7 @@ class SungrowNumberEntity(RestoreNumber, NumberEntity):
             # Update state if valid value exists
             if new_value is not None:
                 self._attr_native_value = new_value
-                self.schedule_update_ha_state()
+                self.async_write_ha_state()
 
     async def async_set_native_value(self, value):
         """Update the current value."""

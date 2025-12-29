@@ -162,7 +162,7 @@ class SungrowTimeEntity(RestoreEntity, TimeEntity):
                         f"Time disabled because hour or minute is None, regs = {self._register}:{self._register + 1}"
                     )
 
-                self.schedule_update_ha_state()
+                self.async_write_ha_state()
 
     @property
     def device_info(self):

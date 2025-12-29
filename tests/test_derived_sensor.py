@@ -42,7 +42,7 @@ def test_derived_sensor_status(hass: HomeAssistant, mock_base_sensor):
     mock_base_sensor.get_value = 3
     event_data = {REGISTER: 33095, VALUE: 3, CONTROLLER: "1.2.3.4:502", SLAVE: 1}
 
-    with patch.object(sensor, "schedule_update_ha_state"):
+    with patch.object(sensor, "async_write_ha_state"):
         sensor.handle_modbus_update(Event(DOMAIN, data=event_data))
 
     assert sensor.native_value == "Generating"
@@ -57,7 +57,7 @@ def test_derived_sensor_dc_power(hass: HomeAssistant, mock_base_sensor):
 
     event_data = {REGISTER: 33050, VALUE: 10, CONTROLLER: "1.2.3.4:502", SLAVE: 1}
 
-    with patch.object(sensor, "schedule_update_ha_state"):
+    with patch.object(sensor, "async_write_ha_state"):
         sensor.handle_modbus_update(Event(DOMAIN, data=event_data))
 
     assert sensor.native_value == 2000
@@ -73,7 +73,7 @@ def test_derived_sensor_wrong_controller(hass: HomeAssistant, mock_base_sensor):
         SLAVE: 1,
     }
 
-    with patch.object(sensor, "schedule_update_ha_state"):
+    with patch.object(sensor, "async_write_ha_state"):
         sensor.handle_modbus_update(Event(DOMAIN, data=event_data))
 
     assert sensor.native_value is None
@@ -86,7 +86,7 @@ def test_derived_sensor_incomplete_data(hass: HomeAssistant, mock_base_sensor):
     # Only send one value, missing the other
     event_data = {REGISTER: 33050, VALUE: 10, CONTROLLER: "1.2.3.4:502", SLAVE: 1}
 
-    with patch.object(sensor, "schedule_update_ha_state"):
+    with patch.object(sensor, "async_write_ha_state"):
         sensor.handle_modbus_update(Event(DOMAIN, data=event_data))
 
     assert sensor.native_value is None

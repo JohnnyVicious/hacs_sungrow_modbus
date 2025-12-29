@@ -99,7 +99,7 @@ class SungrowSensor(RestoreSensor, SensorEntity):
                 == GRID_STATE_SHUTDOWN
             ):
                 self._attr_native_value = 0
-                self.schedule_update_ha_state()
+                self.async_write_ha_state()
                 self._last_update = datetime.now(UTC).astimezone()
                 return
 
@@ -131,7 +131,7 @@ class SungrowSensor(RestoreSensor, SensorEntity):
                 self._attr_native_value = new_value
                 self._attr_available = True
                 self._last_update = datetime.now(UTC).astimezone()
-                self.schedule_update_ha_state()
+                self.async_write_ha_state()
 
     async def async_update(self):
         """Fallback-Check: If no update for more than _WATCHDOG_TIMEOUT_MIN minutes, set values to 0 or unavailable"""
@@ -142,7 +142,7 @@ class SungrowSensor(RestoreSensor, SensorEntity):
             )
             # self._attr_native_value = 0
             self._attr_available = False  # Set attribute unavailable (if desired)
-            self.schedule_update_ha_state()
+            self.async_write_ha_state()
 
     @property
     def device_info(self):
