@@ -194,7 +194,9 @@ class ModbusController:
             Exception: If there is an error during the write operation.
         """
         try:
-            await self.connect()
+            if not await self.connect():
+                _LOGGER.debug(f"({self.host}.{self.device_id}) Skipping write to register {register} - not connected")
+                return None
             async with self.poll_lock:
                 await self.inter_frame_wait(is_write=True)  # Delay before write
                 int_value = int(value)
@@ -245,7 +247,11 @@ class ModbusController:
             Exception: If there is an error during the write operation.
         """
         try:
-            await self.connect()
+            if not await self.connect():
+                _LOGGER.debug(
+                    f"({self.host}.{self.device_id}) Skipping write to registers {start_register}-{start_register + len(values) - 1} - not connected"
+                )
+                return None
             async with self.poll_lock:
                 await self.inter_frame_wait(is_write=True)  # Delay before write
 
@@ -361,7 +367,11 @@ class ModbusController:
             Exception: If there is an error during the read operation.
         """
         try:
-            await self.connect()
+            if not await self.connect():
+                _LOGGER.debug(
+                    f"({self.host}.{self.device_id}) Skipping read of input registers {register}-{register + count - 1} - not connected"
+                )
+                return None
             return await self._async_read_input_register_raw(register, count)
         except Exception as e:
             _LOGGER.error(
@@ -383,7 +393,11 @@ class ModbusController:
             Exception: If there is an error during the read operation.
         """
         try:
-            await self.connect()
+            if not await self.connect():
+                _LOGGER.debug(
+                    f"({self.host}.{self.device_id}) Skipping read of holding registers {register}-{register + count - 1} - not connected"
+                )
+                return None
             async with self.poll_lock:
                 await self.inter_frame_wait()
 

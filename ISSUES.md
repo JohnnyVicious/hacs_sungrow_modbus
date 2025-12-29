@@ -14,42 +14,7 @@ This document tracks remaining issues identified during code review that have no
 
 ## Important Issues
 
-### 1. Connect Return Value Ignored in Read/Write Methods
-
-**Severity:** Important
-**File:** `custom_components/sungrow_modbus/modbus_controller.py`
-**Lines:** 197, 244, 365
-
-**Symptom:** When the Modbus device is offline, read/write operations proceed anyway, causing repeated exceptions and log spam. No retry gating while offline.
-
-**Current Code:**
-```python
-async def _execute_write_holding_register(self, register, value):
-    try:
-        await self.connect()  # Return value ignored!
-        async with self.poll_lock:
-            # Proceeds even if connect() returned False
-            result = await self.client.write_register(...)
-```
-
-**Root Cause:** `connect()` returns `True`/`False` to indicate success, but all callers ignore the return value and proceed with modbus operations regardless.
-
-**Suggested Fix:**
-```python
-async def _execute_write_holding_register(self, register, value):
-    try:
-        if not await self.connect():
-            _LOGGER.debug("Skipping write - not connected")
-            return None
-        async with self.poll_lock:
-            result = await self.client.write_register(...)
-```
-
-**Impact:** High - causes exception spam and unnecessary retries when device is offline. Affects all read/write operations.
-
----
-
-### 2. AsyncModbus Client close() Not Awaited
+### 1. AsyncModbus Client close() Not Awaited
 
 **Severity:** Important
 **File:** `custom_components/sungrow_modbus/client_manager.py`
@@ -89,7 +54,7 @@ if client.connected:
 
 ---
 
-### 3. Clock Drift Counters Not Namespaced Per Controller
+### 2. Clock Drift Counters Not Namespaced Per Controller
 
 **Severity:** Important
 **File:** `custom_components/sungrow_modbus/helpers.py`
@@ -124,7 +89,7 @@ def clock_drift_test(hass, controller, hours, minutes, seconds):
 
 ---
 
-### 4. Derived Sensor Mutates Controller Private Attributes
+### 3. Derived Sensor Mutates Controller Private Attributes
 
 **Severity:** Important
 **File:** `custom_components/sungrow_modbus/sensors/sungrow_derived_sensor.py`
@@ -162,7 +127,7 @@ self.base_sensor.controller.set_model(model_description)
 
 ---
 
-### 5. Service Handler Write Result Discarded
+### 4. Service Handler Write Result Discarded
 
 **Severity:** Important
 **File:** `custom_components/sungrow_modbus/__init__.py`
@@ -369,13 +334,12 @@ When adding new issues, use this format:
 
 ## Summary
 
-**5 Important issues** remaining (2025-12-29):
+**4 Important issues** remaining (2025-12-29):
 
-1. Connect return value ignored - causes exception spam when offline
-2. AsyncModbus close() not awaited - potential resource leaks
-3. Clock drift counters not namespaced - multi-inverter interference
-4. Derived sensor mutates controller privates - encapsulation violation
-5. Service handler discards write results - no failure feedback
+1. AsyncModbus close() not awaited - potential resource leaks
+2. Clock drift counters not namespaced - multi-inverter interference
+3. Derived sensor mutates controller privates - encapsulation violation
+4. Service handler discards write results - no failure feedback
 
 **4 Minor issues** remaining:
 
@@ -385,6 +349,7 @@ When adding new issues, use this format:
 4. Hardcoded timeout values
 
 **Resolved issues (see CHANGELOG.md):**
+- Connect return value ignored - FIXED in [Unreleased]
 - Number entity fire-and-forget writes - FIXED in [Unreleased]
 - Switch entity fire-and-forget writes - FIXED in [Unreleased]
 
