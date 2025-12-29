@@ -9,7 +9,7 @@ import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.exceptions import ConfigEntryError
+from homeassistant.exceptions import ConfigEntryError, HomeAssistantError
 
 from .const import (
     BATTERY_CONTROLLER,
@@ -119,20 +119,26 @@ async def async_setup(hass: HomeAssistant, entry: ConfigEntry):
             controller = get_controller(hass, host, slave)
             if controller is None:
                 _LOGGER.error("No controller found for host %s, slave %s", host, slave)
-                return
-            await write_with_logging(controller, address, value)
+                raise HomeAssistantError(f"No controller found for host {host}, slave {slave}")
+            result = await write_with_logging(controller, address, value)
+            if not result:
+                raise HomeAssistantError(f"Failed to write value {value} to register {address} on {host}:{slave}")
         else:
             controllers = hass.data.get(DOMAIN, {}).get(CONTROLLER, {})
             if not controllers:
                 _LOGGER.error("No controllers available for write operation")
-                return
+                raise HomeAssistantError("No controllers available for write operation")
             # Filter by slave ID when host is not provided
             targets = [c for c in controllers.values() if c.device_id == slave]
             if not targets:
                 _LOGGER.error("No controller found for slave %s", slave)
-                return
+                raise HomeAssistantError(f"No controller found for slave {slave}")
+            failed = []
             for controller in targets:
-                await write_with_logging(controller, address, value)
+                if not await write_with_logging(controller, address, value):
+                    failed.append(controller.connection_id)
+            if failed:
+                raise HomeAssistantError(f"Failed to write to register {address} on: {', '.join(failed)}")
 
     # @Ian-Johnston
     async def service_set_time(call: ServiceCall) -> None:

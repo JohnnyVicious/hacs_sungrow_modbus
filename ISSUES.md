@@ -14,45 +14,7 @@ This document tracks remaining issues identified during code review that have no
 
 ## Important Issues
 
-### 1. Service Handler Write Result Discarded
-
-**Severity:** Important
-**File:** `custom_components/sungrow_modbus/__init__.py`
-**Lines:** 123, 135
-
-**Symptom:** Service calls report success even when underlying writes fail.
-
-**Current Code:**
-```python
-if host:
-    controller = get_controller(hass, host, slave)
-    if controller is None:
-        _LOGGER.error("No controller found for host %s, slave %s", host, slave)
-        return
-    await write_with_logging(controller, address, value)  # Result discarded!
-else:
-    for controller in targets:
-        await write_with_logging(controller, address, value)  # Result discarded!
-```
-
-**Root Cause:** `write_with_logging()` returns success/failure but callers don't use the return value. Service always "succeeds" from HA's perspective.
-
-**Suggested Fix:**
-```python
-if host:
-    result = await write_with_logging(controller, address, value)
-    if not result:
-        raise ServiceValidationError(f"Failed to write to {host}:{slave}")
-else:
-    failed = []
-    for controller in targets:
-        if not await write_with_logging(controller, address, value):
-            failed.append(controller.connection_id)
-    if failed:
-        raise ServiceValidationError(f"Write failed on: {', '.join(failed)}")
-```
-
-**Impact:** Medium - users can't reliably know if service calls succeeded.
+*No important issues at this time.*
 
 ---
 
@@ -238,9 +200,7 @@ When adding new issues, use this format:
 
 ## Summary
 
-**1 Important issue** remaining (2025-12-29):
-
-1. Service handler discards write results - no failure feedback
+**No Important issues remaining** (2025-12-29)
 
 **4 Minor issues** remaining:
 
@@ -250,6 +210,7 @@ When adding new issues, use this format:
 4. Hardcoded timeout values
 
 **Resolved issues (see CHANGELOG.md):**
+- Service handler discards write results - FIXED in [Unreleased]
 - Derived sensor mutates controller privates - FIXED in [Unreleased]
 - Clock drift counters not namespaced - FIXED in [Unreleased]
 - Connect return value ignored - FIXED in [Unreleased]

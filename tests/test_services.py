@@ -11,7 +11,8 @@ def mock_controller():
     controller = MagicMock()
     controller.host = "1.2.3.4"
     controller.device_id = 1
-    controller.async_write_holding_register = AsyncMock(return_value=None)
+    controller.connection_id = "1.2.3.4:502"
+    controller.async_write_holding_register = AsyncMock(return_value=True)
     return controller
 
 
