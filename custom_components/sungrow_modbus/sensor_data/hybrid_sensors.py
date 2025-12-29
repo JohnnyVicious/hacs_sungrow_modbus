@@ -391,6 +391,7 @@ hybrid_sensors = [
     {
         "register_start": 5627,
         "poll_speed": PollSpeed.SLOW,
+        "cache_ttl": 3600,  # 1 hour - hardware spec rarely changes
         "feature_requirement": [InverterFeature.BATTERY],
         "entities": [
             {
@@ -435,6 +436,7 @@ hybrid_sensors = [
     {
         "register_start": 5638,
         "poll_speed": PollSpeed.SLOW,
+        "cache_ttl": 3600,  # 1 hour - only changes if battery modules added/removed
         "feature_requirement": [InverterFeature.BATTERY],
         "entities": [
             {
