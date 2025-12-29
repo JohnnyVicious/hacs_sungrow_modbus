@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Removed redundant _attr_step attribute** (`sensors/sungrow_number_sensor.py`) - NumberEntity only needs `_attr_native_step`; the `step` property is derived automatically by the base class.
+
+- **Standardized state update methods to async_write_ha_state()** (`sensors/sungrow_derived_sensor.py`, `sensors/sungrow_sensor.py`, `sensors/sungrow_number_sensor.py`, `time.py`) - Replaced inconsistent usage of `schedule_update_ha_state()` with `async_write_ha_state()` in all `@callback` decorated event handlers for immediate state updates.
+
+- **Extracted magic numbers to named constants** (`data_retrieval.py`) - Added `RETRY_DELAY_INITIAL`, `RETRY_DELAY_MAX`, `RETRY_MAX_ATTEMPTS`, and `SPIKE_FILTER_THRESHOLD` constants with documentation explaining their purpose.
+
+- **Extracted timeout values to named constants** (`modbus_controller.py`) - Added `QUEUE_DISCONNECTED_SLEEP`, `QUEUE_EMPTY_SLEEP`, `INTER_FRAME_DELAY_READ_MS`, and `INTER_FRAME_DELAY_WRITE_MS` constants with documentation.
+
 ## [0.3.2] - 2025-12-29
 
 ### Fixed

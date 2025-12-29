@@ -20,73 +20,7 @@ This document tracks remaining issues identified during code review that have no
 
 ## Minor Issues
 
-### 6. Duplicate Step Attribute Assignment
-
-**Severity:** Minor
-**File:** `custom_components/sungrow_modbus/sensors/sungrow_number_sensor.py`
-**Lines:** 53-54
-
-**What's wrong:** Both `_attr_native_step` and `_attr_step` are set to the same value. One is likely redundant.
-
-**Current Code:**
-```python
-self._attr_native_step = sensor.step
-self._attr_step = sensor.step
-```
-
-**How to fix:** Verify which attribute `NumberEntity` base class uses and remove the redundant one.
-
----
-
-### 7. Inconsistent State Update Methods
-
-**Severity:** Minor
-**File:** Multiple files
-
-**What's wrong:** Codebase mixes `schedule_update_ha_state()` and `async_write_ha_state()` inconsistently:
-- `sungrow_derived_sensor.py:125,134,215` uses `schedule_update_ha_state()`
-- `sungrow_binary_sensor.py:77,93` uses `async_write_ha_state()`
-
-**How to fix:** Standardize on `async_write_ha_state()` in `@callback` decorated methods for immediate state updates.
-
----
-
-### 8. Magic Numbers in Retry Logic
-
-**Severity:** Minor
-**File:** `custom_components/sungrow_modbus/data_retrieval.py`
-**Lines:** 110-111, 369
-
-**What's wrong:** Retry delays (0.5s initial, 30s max, 20 retries) and spike filter threshold (3) are hardcoded without documentation.
-
-**Current Code:**
-```python
-retry_delay = 0.5
-max_retries = 20
-# ...
-retry_delay = min(retry_delay * 2, 30)
-# ...
-if self._spike_counter[register] < 3:  # Magic number
-```
-
-**How to fix:** Extract to named constants with comments explaining rationale.
-
----
-
-### 9. Hardcoded Timeout Values
-
-**Severity:** Minor
-**File:** `custom_components/sungrow_modbus/modbus_controller.py`
-**Lines:** 147, 151, 318-319
-
-**What's wrong:** Various timeouts are hardcoded:
-- `await asyncio.sleep(5)` when not connected
-- `await asyncio.sleep(0.2)` between queue checks
-- `delay_ms = 100 if is_write else 50` for inter-frame delays
-
-**How to fix:** Extract to named constants or make configurable via constructor.
-
----
+*No minor issues at this time.*
 
 ### Theoretical Issues (Low Risk)
 
@@ -200,26 +134,23 @@ When adding new issues, use this format:
 
 ## Summary
 
-**No Important issues remaining** (2025-12-29)
-
-**4 Minor issues** remaining:
-
-1. Duplicate step attribute assignment
-2. Inconsistent state update methods
-3. Magic numbers in retry logic
-4. Hardcoded timeout values
+**No issues remaining** (2025-12-29)
 
 **Resolved issues (see CHANGELOG.md):**
-- Service handler discards write results - FIXED in [Unreleased]
-- Derived sensor mutates controller privates - FIXED in [Unreleased]
-- Clock drift counters not namespaced - FIXED in [Unreleased]
-- Connect return value ignored - FIXED in [Unreleased]
-- Number entity fire-and-forget writes - FIXED in [Unreleased]
-- Switch entity fire-and-forget writes - FIXED in [Unreleased]
+- Duplicate step attribute assignment - FIXED in [Unreleased]
+- Inconsistent state update methods - FIXED in [Unreleased]
+- Magic numbers in retry logic - FIXED in [Unreleased]
+- Hardcoded timeout values - FIXED in [Unreleased]
+- Service handler discards write results - FIXED in v0.3.2
+- Derived sensor mutates controller privates - FIXED in v0.3.2
+- Clock drift counters not namespaced - FIXED in v0.3.2
+- Connect return value ignored - FIXED in v0.3.2
+- Number entity fire-and-forget writes - FIXED in v0.3.2
+- Switch entity fire-and-forget writes - FIXED in v0.3.2
 
 **Moved to Ignored/Deferred:**
 - AsyncModbus close() not awaited - FALSE POSITIVE (close() is synchronous in pymodbus 3.x)
 
-**Assessment:** Production ready with caveats. All 410 tests pass. Issues primarily affect edge cases (offline behavior, frequent reloads, multi-inverter).
+**Assessment:** Production ready. All 410 tests pass. No known issues remaining.
 
 See the Ignored/Deferred Issues section above for items that were reviewed but intentionally not fixed.
