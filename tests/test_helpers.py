@@ -68,11 +68,15 @@ class TestClockDriftTest:
 
     def test_no_drift_within_tolerance(self):
         """Test no drift action when drift is small."""
+        controller_key = "10.0.0.1:502_1"
+        drift_key = f"{DRIFT_COUNTER}_{controller_key}"
+
         hass = MagicMock()
-        hass.data = {DOMAIN: {DRIFT_COUNTER: 0}}
+        hass.data = {DOMAIN: {drift_key: 0}}
 
         controller = MagicMock()
         controller.connected.return_value = True
+        controller.controller_key = controller_key
 
         # Use mock to control dt_utils.now()
         with patch("custom_components.sungrow_modbus.helpers.dt_utils") as mock_dt:
@@ -83,15 +87,19 @@ class TestClockDriftTest:
             result = clock_drift_test(hass, controller, 12, 0, 25)
 
             assert result is False
-            assert hass.data[DOMAIN][DRIFT_COUNTER] == 0
+            assert hass.data[DOMAIN][drift_key] == 0
 
     def test_drift_accumulation(self):
         """Test drift counter increments on drift detection."""
+        controller_key = "10.0.0.1:502_1"
+        drift_key = f"{DRIFT_COUNTER}_{controller_key}"
+
         hass = MagicMock()
-        hass.data = {DOMAIN: {DRIFT_COUNTER: 0}}
+        hass.data = {DOMAIN: {drift_key: 0}}
 
         controller = MagicMock()
         controller.connected.return_value = True
+        controller.controller_key = controller_key
 
         with patch("custom_components.sungrow_modbus.helpers.dt_utils") as mock_dt:
             mock_now = datetime(2024, 1, 1, 12, 5, 0)
@@ -101,16 +109,20 @@ class TestClockDriftTest:
             result = clock_drift_test(hass, controller, 12, 0, 0)
 
             assert result is False
-            assert hass.data[DOMAIN][DRIFT_COUNTER] == 1
+            assert hass.data[DOMAIN][drift_key] == 1
 
     def test_drift_correction_after_threshold(self):
         """Test clock correction after more than 5 consecutive drift detections."""
+        controller_key = "10.0.0.1:502_1"
+        drift_key = f"{DRIFT_COUNTER}_{controller_key}"
+
         hass = MagicMock()
-        hass.data = {DOMAIN: {DRIFT_COUNTER: 6}}  # Past threshold (> 5)
+        hass.data = {DOMAIN: {drift_key: 6}}  # Past threshold (> 5)
         hass.create_task = MagicMock()
 
         controller = MagicMock()
         controller.connected.return_value = True
+        controller.controller_key = controller_key
 
         with patch("custom_components.sungrow_modbus.helpers.dt_utils") as mock_dt:
             mock_now = datetime(2024, 1, 1, 12, 5, 0)
@@ -124,11 +136,15 @@ class TestClockDriftTest:
 
     def test_drift_reset_on_good_time(self):
         """Test drift counter resets when time is good."""
+        controller_key = "10.0.0.1:502_1"
+        drift_key = f"{DRIFT_COUNTER}_{controller_key}"
+
         hass = MagicMock()
-        hass.data = {DOMAIN: {DRIFT_COUNTER: 3}}  # Had some drift
+        hass.data = {DOMAIN: {drift_key: 3}}  # Had some drift
 
         controller = MagicMock()
         controller.connected.return_value = True
+        controller.controller_key = controller_key
 
         with patch("custom_components.sungrow_modbus.helpers.dt_utils") as mock_dt:
             mock_now = datetime(2024, 1, 1, 12, 0, 30)
@@ -138,16 +154,20 @@ class TestClockDriftTest:
             result = clock_drift_test(hass, controller, 12, 0, 25)
 
             assert result is False
-            assert hass.data[DOMAIN][DRIFT_COUNTER] == 0
+            assert hass.data[DOMAIN][drift_key] == 0
 
     def test_no_correction_when_disconnected(self):
         """Test no correction attempted when controller disconnected."""
+        controller_key = "10.0.0.1:502_1"
+        drift_key = f"{DRIFT_COUNTER}_{controller_key}"
+
         hass = MagicMock()
-        hass.data = {DOMAIN: {DRIFT_COUNTER: 5}}
+        hass.data = {DOMAIN: {drift_key: 5}}
         hass.create_task = MagicMock()
 
         controller = MagicMock()
         controller.connected.return_value = False
+        controller.controller_key = controller_key
 
         with patch("custom_components.sungrow_modbus.helpers.dt_utils") as mock_dt:
             mock_now = datetime(2024, 1, 1, 12, 5, 0)

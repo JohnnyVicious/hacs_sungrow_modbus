@@ -14,42 +14,7 @@ This document tracks remaining issues identified during code review that have no
 
 ## Important Issues
 
-### 1. Clock Drift Counters Not Namespaced Per Controller
-
-**Severity:** Important
-**File:** `custom_components/sungrow_modbus/helpers.py`
-**Lines:** 68-69, 83-84, 91, 93
-
-**Symptom:** In multi-inverter setups, clock drift detection and correction interferes across inverters. One inverter's drift counter affects all others.
-
-**Current Code:**
-```python
-def clock_drift_test(hass, controller, hours, minutes, seconds):
-    # ...
-    drift_counter = hass.data[DOMAIN].get(DRIFT_COUNTER, 0)  # Global!
-    last_correction = hass.data[DOMAIN].get(LAST_CLOCK_CORRECTION, 0)  # Global!
-    # ...
-    hass.data[DOMAIN][DRIFT_COUNTER] = drift_counter + 1  # Shared across all inverters
-```
-
-**Root Cause:** `DRIFT_COUNTER` and `LAST_CLOCK_CORRECTION` are stored directly in `hass.data[DOMAIN]` without namespacing by controller key. All inverters share the same counter.
-
-**Suggested Fix:**
-```python
-def clock_drift_test(hass, controller, hours, minutes, seconds):
-    # ...
-    controller_key = controller.controller_key
-    drift_counter = hass.data[DOMAIN].get(f"{DRIFT_COUNTER}_{controller_key}", 0)
-    last_correction = hass.data[DOMAIN].get(f"{LAST_CLOCK_CORRECTION}_{controller_key}", 0)
-    # ...
-    hass.data[DOMAIN][f"{DRIFT_COUNTER}_{controller_key}"] = drift_counter + 1
-```
-
-**Impact:** Medium - causes incorrect clock drift behavior in multi-inverter setups. One inverter hitting drift threshold can trigger or suppress corrections on another.
-
----
-
-### 2. Derived Sensor Mutates Controller Private Attributes
+### 1. Derived Sensor Mutates Controller Private Attributes
 
 **Severity:** Important
 **File:** `custom_components/sungrow_modbus/sensors/sungrow_derived_sensor.py`
@@ -87,7 +52,7 @@ self.base_sensor.controller.set_model(model_description)
 
 ---
 
-### 3. Service Handler Write Result Discarded
+### 2. Service Handler Write Result Discarded
 
 **Severity:** Important
 **File:** `custom_components/sungrow_modbus/__init__.py`
@@ -311,11 +276,10 @@ When adding new issues, use this format:
 
 ## Summary
 
-**3 Important issues** remaining (2025-12-29):
+**2 Important issues** remaining (2025-12-29):
 
-1. Clock drift counters not namespaced - multi-inverter interference
-2. Derived sensor mutates controller privates - encapsulation violation
-3. Service handler discards write results - no failure feedback
+1. Derived sensor mutates controller privates - encapsulation violation
+2. Service handler discards write results - no failure feedback
 
 **4 Minor issues** remaining:
 
@@ -325,6 +289,7 @@ When adding new issues, use this format:
 4. Hardcoded timeout values
 
 **Resolved issues (see CHANGELOG.md):**
+- Clock drift counters not namespaced - FIXED in [Unreleased]
 - Connect return value ignored - FIXED in [Unreleased]
 - Number entity fire-and-forget writes - FIXED in [Unreleased]
 - Switch entity fire-and-forget writes - FIXED in [Unreleased]

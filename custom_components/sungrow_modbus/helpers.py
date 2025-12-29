@@ -65,8 +65,14 @@ def clock_drift_test(hass, controller, hours, minutes, seconds):
     # Ensure structure
     if DOMAIN not in hass.data:
         hass.data[DOMAIN] = {}
-    drift_counter = hass.data[DOMAIN].get(DRIFT_COUNTER, 0)
-    last_correction = hass.data[DOMAIN].get(LAST_CLOCK_CORRECTION, 0)
+
+    # Namespace counters by controller to prevent multi-inverter interference
+    controller_key = controller.controller_key
+    drift_key = f"{DRIFT_COUNTER}_{controller_key}"
+    correction_key = f"{LAST_CLOCK_CORRECTION}_{controller_key}"
+
+    drift_counter = hass.data[DOMAIN].get(drift_key, 0)
+    last_correction = hass.data[DOMAIN].get(correction_key, 0)
     clock_adjusted = False
 
     if abs(total_drift) > 60:
@@ -80,17 +86,17 @@ def clock_drift_test(hass, controller, hours, minutes, seconds):
                             43003, [current_time.hour, current_time.minute, current_time.second]
                         )
                     )
-                    hass.data[DOMAIN][LAST_CLOCK_CORRECTION] = time.time()
-                    hass.data[DOMAIN][DRIFT_COUNTER] = 0  # Reset counter after correction
+                    hass.data[DOMAIN][correction_key] = time.time()
+                    hass.data[DOMAIN][drift_key] = 0  # Reset counter after correction
                     clock_adjusted = True
             else:
                 _LOGGER.debug(
                     f"Clock correction skipped: cooldown active ({CLOCK_CORRECTION_COOLDOWN - time_since_correction:.0f}s remaining)"
                 )
         else:
-            hass.data[DOMAIN][DRIFT_COUNTER] = drift_counter + 1
+            hass.data[DOMAIN][drift_key] = drift_counter + 1
     else:
-        hass.data[DOMAIN][DRIFT_COUNTER] = 0
+        hass.data[DOMAIN][drift_key] = 0
 
     _LOGGER.debug(f"Drift: {total_drift}s, Counter: {drift_counter}, Adjusted: {clock_adjusted}")
     return clock_adjusted
