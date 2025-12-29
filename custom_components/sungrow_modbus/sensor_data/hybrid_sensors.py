@@ -20,6 +20,7 @@ hybrid_sensors = [
     {
         "register_start": 4989,
         "poll_speed": PollSpeed.ONCE,
+        "cache_ttl": 86400,  # 24 hours - serial number never changes
         "entities": [
             {
                 "name": "Inverter Serial",
@@ -33,6 +34,7 @@ hybrid_sensors = [
     {
         "register_start": 4999,
         "poll_speed": PollSpeed.ONCE,
+        "cache_ttl": 86400,  # 24 hours - device type never changes
         "entities": [
             {
                 "name": "Device Type Code",
