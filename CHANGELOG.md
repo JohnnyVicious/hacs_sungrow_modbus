@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.3] - 2025-12-29
+
 ### Changed
 
 - **Removed redundant _attr_step attribute** (`sensors/sungrow_number_sensor.py`) - NumberEntity only needs `_attr_native_step`; the `step` property is derived automatically by the base class.
