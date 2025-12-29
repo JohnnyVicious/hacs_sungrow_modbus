@@ -1,6 +1,9 @@
 import logging
 import struct
+import time
+from dataclasses import dataclass
 from datetime import datetime, timedelta
+from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -14,6 +17,7 @@ from custom_components.sungrow_modbus.const import (
     CONN_TYPE_TCP,
     CONTROLLER,
     DRIFT_COUNTER,
+    REGISTER_CACHE,
     VALUES,
 )
 
@@ -22,6 +26,208 @@ _LOGGER = logging.getLogger(__name__)
 # Clock correction cooldown (seconds) - prevents spam if RTC is faulty
 CLOCK_CORRECTION_COOLDOWN = 3600  # 1 hour
 LAST_CLOCK_CORRECTION = "last_clock_correction"
+
+
+@dataclass
+class CachedValue:
+    """A cached register value with expiration time."""
+
+    value: Any
+    expires_at: float  # time.monotonic() timestamp
+
+
+class RegisterCache:
+    """TTL-based cache for Modbus register values.
+
+    Reduces unnecessary device reads for slow-changing values like
+    firmware versions, serial numbers, and configuration settings.
+
+    Usage:
+        cache = RegisterCache()
+
+        # Store a value with 24-hour TTL
+        cache.set("controller_key", 13249, 0x1234, ttl_seconds=86400)
+
+        # Retrieve if not expired (returns None if expired or missing)
+        value = cache.get("controller_key", 13249)
+
+        # Check if a range of registers is cached
+        if cache.is_range_cached("key", 13249, 10):
+            # All registers 13249-13258 are cached and valid
+            values = cache.get_range("key", 13249, 10)
+    """
+
+    def __init__(self) -> None:
+        """Initialize an empty cache."""
+        self._cache: dict[str, CachedValue] = {}
+
+    def _make_key(self, controller_key: str, register: int) -> str:
+        """Create a cache key from controller key and register address."""
+        return f"{controller_key}:{register}"
+
+    def get(self, controller_key: str, register: int) -> Any | None:
+        """Get a cached value if it exists and hasn't expired.
+
+        Args:
+            controller_key: Unique identifier for the controller
+            register: Register address
+
+        Returns:
+            The cached value, or None if not cached or expired
+        """
+        key = self._make_key(controller_key, register)
+        if key not in self._cache:
+            return None
+
+        cached = self._cache[key]
+        if time.monotonic() >= cached.expires_at:
+            # Expired - remove and return None
+            del self._cache[key]
+            return None
+
+        return cached.value
+
+    def set(self, controller_key: str, register: int, value: Any, ttl_seconds: float) -> None:
+        """Store a value in the cache with a TTL.
+
+        Args:
+            controller_key: Unique identifier for the controller
+            register: Register address
+            value: Value to cache
+            ttl_seconds: Time-to-live in seconds
+        """
+        key = self._make_key(controller_key, register)
+        self._cache[key] = CachedValue(
+            value=value,
+            expires_at=time.monotonic() + ttl_seconds,
+        )
+
+    def is_range_cached(self, controller_key: str, start_register: int, count: int) -> bool:
+        """Check if an entire range of registers is cached and valid.
+
+        Args:
+            controller_key: Unique identifier for the controller
+            start_register: First register address
+            count: Number of consecutive registers
+
+        Returns:
+            True if ALL registers in the range are cached and not expired
+        """
+        now = time.monotonic()
+        for offset in range(count):
+            key = self._make_key(controller_key, start_register + offset)
+            if key not in self._cache:
+                return False
+            if now >= self._cache[key].expires_at:
+                # Proactively purge expired entry
+                del self._cache[key]
+                return False
+        return True
+
+    def get_range(self, controller_key: str, start_register: int, count: int) -> list[Any] | None:
+        """Get a range of cached values.
+
+        Args:
+            controller_key: Unique identifier for the controller
+            start_register: First register address
+            count: Number of consecutive registers
+
+        Returns:
+            List of values if all are cached and valid, None otherwise
+        """
+        # Single-pass: collect values and check expiration simultaneously
+        now = time.monotonic()
+        values = []
+        for offset in range(count):
+            key = self._make_key(controller_key, start_register + offset)
+            if key not in self._cache:
+                return None
+            cached = self._cache[key]
+            if now >= cached.expires_at:
+                # Proactively purge expired entry
+                del self._cache[key]
+                return None
+            values.append(cached.value)
+        return values
+
+    def set_range(self, controller_key: str, start_register: int, values: list[Any], ttl_seconds: float) -> None:
+        """Store a range of values in the cache with a TTL.
+
+        Args:
+            controller_key: Unique identifier for the controller
+            start_register: First register address
+            values: List of values to cache
+            ttl_seconds: Time-to-live in seconds
+        """
+        for offset, value in enumerate(values):
+            self.set(controller_key, start_register + offset, value, ttl_seconds)
+
+    def invalidate(self, controller_key: str, register: int) -> None:
+        """Remove a specific register from the cache.
+
+        Args:
+            controller_key: Unique identifier for the controller
+            register: Register address to invalidate
+        """
+        key = self._make_key(controller_key, register)
+        self._cache.pop(key, None)
+
+    def invalidate_range(self, controller_key: str, start_register: int, count: int) -> None:
+        """Remove a range of registers from the cache.
+
+        Args:
+            controller_key: Unique identifier for the controller
+            start_register: First register address
+            count: Number of consecutive registers
+        """
+        for offset in range(count):
+            self.invalidate(controller_key, start_register + offset)
+
+    def clear(self, controller_key: str | None = None) -> None:
+        """Clear the cache.
+
+        Args:
+            controller_key: If provided, only clear entries for this controller.
+                          If None, clear the entire cache.
+        """
+        if controller_key is None:
+            self._cache.clear()
+        else:
+            prefix = f"{controller_key}:"
+            keys_to_remove = [k for k in self._cache if k.startswith(prefix)]
+            for key in keys_to_remove:
+                del self._cache[key]
+
+    def stats(self) -> dict[str, int]:
+        """Return cache statistics.
+
+        Returns:
+            Dict with 'total_entries' and 'expired_entries' counts
+        """
+        now = time.monotonic()
+        expired = sum(1 for cached in self._cache.values() if now >= cached.expires_at)
+        return {
+            "total_entries": len(self._cache),
+            "expired_entries": expired,
+        }
+
+
+def get_register_cache(hass: HomeAssistant) -> RegisterCache:
+    """Get or create the shared RegisterCache instance.
+
+    The cache is stored in hass.data[DOMAIN][REGISTER_CACHE] for persistence
+    across the integration's lifecycle.
+
+    Args:
+        hass: Home Assistant instance
+
+    Returns:
+        The shared RegisterCache instance
+    """
+    hass.data.setdefault(DOMAIN, {})
+    if REGISTER_CACHE not in hass.data[DOMAIN]:
+        hass.data[DOMAIN][REGISTER_CACHE] = RegisterCache()
+    return hass.data[DOMAIN][REGISTER_CACHE]
 
 
 def hex_to_ascii(hex_value):

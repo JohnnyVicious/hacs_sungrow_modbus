@@ -349,6 +349,7 @@ class SungrowSensorGroup:
             "poll_speed", PollSpeed.NORMAL if self.start_register < 40000 else PollSpeed.SLOW
         )
         self._is_holding: bool = definition.get("holding", False)
+        self._cache_ttl: int | None = definition.get("cache_ttl", None)
 
         _LOGGER.debug(
             f"Sensor group creation. start registrar = {self.start_register}, sensor count = {self.sensors_count}, registrar count = {self.registrar_count}"
@@ -385,3 +386,12 @@ class SungrowSensorGroup:
     def is_holding(self) -> bool:
         """Return True if this group uses holding registers instead of input registers."""
         return self._is_holding
+
+    @property
+    def cache_ttl(self) -> int | None:
+        """Return the cache TTL in seconds, or None if caching is disabled.
+
+        When set, register values are cached for this duration to reduce
+        Modbus reads for slow-changing values like firmware versions.
+        """
+        return self._cache_ttl

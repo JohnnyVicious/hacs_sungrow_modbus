@@ -17,7 +17,7 @@ from custom_components.sungrow_modbus.const import (
     SLAVE,
     VALUE,
 )
-from custom_components.sungrow_modbus.helpers import cache_get, cache_save
+from custom_components.sungrow_modbus.helpers import cache_get, cache_save, get_register_cache
 
 from .data.enums import PollSpeed
 from .modbus_controller import ModbusController
@@ -317,6 +317,10 @@ class DataRetrieval:
                 total_registrars, total_groups = 0, 0
                 marked_for_removal = []
 
+                # Get TTL cache for checking cached values
+                ttl_cache = get_register_cache(self.hass)
+                controller_key = self.controller.controller_key
+
                 for sensor_group in groups:
                     start_register = sensor_group.start_register
                     count = sensor_group.registrar_count
@@ -326,6 +330,31 @@ class DataRetrieval:
                     _LOGGER.debug(
                         f"Group {start_register} starting for ({self.controller.host}.{self.controller.slave})"
                     )
+
+                    # Check TTL cache if cache_ttl is configured for this group
+                    cache_ttl = sensor_group.cache_ttl
+                    if cache_ttl is not None:
+                        cached_values = ttl_cache.get_range(controller_key, start_register, count)
+                        if cached_values is not None:
+                            _LOGGER.debug(
+                                f"Using TTL-cached values for registers {start_register}-{start_register + count - 1}"
+                            )
+                            # Use cached values - still need to fire events for sensor updates
+                            for i, value in enumerate(cached_values):
+                                reg = start_register + i
+                                corrected_value = self.spike_filtering(reg, value)
+                                cache_save(self.hass, reg, corrected_value, controller_key)
+                                self.hass.bus.async_fire(
+                                    DOMAIN,
+                                    {
+                                        REGISTER: reg,
+                                        VALUE: corrected_value,
+                                        CONTROLLER: self.controller.connection_id,
+                                        SLAVE: self.controller.slave,
+                                    },
+                                )
+                            self.controller.mark_data_received()
+                            continue  # Skip Modbus read, use cached values
 
                     # Use holding registers if explicitly marked or if register >= 40000
                     use_holding = sensor_group.is_holding or start_register >= 40000
@@ -347,11 +376,18 @@ class DataRetrieval:
                         )
                         continue
 
+                    # Store in TTL cache if cache_ttl is configured
+                    if cache_ttl is not None:
+                        ttl_cache.set_range(controller_key, start_register, list(values), cache_ttl)
+                        _LOGGER.debug(
+                            f"Cached registers {start_register}-{start_register + count - 1} with TTL {cache_ttl}s"
+                        )
+
                     for i, value in enumerate(values):
                         reg = start_register + i
                         _LOGGER.debug(f"block {start_register}, register {reg} has value {value}")
                         corrected_value = self.spike_filtering(reg, value)
-                        cache_save(self.hass, reg, corrected_value, self.controller.controller_key)
+                        cache_save(self.hass, reg, corrected_value, controller_key)
                         self.hass.bus.async_fire(
                             DOMAIN,
                             {

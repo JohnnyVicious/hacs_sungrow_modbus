@@ -37,21 +37,29 @@ class TestDataRetrieval:
         self.fast_group.poll_speed = PollSpeed.FAST
         self.fast_group.start_register = 1000
         self.fast_group.registrar_count = 10
+        self.fast_group.cache_ttl = None  # No TTL caching
+        self.fast_group.is_holding = False
 
         self.normal_group = MagicMock(spec=SungrowSensorGroup)
         self.normal_group.poll_speed = PollSpeed.NORMAL
         self.normal_group.start_register = 2000
         self.normal_group.registrar_count = 10
+        self.normal_group.cache_ttl = None  # No TTL caching
+        self.normal_group.is_holding = False
 
         self.slow_group = MagicMock(spec=SungrowSensorGroup)
         self.slow_group.poll_speed = PollSpeed.SLOW
         self.slow_group.start_register = 3000
         self.slow_group.registrar_count = 10
+        self.slow_group.cache_ttl = None  # No TTL caching
+        self.slow_group.is_holding = False
 
         self.once_group = MagicMock(spec=SungrowSensorGroup)
         self.once_group.poll_speed = PollSpeed.ONCE
         self.once_group.start_register = 4000
         self.once_group.registrar_count = 10
+        self.once_group.cache_ttl = None  # No TTL caching
+        self.once_group.is_holding = False
 
         # Set up the controller's sensor groups
         self.controller.sensor_groups = [self.fast_group, self.normal_group, self.slow_group, self.once_group]
@@ -256,11 +264,15 @@ class TestDataRetrieval:
         once_group.poll_speed = PollSpeed.ONCE
         once_group.start_register = 4000
         once_group.registrar_count = 10
+        once_group.cache_ttl = None  # No TTL caching
+        once_group.is_holding = False
 
         normal_group = MagicMock(spec=SungrowSensorGroup)
         normal_group.poll_speed = PollSpeed.NORMAL
         normal_group.start_register = 2000
         normal_group.registrar_count = 10
+        normal_group.cache_ttl = None  # No TTL caching
+        normal_group.is_holding = False
 
         # Use a real list for sensor_groups (the implementation reads sensor_groups
         # but uses remove_sensor_groups() method, so we need to track calls)

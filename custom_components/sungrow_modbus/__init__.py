@@ -39,7 +39,13 @@ from .const import (
 from .data.enums import InverterFeature
 from .data.sungrow_config import SUNGROW_INVERTERS, InverterConfig, InverterType
 from .data_retrieval import DataRetrieval
-from .helpers import get_controller, get_controller_from_entry, get_controller_key, set_controller
+from .helpers import (
+    get_controller,
+    get_controller_from_entry,
+    get_controller_key,
+    get_register_cache,
+    set_controller,
+)
 from .modbus_controller import ModbusController
 from .sensors.sungrow_base_sensor import SungrowBaseSensor, SungrowSensorGroup
 
@@ -441,6 +447,11 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
             keys_to_remove = [k for k in values if k.startswith(f"{controller_key}:")]
             for key in keys_to_remove:
                 values.pop(key, None)
+
+        # Clear TTL cache for this controller
+        if controller_key:
+            ttl_cache = get_register_cache(hass)
+            ttl_cache.clear(controller_key)
 
         # Clean up entry data
         hass.data[DOMAIN].pop(entry.entry_id, None)
