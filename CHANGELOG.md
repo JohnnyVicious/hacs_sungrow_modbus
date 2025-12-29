@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.5] - 2025-12-29
+
 ### Added
 
 - **Circuit breaker pattern for connection management** (`modbus_controller.py`, `data_retrieval.py`) - Implemented circuit breaker to prevent repeated connection attempts to offline inverters. Previously, when an inverter went offline, the integration would retry up to 20 times with exponential backoff (~10 minutes), then repeat the entire cycle every 2 minutes indefinitely. This caused log spam and wasted resources. The circuit breaker opens after 5 consecutive connection failures and rejects further attempts for 5 minutes (configurable via `CIRCUIT_BREAKER_FAILURE_THRESHOLD` and `CIRCUIT_BREAKER_RECOVERY_MINUTES`). After the recovery timeout, it enters HALF_OPEN state allowing one test attempt. On success, the circuit closes; on failure, it reopens. Benefits: reduced log noise, lower CPU/network usage during outages, clear "offline" state for users, automatic recovery when the inverter comes back online. Added 15 unit tests for the CircuitBreaker class.
