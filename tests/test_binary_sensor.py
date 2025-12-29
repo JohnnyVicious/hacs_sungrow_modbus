@@ -151,121 +151,126 @@ class TestSungrowBinaryEntityInit:
 class TestSungrowBinaryEntityTurnOnOff:
     """Test turn_on and turn_off operations."""
 
-    def test_turn_on_bit_position(self):
+    @pytest.mark.asyncio
+    async def test_turn_on_bit_position(self):
         """Test turning on a switch with bit_position."""
         hass = MagicMock()
         hass.data = {DOMAIN: {VALUES: {"43110": 0}}}  # All bits off
-        hass.create_task = MagicMock()
 
         controller = create_mock_controller()
+        controller.async_write_holding_register = AsyncMock(return_value=MagicMock())
 
         entity_def = {"name": "Self-Use Mode", "register": 43110, "bit_position": 0}
 
         entity = SungrowBinaryEntity(hass, controller, entity_def)
+        entity.async_write_ha_state = MagicMock()
 
         with patch("custom_components.sungrow_modbus.sensors.sungrow_binary_sensor.cache_get") as mock_get:
             mock_get.return_value = 0
-            entity.turn_on()
+            await entity.async_turn_on()
 
         # Should write 1 (bit 0 set)
-        hass.create_task.assert_called_once()
+        controller.async_write_holding_register.assert_called_once_with(43110, 1)
         assert entity._attr_is_on is True
-        close_create_task_coroutine(hass)
 
-    def test_turn_off_bit_position(self):
+    @pytest.mark.asyncio
+    async def test_turn_off_bit_position(self):
         """Test turning off a switch with bit_position."""
         hass = MagicMock()
         hass.data = {DOMAIN: {VALUES: {"43110": 1}}}  # Bit 0 on
-        hass.create_task = MagicMock()
 
         controller = create_mock_controller()
+        controller.async_write_holding_register = AsyncMock(return_value=MagicMock())
 
         entity_def = {"name": "Self-Use Mode", "register": 43110, "bit_position": 0}
 
         entity = SungrowBinaryEntity(hass, controller, entity_def)
+        entity.async_write_ha_state = MagicMock()
 
         with patch("custom_components.sungrow_modbus.sensors.sungrow_binary_sensor.cache_get") as mock_get:
             mock_get.return_value = 1
-            entity.turn_off()
+            await entity.async_turn_off()
 
-        hass.create_task.assert_called_once()
+        controller.async_write_holding_register.assert_called_once_with(43110, 0)
         assert entity._attr_is_on is False
-        close_create_task_coroutine(hass)
 
-    def test_turn_on_with_on_value(self):
+    @pytest.mark.asyncio
+    async def test_turn_on_with_on_value(self):
         """Test turning on with on_value style switch."""
         hass = MagicMock()
         hass.data = {DOMAIN: {VALUES: {"43007": 222}}}
-        hass.create_task = MagicMock()
 
         controller = create_mock_controller()
+        controller.async_write_holding_register = AsyncMock(return_value=MagicMock())
 
         entity_def = {"name": "EMS Mode", "register": 43007, "on_value": 190, "off_value": 222}
 
         entity = SungrowBinaryEntity(hass, controller, entity_def)
+        entity.async_write_ha_state = MagicMock()
 
         with patch("custom_components.sungrow_modbus.sensors.sungrow_binary_sensor.cache_get") as mock_get:
             mock_get.return_value = 222
-            entity.turn_on()
+            await entity.async_turn_on()
 
         # Should write 190
-        hass.create_task.assert_called_once()
-        close_create_task_coroutine(hass)
+        controller.async_write_holding_register.assert_called_once_with(43007, 190)
 
-    def test_turn_off_with_off_value(self):
+    @pytest.mark.asyncio
+    async def test_turn_off_with_off_value(self):
         """Test turning off with off_value style switch."""
         hass = MagicMock()
         hass.data = {DOMAIN: {VALUES: {"43007": 190}}}
-        hass.create_task = MagicMock()
 
         controller = create_mock_controller()
+        controller.async_write_holding_register = AsyncMock(return_value=MagicMock())
 
         entity_def = {"name": "EMS Mode", "register": 43007, "on_value": 190, "off_value": 222}
 
         entity = SungrowBinaryEntity(hass, controller, entity_def)
+        entity.async_write_ha_state = MagicMock()
 
         with patch("custom_components.sungrow_modbus.sensors.sungrow_binary_sensor.cache_get") as mock_get:
             mock_get.return_value = 190
-            entity.turn_off()
+            await entity.async_turn_off()
 
         # Should write 222
-        hass.create_task.assert_called_once()
-        close_create_task_coroutine(hass)
+        controller.async_write_holding_register.assert_called_once_with(43007, 222)
 
 
 class TestConflictsAndRequires:
     """Test conflicts_with and requires logic."""
 
-    def test_turn_on_clears_conflicts(self):
+    @pytest.mark.asyncio
+    async def test_turn_on_clears_conflicts(self):
         """Test that turning on clears conflicting bits."""
         hass = MagicMock()
         # Start with bits 6 and 11 set (0b100001000000 = 2112)
         hass.data = {DOMAIN: {VALUES: {"43110": 0b100001000000}}}
-        hass.create_task = MagicMock()
 
         controller = create_mock_controller()
+        controller.async_write_holding_register = AsyncMock(return_value=MagicMock())
 
         entity_def = {"name": "Self-Use Mode", "register": 43110, "bit_position": 0, "conflicts_with": [6, 11]}
 
         entity = SungrowBinaryEntity(hass, controller, entity_def)
+        entity.async_write_ha_state = MagicMock()
 
         with patch("custom_components.sungrow_modbus.sensors.sungrow_binary_sensor.cache_get") as mock_get:
             mock_get.return_value = 0b100001000000
-            entity.turn_on()
+            await entity.async_turn_on()
 
         # Verify bits 6 and 11 are cleared and bit 0 is set
         # Final value should be 0b000000000001 = 1
-        call_args = hass.create_task.call_args
-        assert call_args is not None
-        close_create_task_coroutine(hass)
+        controller.async_write_holding_register.assert_called_once_with(43110, 1)
 
-    def test_turn_on_sets_required_bits(self):
+    @pytest.mark.asyncio
+    async def test_turn_on_sets_required_bits(self):
         """Test that turning on sets required bits."""
         hass = MagicMock()
         hass.data = {DOMAIN: {VALUES: {"43110": 0}}}
-        hass.create_task = MagicMock()
 
         controller = create_mock_controller()
+        controller.async_write_holding_register = AsyncMock(return_value=MagicMock())
 
         entity_def = {
             "name": "TOU Mode",
@@ -275,23 +280,24 @@ class TestConflictsAndRequires:
         }
 
         entity = SungrowBinaryEntity(hass, controller, entity_def)
+        entity.async_write_ha_state = MagicMock()
 
         with patch("custom_components.sungrow_modbus.sensors.sungrow_binary_sensor.cache_get") as mock_get:
             mock_get.return_value = 0
-            entity.turn_on()
+            await entity.async_turn_on()
 
         # Should set both bit 0 (required) and bit 1 (target)
         # Final value should be 0b11 = 3
-        hass.create_task.assert_called_once()
-        close_create_task_coroutine(hass)
+        controller.async_write_holding_register.assert_called_once_with(43110, 3)
 
-    def test_turn_on_with_requires_any_none_set(self):
+    @pytest.mark.asyncio
+    async def test_turn_on_with_requires_any_none_set(self):
         """Test requires_any sets first option when none are set."""
         hass = MagicMock()
         hass.data = {DOMAIN: {VALUES: {"43110": 0}}}
-        hass.create_task = MagicMock()
 
         controller = create_mock_controller()
+        controller.async_write_holding_register = AsyncMock(return_value=MagicMock())
 
         entity_def = {
             "name": "TOU Mode",
@@ -301,36 +307,38 @@ class TestConflictsAndRequires:
         }
 
         entity = SungrowBinaryEntity(hass, controller, entity_def)
+        entity.async_write_ha_state = MagicMock()
 
         with patch("custom_components.sungrow_modbus.sensors.sungrow_binary_sensor.cache_get") as mock_get:
             mock_get.return_value = 0
-            entity.turn_on()
+            await entity.async_turn_on()
 
         # Should set bit 0 (first in requires_any) and bit 1 (target)
-        hass.create_task.assert_called_once()
-        close_create_task_coroutine(hass)
+        # Final value should be 0b11 = 3
+        controller.async_write_holding_register.assert_called_once_with(43110, 3)
 
-    def test_turn_on_with_requires_any_one_already_set(self):
+    @pytest.mark.asyncio
+    async def test_turn_on_with_requires_any_one_already_set(self):
         """Test requires_any doesn't add more when one is already set."""
         hass = MagicMock()
         # Bit 6 already set (0b1000000 = 64)
         hass.data = {DOMAIN: {VALUES: {"43110": 64}}}
-        hass.create_task = MagicMock()
 
         controller = create_mock_controller()
+        controller.async_write_holding_register = AsyncMock(return_value=MagicMock())
 
         entity_def = {"name": "TOU Mode", "register": 43110, "bit_position": 1, "requires_any": [0, 6]}
 
         entity = SungrowBinaryEntity(hass, controller, entity_def)
+        entity.async_write_ha_state = MagicMock()
 
         with patch("custom_components.sungrow_modbus.sensors.sungrow_binary_sensor.cache_get") as mock_get:
             mock_get.return_value = 64
-            entity.turn_on()
+            await entity.async_turn_on()
 
         # Should only add bit 1, keep bit 6
         # Final value should be 0b1000010 = 66
-        hass.create_task.assert_called_once()
-        close_create_task_coroutine(hass)
+        controller.async_write_holding_register.assert_called_once_with(43110, 66)
 
 
 class TestSungrowBinaryEntityUpdate:
@@ -468,7 +476,8 @@ class TestSungrowBinaryEntityUpdate:
 class TestConnectionToggle:
     """Test special register 90005 for connection toggle."""
 
-    def test_turn_on_register_90005_enables_connection(self):
+    @pytest.mark.asyncio
+    async def test_turn_on_register_90005_enables_connection(self):
         """Test register 90005 enables modbus connection."""
         hass = MagicMock()
         controller = create_mock_controller()
@@ -476,11 +485,13 @@ class TestConnectionToggle:
         entity_def = {"name": "Modbus Enabled", "register": 90005, "bit_position": 0}
 
         entity = SungrowBinaryEntity(hass, controller, entity_def)
-        entity.turn_on()
+        entity.async_write_ha_state = MagicMock()
+        await entity.async_turn_on()
 
         controller.enable_connection.assert_called_once()
 
-    def test_turn_off_register_90005_disables_connection(self):
+    @pytest.mark.asyncio
+    async def test_turn_off_register_90005_disables_connection(self):
         """Test register 90005 disables modbus connection."""
         hass = MagicMock()
         controller = create_mock_controller()
@@ -488,7 +499,8 @@ class TestConnectionToggle:
         entity_def = {"name": "Modbus Enabled", "register": 90005, "bit_position": 0}
 
         entity = SungrowBinaryEntity(hass, controller, entity_def)
-        entity.turn_off()
+        entity.async_write_ha_state = MagicMock()
+        await entity.async_turn_off()
 
         controller.disable_connection.assert_called_once()
 

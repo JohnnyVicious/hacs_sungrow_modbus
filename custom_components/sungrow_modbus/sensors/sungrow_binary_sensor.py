@@ -3,6 +3,7 @@ from typing import Any
 
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.core import callback
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.restore_state import RestoreEntity
 
 from custom_components.sungrow_modbus import ModbusController
@@ -97,21 +98,27 @@ class SungrowBinaryEntity(RestoreEntity, SwitchEntity):
         """Return true if the binary sensor is on."""
         return self._attr_is_on
 
-    def turn_on(self, **kwargs: Any) -> None:
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        """Turn on the switch."""
         _LOGGER.debug(f"{self._register}-{self._bit_position} turn on called ")
         if self._register == 90005:
             self._modbus_controller.enable_connection()
+            self._attr_is_on = True
+            self.async_write_ha_state()
         else:
-            self.set_register_bit(True)
+            await self.async_set_register_bit(True)
 
-    def turn_off(self, **kwargs: Any) -> None:
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        """Turn off the switch."""
         _LOGGER.debug(f"{self._register}-{self._bit_position} turn off called ")
         if self._register == 90005:
             self._modbus_controller.disable_connection()
+            self._attr_is_on = False
+            self.async_write_ha_state()
         else:
-            self.set_register_bit(False)
+            await self.async_set_register_bit(False)
 
-    def set_register_bit(self, value: bool):
+    async def async_set_register_bit(self, value: bool):
         """Set or clear a specific bit in the Modbus register, enforcing dependencies and conflicts."""
         controller = self._modbus_controller
         current_register_value = cache_get(self._hass, self._register, self._modbus_controller.controller_key)
@@ -157,11 +164,17 @@ class SungrowBinaryEntity(RestoreEntity, SwitchEntity):
 
         if current_register_value != new_register_value:
             target_register = self._write_register
-            # Always queue the write - controller handles connection state
-            # Only update local state if we actually queued a write
-            self._hass.create_task(controller.async_write_holding_register(target_register, new_register_value))
+
+            # Write to Modbus controller and wait for result
+            result = await controller.async_write_holding_register(target_register, new_register_value)
+
+            if result is None:
+                raise HomeAssistantError(f"Failed to write to register {target_register}")
+
+            # Only update state after successful write
             self._attr_is_on = value
             self._attr_available = True
+            self.async_write_ha_state()
 
     @property
     def device_info(self):

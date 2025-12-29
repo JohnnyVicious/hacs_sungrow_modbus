@@ -1,11 +1,10 @@
-import inspect
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from custom_components.sungrow_modbus.helpers import set_bit
 from custom_components.sungrow_modbus.sensors.sungrow_binary_sensor import (
     SungrowBinaryEntity,
-    set_bit,
 )
 
 
@@ -18,30 +17,14 @@ def controller():
     mock.model = "S6"
     mock.device_identification = "XYZ"
     mock.sw_version = "1.0"
-    mock.async_write_holding_register = AsyncMock()
+    mock.async_write_holding_register = AsyncMock(return_value=MagicMock())
     return mock
 
 
 @pytest.fixture
 def mock_hass():
     hass = MagicMock()
-    hass.create_task = MagicMock()
     return hass
-
-
-def assert_called_with_write_task(mock_hass, expected_register, expected_value):
-    mock_hass.create_task.assert_called_once()
-    task = mock_hass.create_task.call_args[0][0]
-
-    # Confirm it's a coroutine
-    assert inspect.iscoroutine(task)
-
-    # Evaluate the coroutine manually to extract the arguments passed
-    coro_func = task.cr_code.co_name
-    assert "async_write_holding_register" in coro_func or "_execute_mock_call" in coro_func
-
-    # Close the coroutine to prevent "coroutine was never awaited" warning
-    task.close()
 
 
 @pytest.mark.asyncio
@@ -57,12 +40,13 @@ async def test_conflicts_self_use_mode(mock_hass, controller):
 
     with patch("custom_components.sungrow_modbus.sensors.sungrow_binary_sensor.cache_get", return_value=initial):
         entity = SungrowBinaryEntity(mock_hass, controller, entity_def)
-        entity.set_register_bit(True)
+        entity.async_write_ha_state = MagicMock()
+        await entity.async_set_register_bit(True)
 
         expected = set_bit(set_bit(0, 6, False), 11, False)
         expected = set_bit(expected, 0, True)
 
-        assert_called_with_write_task(mock_hass, 43110, expected)
+        controller.async_write_holding_register.assert_called_once_with(43110, expected)
 
 
 @pytest.mark.asyncio
@@ -76,10 +60,11 @@ async def test_requires_tou(mock_hass, controller):
 
     with patch("custom_components.sungrow_modbus.sensors.sungrow_binary_sensor.cache_get", return_value=0):
         entity = SungrowBinaryEntity(mock_hass, controller, entity_def)
-        entity.set_register_bit(True)
+        entity.async_write_ha_state = MagicMock()
+        await entity.async_set_register_bit(True)
 
         expected = set_bit(set_bit(0, 0, True), 1, True)
-        assert_called_with_write_task(mock_hass, 43110, expected)
+        controller.async_write_holding_register.assert_called_once_with(43110, expected)
 
 
 @pytest.mark.asyncio
@@ -96,7 +81,8 @@ async def test_conflicts_and_requires_combined(mock_hass, controller):
 
     with patch("custom_components.sungrow_modbus.sensors.sungrow_binary_sensor.cache_get", return_value=initial):
         entity = SungrowBinaryEntity(mock_hass, controller, entity_def)
-        entity.set_register_bit(True)
+        entity.async_write_ha_state = MagicMock()
+        await entity.async_set_register_bit(True)
 
         expected = set_bit(set_bit(0, 1, True), 4, True)
-        assert_called_with_write_task(mock_hass, 43110, expected)
+        controller.async_write_holding_register.assert_called_once_with(43110, expected)

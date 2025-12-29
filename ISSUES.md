@@ -14,13 +14,271 @@ This document tracks remaining issues identified during code review that have no
 
 ## Important Issues
 
-*No important issues at this time.*
+### 1. Connect Return Value Ignored in Read/Write Methods
+
+**Severity:** Important
+**File:** `custom_components/sungrow_modbus/modbus_controller.py`
+**Lines:** 197, 244, 365
+
+**Symptom:** When the Modbus device is offline, read/write operations proceed anyway, causing repeated exceptions and log spam. No retry gating while offline.
+
+**Current Code:**
+```python
+async def _execute_write_holding_register(self, register, value):
+    try:
+        await self.connect()  # Return value ignored!
+        async with self.poll_lock:
+            # Proceeds even if connect() returned False
+            result = await self.client.write_register(...)
+```
+
+**Root Cause:** `connect()` returns `True`/`False` to indicate success, but all callers ignore the return value and proceed with modbus operations regardless.
+
+**Suggested Fix:**
+```python
+async def _execute_write_holding_register(self, register, value):
+    try:
+        if not await self.connect():
+            _LOGGER.debug("Skipping write - not connected")
+            return None
+        async with self.poll_lock:
+            result = await self.client.write_register(...)
+```
+
+**Impact:** High - causes exception spam and unnecessary retries when device is offline. Affects all read/write operations.
+
+---
+
+### 2. AsyncModbus Client close() Not Awaited
+
+**Severity:** Important
+**File:** `custom_components/sungrow_modbus/client_manager.py`
+**Line:** 116
+
+**Symptom:** Potential socket/task leaks when releasing Modbus clients. May cause "unclosed transport" warnings or connection pool exhaustion.
+
+**Current Code:**
+```python
+def release_client(self, connection_id: str):
+    with self._clients_lock:
+        # ...
+        if self._clients[connection_id]["ref_count"] <= 0:
+            client = self._clients[connection_id]["client"]
+            if client.connected:
+                client.close()  # Should be awaited!
+            del self._clients[connection_id]
+```
+
+**Root Cause:** `AsyncModbusTcpClient.close()` and `AsyncModbusSerialClient.close()` are coroutines that need to be awaited. Calling without `await` leaves sockets/tasks open.
+
+**Suggested Fix:**
+```python
+async def release_client(self, connection_id: str):
+    # ... (make method async)
+    if client.connected:
+        await client.close()
+```
+
+Or if sync context is required:
+```python
+if client.connected:
+    asyncio.create_task(client.close())
+```
+
+**Impact:** Medium - can cause resource leaks over time, especially with frequent config reloads or multi-inverter setups.
+
+---
+
+### 3. Clock Drift Counters Not Namespaced Per Controller
+
+**Severity:** Important
+**File:** `custom_components/sungrow_modbus/helpers.py`
+**Lines:** 68-69, 83-84, 91, 93
+
+**Symptom:** In multi-inverter setups, clock drift detection and correction interferes across inverters. One inverter's drift counter affects all others.
+
+**Current Code:**
+```python
+def clock_drift_test(hass, controller, hours, minutes, seconds):
+    # ...
+    drift_counter = hass.data[DOMAIN].get(DRIFT_COUNTER, 0)  # Global!
+    last_correction = hass.data[DOMAIN].get(LAST_CLOCK_CORRECTION, 0)  # Global!
+    # ...
+    hass.data[DOMAIN][DRIFT_COUNTER] = drift_counter + 1  # Shared across all inverters
+```
+
+**Root Cause:** `DRIFT_COUNTER` and `LAST_CLOCK_CORRECTION` are stored directly in `hass.data[DOMAIN]` without namespacing by controller key. All inverters share the same counter.
+
+**Suggested Fix:**
+```python
+def clock_drift_test(hass, controller, hours, minutes, seconds):
+    # ...
+    controller_key = controller.controller_key
+    drift_counter = hass.data[DOMAIN].get(f"{DRIFT_COUNTER}_{controller_key}", 0)
+    last_correction = hass.data[DOMAIN].get(f"{LAST_CLOCK_CORRECTION}_{controller_key}", 0)
+    # ...
+    hass.data[DOMAIN][f"{DRIFT_COUNTER}_{controller_key}"] = drift_counter + 1
+```
+
+**Impact:** Medium - causes incorrect clock drift behavior in multi-inverter setups. One inverter hitting drift threshold can trigger or suppress corrections on another.
+
+---
+
+### 4. Derived Sensor Mutates Controller Private Attributes
+
+**Severity:** Important
+**File:** `custom_components/sungrow_modbus/sensors/sungrow_derived_sensor.py`
+**Lines:** 206-207
+
+**Symptom:** Derived sensor directly mutates private attributes (`_sw_version` and `_model`) on the controller object.
+
+**Current Code:**
+```python
+if REGISTER_PROTOCOL_VERSION in self._register:
+    protocol_version, model_description = decode_inverter_model(new_value)
+    self.base_sensor.controller._sw_version = protocol_version  # Direct mutation!
+    self.base_sensor.controller._model = model_description      # Direct mutation!
+```
+
+**Root Cause:** Violates encapsulation by directly accessing controller internals. Creates tight coupling that will break silently if controller implementation changes.
+
+**Suggested Fix:**
+```python
+# Add setter methods to ModbusController:
+def set_sw_version(self, version: str) -> None:
+    self._sw_version = version
+
+def set_model(self, model: str) -> None:
+    self._model = model
+
+# Then in derived sensor:
+self.base_sensor.controller.set_sw_version(protocol_version)
+self.base_sensor.controller.set_model(model_description)
+```
+
+**Impact:** Medium - code smell that complicates maintenance and debugging.
+
+**Note:** v0.2.0 fixed the same pattern for `_data_received`/`_sensor_groups` in DataRetrieval. This is the same issue with different attributes (`_sw_version`/`_model`).
+
+---
+
+### 5. Service Handler Write Result Discarded
+
+**Severity:** Important
+**File:** `custom_components/sungrow_modbus/__init__.py`
+**Lines:** 123, 135
+
+**Symptom:** Service calls report success even when underlying writes fail.
+
+**Current Code:**
+```python
+if host:
+    controller = get_controller(hass, host, slave)
+    if controller is None:
+        _LOGGER.error("No controller found for host %s, slave %s", host, slave)
+        return
+    await write_with_logging(controller, address, value)  # Result discarded!
+else:
+    for controller in targets:
+        await write_with_logging(controller, address, value)  # Result discarded!
+```
+
+**Root Cause:** `write_with_logging()` returns success/failure but callers don't use the return value. Service always "succeeds" from HA's perspective.
+
+**Suggested Fix:**
+```python
+if host:
+    result = await write_with_logging(controller, address, value)
+    if not result:
+        raise ServiceValidationError(f"Failed to write to {host}:{slave}")
+else:
+    failed = []
+    for controller in targets:
+        if not await write_with_logging(controller, address, value):
+            failed.append(controller.connection_id)
+    if failed:
+        raise ServiceValidationError(f"Write failed on: {', '.join(failed)}")
+```
+
+**Impact:** Medium - users can't reliably know if service calls succeeded.
 
 ---
 
 ## Minor Issues
 
-*No minor issues at this time.*
+### 6. Duplicate Step Attribute Assignment
+
+**Severity:** Minor
+**File:** `custom_components/sungrow_modbus/sensors/sungrow_number_sensor.py`
+**Lines:** 53-54
+
+**What's wrong:** Both `_attr_native_step` and `_attr_step` are set to the same value. One is likely redundant.
+
+**Current Code:**
+```python
+self._attr_native_step = sensor.step
+self._attr_step = sensor.step
+```
+
+**How to fix:** Verify which attribute `NumberEntity` base class uses and remove the redundant one.
+
+---
+
+### 7. Inconsistent State Update Methods
+
+**Severity:** Minor
+**File:** Multiple files
+
+**What's wrong:** Codebase mixes `schedule_update_ha_state()` and `async_write_ha_state()` inconsistently:
+- `sungrow_derived_sensor.py:125,134,215` uses `schedule_update_ha_state()`
+- `sungrow_binary_sensor.py:77,93` uses `async_write_ha_state()`
+
+**How to fix:** Standardize on `async_write_ha_state()` in `@callback` decorated methods for immediate state updates.
+
+---
+
+### 8. Magic Numbers in Retry Logic
+
+**Severity:** Minor
+**File:** `custom_components/sungrow_modbus/data_retrieval.py`
+**Lines:** 110-111, 369
+
+**What's wrong:** Retry delays (0.5s initial, 30s max, 20 retries) and spike filter threshold (3) are hardcoded without documentation.
+
+**Current Code:**
+```python
+retry_delay = 0.5
+max_retries = 20
+# ...
+retry_delay = min(retry_delay * 2, 30)
+# ...
+if self._spike_counter[register] < 3:  # Magic number
+```
+
+**How to fix:** Extract to named constants with comments explaining rationale.
+
+---
+
+### 9. Hardcoded Timeout Values
+
+**Severity:** Minor
+**File:** `custom_components/sungrow_modbus/modbus_controller.py`
+**Lines:** 147, 151, 318-319
+
+**What's wrong:** Various timeouts are hardcoded:
+- `await asyncio.sleep(5)` when not connected
+- `await asyncio.sleep(0.2)` between queue checks
+- `delay_ms = 100 if is_write else 50` for inter-frame delays
+
+**How to fix:** Extract to named constants or make configurable via constructor.
+
+---
+
+### Theoretical Issues (Low Risk)
+
+These issues were identified but have low practical risk:
+
+- **Division by zero in number sensor** (`sungrow_number_sensor.py:153`): Divides by `self._multiplier` without guard. However, no editable sensors currently use `multiplier: 0` (only string-type read-only sensors do).
 
 ---
 
@@ -111,6 +369,25 @@ When adding new issues, use this format:
 
 ## Summary
 
-*No open issues at this time.* All issues from the code review have been resolved.
+**5 Important issues** remaining (2025-12-29):
+
+1. Connect return value ignored - causes exception spam when offline
+2. AsyncModbus close() not awaited - potential resource leaks
+3. Clock drift counters not namespaced - multi-inverter interference
+4. Derived sensor mutates controller privates - encapsulation violation
+5. Service handler discards write results - no failure feedback
+
+**4 Minor issues** remaining:
+
+1. Duplicate step attribute assignment
+2. Inconsistent state update methods
+3. Magic numbers in retry logic
+4. Hardcoded timeout values
+
+**Resolved issues (see CHANGELOG.md):**
+- Number entity fire-and-forget writes - FIXED in [Unreleased]
+- Switch entity fire-and-forget writes - FIXED in [Unreleased]
+
+**Assessment:** Production ready with caveats. All 410 tests pass. Issues primarily affect edge cases (offline behavior, frequent reloads, multi-inverter).
 
 See the Ignored/Deferred Issues section above for items that were reviewed but intentionally not fixed.

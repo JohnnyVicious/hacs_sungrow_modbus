@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **Switch entity optimistic state update causes UI/device desync** (`sensors/sungrow_binary_sensor.py`) - Switch turn_on/turn_off used fire-and-forget pattern (via `hass.create_task`) that immediately updated local state, even if the Modbus write would fail. This caused the UI to show the switch as toggled while the inverter never received the command. Root cause: sync `turn_on()`/`turn_off()` methods couldn't await the async write operation. Fixed by converting to async `async_turn_on()`/`async_turn_off()` methods that properly await the Modbus write and only update state after confirmed success. Raises `HomeAssistantError` on write failure.
+
+- **Number entity optimistic state update causes UI/device desync** (`sensors/sungrow_number_sensor.py`) - Number entity `set_native_value` used fire-and-forget pattern that immediately updated local state without waiting for write confirmation. This caused the UI to show the new value while the inverter never received it. Root cause: sync `set_native_value()` method couldn't await the async write operation. Fixed by converting to async `async_set_native_value()` that properly awaits the Modbus write and only updates state after confirmed success. Raises `HomeAssistantError` on write failure.
+
 ## [0.3.1] - 2025-12-28
 
 ### Fixed
