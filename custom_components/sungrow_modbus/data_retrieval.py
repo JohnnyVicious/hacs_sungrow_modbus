@@ -25,6 +25,17 @@ from .sensors.sungrow_base_sensor import SungrowSensorGroup
 
 _LOGGER = logging.getLogger(__name__)
 
+# Connection retry configuration
+# Uses exponential backoff: starts at RETRY_DELAY_INITIAL, doubles each attempt up to RETRY_DELAY_MAX
+RETRY_DELAY_INITIAL = 0.5  # Initial retry delay in seconds
+RETRY_DELAY_MAX = 30  # Maximum retry delay cap in seconds
+RETRY_MAX_ATTEMPTS = 20  # Stop after ~10 minutes of retries with exponential backoff
+
+# Spike filter configuration
+# SOC sensors may briefly read 0% or 100% due to communication glitches.
+# Filter requires SPIKE_FILTER_THRESHOLD consecutive extreme readings before accepting.
+SPIKE_FILTER_THRESHOLD = 3
+
 # Registers that should have spike filtering applied (SOC-type values that read 0-100)
 # These sensors may report brief 0 or 100 spikes that should be filtered
 SPIKE_FILTERED_REGISTERS = {
@@ -107,10 +118,9 @@ class DataRetrieval:
                     self.first_poll = False
                 return
 
-            retry_delay = 0.5
-            max_retries = 20  # Stop after ~10 minutes of retries (with exponential backoff)
+            retry_delay = RETRY_DELAY_INITIAL
             retry_count = 0
-            while not self.controller.connected() and retry_count < max_retries:
+            while not self.controller.connected() and retry_count < RETRY_MAX_ATTEMPTS:
                 try:
                     if await self.controller.connect():
                         _LOGGER.info(
@@ -124,12 +134,12 @@ class DataRetrieval:
                     _LOGGER.error(f"({self.controller.host}.{self.controller.slave}) Connection error: {e}")
 
                 await asyncio.sleep(retry_delay)
-                retry_delay = min(retry_delay * 2, 30)
+                retry_delay = min(retry_delay * 2, RETRY_DELAY_MAX)
                 retry_count += 1
 
-            if retry_count >= max_retries and not self.controller.connected():
+            if retry_count >= RETRY_MAX_ATTEMPTS and not self.controller.connected():
                 _LOGGER.warning(
-                    f"({self.controller.host}.{self.controller.slave}) Max connection retries ({max_retries}) exceeded, "
+                    f"({self.controller.host}.{self.controller.slave}) Max connection retries ({RETRY_MAX_ATTEMPTS}) exceeded, "
                     "waiting for next check_connection cycle"
                 )
         finally:
@@ -366,7 +376,7 @@ class DataRetrieval:
         else:
             # The reading is either 0 or 100 (extreme values)
             self._spike_counter[register] += 1
-            if self._spike_counter[register] < 3:
+            if self._spike_counter[register] < SPIKE_FILTER_THRESHOLD:
                 _LOGGER.debug(
                     f"Ignoring short spike value {value} for battery SOC sensor; "
                     f"retaining previous value {cached_value} (counter={self._spike_counter[register]})"
