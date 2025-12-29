@@ -24,7 +24,31 @@ This is a Home Assistant custom integration for Sungrow SHx hybrid inverters. It
 ```
 
 ### Commit Hygiene
-- Fix **one issue per commit**. Do not batch multiple bug fixes into a single commit; each issue should have its own commit to keep history and rollbacks clear.
+
+**CRITICAL: One issue = one commit.** Do not batch multiple bug fixes into a single commit, even if they seem related or minor. Each issue should have its own commit to keep history and rollbacks clear.
+
+**Common mistake to avoid:** When fixing multiple issues from ISSUES.md in one session, it's tempting to make all the code changes first, then commit everything together. DON'T. Instead:
+1. Make changes for issue #1
+2. Stage and commit issue #1
+3. Make changes for issue #2
+4. Stage and commit issue #2
+5. Repeat for each issue
+
+**If you accidentally batch multiple fixes into one commit:**
+```bash
+# Reset to before the combined commit (keep changes in working directory)
+git reset HEAD~1
+
+# Unstage everything
+git restore --staged .
+
+# Now selectively stage and commit each fix separately
+git add <files-for-fix-1> && git commit -m "fix: Description of fix 1"
+git add <files-for-fix-2> && git commit -m "fix: Description of fix 2"
+
+# Force push to replace the combined commit (if already pushed)
+git push --force-with-lease origin main
+```
 
 ### Issue Tracking (ISSUES.md)
 
