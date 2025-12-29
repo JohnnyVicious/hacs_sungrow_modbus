@@ -29,6 +29,16 @@ from custom_components.sungrow_modbus.sensors.sungrow_derived_sensor import Sung
 
 _LOGGER = logging.getLogger(__name__)
 
+# Write queue timing configuration
+QUEUE_DISCONNECTED_SLEEP = 5.0  # Seconds to wait between queue checks when disconnected
+QUEUE_EMPTY_SLEEP = 0.2  # Seconds to wait between queue checks when queue is empty
+
+# Modbus inter-frame delay configuration (milliseconds)
+# These delays ensure proper spacing between Modbus operations to avoid
+# overwhelming the device. Write operations use longer delays for safety.
+INTER_FRAME_DELAY_READ_MS = 50
+INTER_FRAME_DELAY_WRITE_MS = 100
+
 
 class ModbusController:
     def __init__(
@@ -144,11 +154,11 @@ class ModbusController:
         try:
             while True:
                 if not self.connected():
-                    await asyncio.sleep(5)
+                    await asyncio.sleep(QUEUE_DISCONNECTED_SLEEP)
                     continue
 
                 if self.write_queue.empty():
-                    await asyncio.sleep(0.2)
+                    await asyncio.sleep(QUEUE_EMPTY_SLEEP)
                     continue
 
                 write_request = await self.write_queue.get()
@@ -320,9 +330,7 @@ class ModbusController:
         Returns:
             None
         """
-        # Minimum delay between Modbus operations (milliseconds)
-        # Write operations get slightly longer delays for safety
-        delay_ms = 100 if is_write else 50
+        delay_ms = INTER_FRAME_DELAY_WRITE_MS if is_write else INTER_FRAME_DELAY_READ_MS
 
         current_time = time.perf_counter()
         elapsed = (current_time - self._last_modbus_request) * 1000  # Convert to ms
