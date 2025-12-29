@@ -144,24 +144,48 @@ class TestModbusControllerTCP(IsolatedAsyncioTestCase):
         self.assertIsNone(result)
 
     async def test_async_write_holding_register(self):
-        """Test queuing a write to a holding register."""
-        # Mock the write queue
+        """Test queuing a write to a holding register and waiting for result."""
+        # Mock the write queue with a side effect that resolves the future
+        mock_result = MagicMock()
+
+        async def mock_put(item):
+            register, value, multiple, future = item
+            # Verify the queue item structure
+            assert register == 100
+            assert value == 42
+            assert multiple is False
+            # Resolve the future as if the write succeeded
+            future.set_result(mock_result)
+
         self.controller.write_queue = MagicMock()
-        self.controller.write_queue.put = AsyncMock()
+        self.controller.write_queue.put = AsyncMock(side_effect=mock_put)
 
-        await self.controller.async_write_holding_register(100, 42)
+        result = await self.controller.async_write_holding_register(100, 42)
 
-        self.controller.write_queue.put.assert_called_once_with((100, 42, False))
+        self.controller.write_queue.put.assert_called_once()
+        self.assertEqual(result, mock_result)
 
     async def test_async_write_holding_registers(self):
-        """Test queuing a write to multiple holding registers."""
-        # Mock the write queue
+        """Test queuing a write to multiple holding registers and waiting for result."""
+        # Mock the write queue with a side effect that resolves the future
+        mock_result = MagicMock()
+
+        async def mock_put(item):
+            register, values, multiple, future = item
+            # Verify the queue item structure
+            assert register == 100
+            assert values == [42, 43]
+            assert multiple is True
+            # Resolve the future as if the write succeeded
+            future.set_result(mock_result)
+
         self.controller.write_queue = MagicMock()
-        self.controller.write_queue.put = AsyncMock()
+        self.controller.write_queue.put = AsyncMock(side_effect=mock_put)
 
-        await self.controller.async_write_holding_registers(100, [42, 43])
+        result = await self.controller.async_write_holding_registers(100, [42, 43])
 
-        self.controller.write_queue.put.assert_called_once_with((100, [42, 43], True))
+        self.controller.write_queue.put.assert_called_once()
+        self.assertEqual(result, mock_result)
 
     def test_poll_speed(self):
         """Test the poll_speed property."""
@@ -340,24 +364,48 @@ class TestModbusControllerSerial(IsolatedAsyncioTestCase):
         self.assertIsNone(result)
 
     async def test_async_write_holding_register(self):
-        """Test queuing a write to a holding register."""
-        # Mock the write queue
+        """Test queuing a write to a holding register and waiting for result."""
+        # Mock the write queue with a side effect that resolves the future
+        mock_result = MagicMock()
+
+        async def mock_put(item):
+            register, value, multiple, future = item
+            # Verify the queue item structure
+            assert register == 100
+            assert value == 42
+            assert multiple is False
+            # Resolve the future as if the write succeeded
+            future.set_result(mock_result)
+
         self.controller.write_queue = MagicMock()
-        self.controller.write_queue.put = AsyncMock()
+        self.controller.write_queue.put = AsyncMock(side_effect=mock_put)
 
-        await self.controller.async_write_holding_register(100, 42)
+        result = await self.controller.async_write_holding_register(100, 42)
 
-        self.controller.write_queue.put.assert_called_once_with((100, 42, False))
+        self.controller.write_queue.put.assert_called_once()
+        self.assertEqual(result, mock_result)
 
     async def test_async_write_holding_registers(self):
-        """Test queuing a write to multiple holding registers."""
-        # Mock the write queue
+        """Test queuing a write to multiple holding registers and waiting for result."""
+        # Mock the write queue with a side effect that resolves the future
+        mock_result = MagicMock()
+
+        async def mock_put(item):
+            register, values, multiple, future = item
+            # Verify the queue item structure
+            assert register == 100
+            assert values == [42, 43]
+            assert multiple is True
+            # Resolve the future as if the write succeeded
+            future.set_result(mock_result)
+
         self.controller.write_queue = MagicMock()
-        self.controller.write_queue.put = AsyncMock()
+        self.controller.write_queue.put = AsyncMock(side_effect=mock_put)
 
-        await self.controller.async_write_holding_registers(100, [42, 43])
+        result = await self.controller.async_write_holding_registers(100, [42, 43])
 
-        self.controller.write_queue.put.assert_called_once_with((100, [42, 43], True))
+        self.controller.write_queue.put.assert_called_once()
+        self.assertEqual(result, mock_result)
 
     def test_poll_speed(self):
         """Test the poll_speed property."""

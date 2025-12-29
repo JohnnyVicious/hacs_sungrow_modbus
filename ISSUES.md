@@ -141,12 +141,13 @@ When adding new issues, use this format:
 - Inconsistent state update methods - FIXED in [Unreleased]
 - Magic numbers in retry logic - FIXED in [Unreleased]
 - Hardcoded timeout values - FIXED in [Unreleased]
+- Write Queue API mismatch - FIXED in [Unreleased]
 - Service handler discards write results - FIXED in v0.3.2
 - Derived sensor mutates controller privates - FIXED in v0.3.2
 - Clock drift counters not namespaced - FIXED in v0.3.2
 - Connect return value ignored - FIXED in v0.3.2
-- Number entity fire-and-forget writes - FIXED in v0.3.2
-- Switch entity fire-and-forget writes - FIXED in v0.3.2
+- Number entity fire-and-forget writes - FIXED in v0.3.2, completed in [Unreleased]
+- Switch entity fire-and-forget writes - FIXED in v0.3.2, completed in [Unreleased]
 
 **Moved to Ignored/Deferred:**
 - AsyncModbus close() not awaited - FALSE POSITIVE (close() is synchronous in pymodbus 3.x)

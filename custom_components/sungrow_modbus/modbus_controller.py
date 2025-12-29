@@ -146,6 +146,9 @@ class ModbusController:
         It ensures that write operations are executed one at a time, with appropriate
         delays between operations to avoid overwhelming the Modbus device.
 
+        Each queue item is a 4-tuple: (register, value, multiple, future)
+        The future is resolved with the write result when the operation completes.
+
         The loop exits gracefully when cancelled, processing any pending writes first.
 
         Returns:
@@ -162,12 +165,16 @@ class ModbusController:
                     continue
 
                 write_request = await self.write_queue.get()
-                register, value, multiple = write_request
+                register, value, multiple, future = write_request
 
                 if multiple:
-                    await self._execute_write_holding_registers(register, value)
+                    result = await self._execute_write_holding_registers(register, value)
                 else:
-                    await self._execute_write_holding_register(register, value)
+                    result = await self._execute_write_holding_register(register, value)
+
+                # Resolve the future with the result (success or None on failure)
+                if not future.done():
+                    future.set_result(result)
 
                 self.write_queue.task_done()
         except asyncio.CancelledError:
@@ -176,11 +183,14 @@ class ModbusController:
             while not self.write_queue.empty():
                 try:
                     write_request = self.write_queue.get_nowait()
-                    register, value, multiple = write_request
+                    register, value, multiple, future = write_request
                     if multiple:
-                        await self._execute_write_holding_registers(register, value)
+                        result = await self._execute_write_holding_registers(register, value)
                     else:
-                        await self._execute_write_holding_register(register, value)
+                        result = await self._execute_write_holding_register(register, value)
+                    # Resolve the future with the result
+                    if not future.done():
+                        future.set_result(result)
                     self.write_queue.task_done()
                 except asyncio.QueueEmpty:
                     break
@@ -295,28 +305,32 @@ class ModbusController:
             return None
 
     async def async_write_holding_register(self, register, value):
-        """Queues a write request to the Modbus device (write single register).
+        """Queues a write request and waits for completion.
 
         Args:
             register (int): The register address to write to.
             value (int): The value to write to the register.
 
         Returns:
-            None
+            The write result on success, or None on failure.
         """
-        await self.write_queue.put((register, value, False))
+        future = asyncio.get_event_loop().create_future()
+        await self.write_queue.put((register, value, False, future))
+        return await future
 
     async def async_write_holding_registers(self, start_register, values):
-        """Queues a write request to the Modbus device (write multiple registers).
+        """Queues a write request and waits for completion.
 
         Args:
             start_register (int): The starting register address to write to.
             values (list): A list of values to write to consecutive registers.
 
         Returns:
-            None
+            The write result on success, or None on failure.
         """
-        await self.write_queue.put((start_register, values, True))
+        future = asyncio.get_event_loop().create_future()
+        await self.write_queue.put((start_register, values, True, future))
+        return await future
 
     async def inter_frame_wait(self, is_write=False):
         """Implements inter-frame delay to respect Modbus timing requirements.
