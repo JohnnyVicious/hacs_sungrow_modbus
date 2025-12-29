@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **TTL-based register caching** (`helpers.py`, `data_retrieval.py`, `sensors/sungrow_base_sensor.py`, `3a8bb69`) - Implemented a TTL (Time-To-Live) cache for Modbus register values to reduce unnecessary device reads for slow-changing data like firmware versions, serial numbers, and configuration settings. Previously, these values were read on every poll cycle even though they rarely change. The new `RegisterCache` class stores values with expiration timestamps using `time.monotonic()` for reliable timing. Sensor groups can define `cache_ttl` in seconds; `DataRetrieval` checks the cache before making Modbus reads. Cache entries are namespaced by controller key for multi-inverter support. Includes proper cleanup on controller unload and 20 unit tests. Optimizations from Codex review: single-pass `get_range()` instead of double iteration, proactive purging of expired entries.
+
 ## [0.3.5] - 2025-12-29
 
 ### Added

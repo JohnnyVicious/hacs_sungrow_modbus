@@ -231,52 +231,7 @@ async def _rate_limited_write(self, register: int, value: int):
 
 ---
 
-### 10. TTL-Based Register Caching
-
-**Category:** Features
-**Impact:** Low | **Effort:** High
-
-**Problem:**
-Every poll cycle reads all registers. For slow-changing values (firmware version, serial number), this is wasteful. Currently `PollSpeed.ONCE` handles this but isn't extensible.
-
-**Suggested Implementation:**
-```python
-@dataclass
-class CachedValue:
-    value: Any
-    expires_at: float  # time.monotonic()
-
-class RegisterCache:
-    def __init__(self):
-        self._cache: dict[int, CachedValue] = {}
-
-    def get(self, register: int) -> Any | None:
-        if register in self._cache:
-            cached = self._cache[register]
-            if time.monotonic() < cached.expires_at:
-                return cached.value
-            del self._cache[register]
-        return None
-
-    def set(self, register: int, value: Any, ttl_seconds: float):
-        self._cache[register] = CachedValue(
-            value=value,
-            expires_at=time.monotonic() + ttl_seconds
-        )
-```
-
-**Configuration per sensor:**
-```python
-{
-    "name": "Firmware Version",
-    "register": ["13249"],
-    "cache_ttl": 86400,  # Cache for 24 hours
-}
-```
-
----
-
-### 11. ModbusController Usage Documentation
+### 10. ModbusController Usage Documentation
 
 **Category:** Documentation
 **Impact:** Low | **Effort:** Medium
@@ -357,6 +312,7 @@ Move items here when done, with date and commit reference:
 - [x] 2025-12-29 (e7cb90e) - Write queue API returns actual result via Future
 - [x] 2025-12-29 (044a0a5) - Circuit breaker pattern for connection management
 - [x] 2025-12-29 (8e6743c) - Specific exception handling with pymodbus-specific exceptions
+- [x] 2025-12-29 (3a8bb69) - TTL-based register caching for slow-changing values
 ```
 
 ---
