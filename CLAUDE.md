@@ -70,7 +70,7 @@ After each fix commit, add an entry to `CHANGELOG.md` under the `[Unreleased]` s
 ## [Unreleased]
 
 ### Fixed
-- **Brief description** - Detailed explanation of what was broken and how it was fixed. Include file names and the root cause.
+- **Brief description** (`file.py`, `abc1234`) - Detailed explanation of what was broken and how it was fixed. Include file names and the root cause.
 ```
 
 **Why this matters:**
@@ -84,10 +84,11 @@ After each fix commit, add an entry to `CHANGELOG.md` under the `[Unreleased]` s
 2. Why it was broken (the root cause)
 3. How it was fixed (the solution)
 4. Which files were affected
+5. **The commit identifier** (short hash, e.g., `abc1234`)
 
 Example:
 ```markdown
-- **Signed integer handling for single registers** - Single-register values with `signed: true` were displayed as large positive numbers instead of negative values (e.g., -5°C showed as 6553.1°C). Root cause: `SungrowBaseSensor` accepted but never used the `signed` parameter. Fixed by storing the attribute and applying U16→S16 conversion in `_convert_raw_value()`. Affects `sensors/sungrow_base_sensor.py`.
+- **Signed integer handling for single registers** (`sensors/sungrow_base_sensor.py`, `a1b2c3d`) - Single-register values with `signed: true` were displayed as large positive numbers instead of negative values (e.g., -5°C showed as 6553.1°C). Root cause: `SungrowBaseSensor` accepted but never used the `signed` parameter. Fixed by storing the attribute and applying U16→S16 conversion in `_convert_raw_value()`.
 ```
 
 ### Testing Guidelines
