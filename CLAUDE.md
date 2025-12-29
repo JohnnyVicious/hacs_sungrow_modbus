@@ -66,6 +66,24 @@ When fixing issues:
 
 **Ignored/Deferred Issues:** If you find an issue but decide NOT to fix it, add it to the "Ignored/Deferred Issues" section with a clear reason. This prevents future reviewers from re-discovering and re-evaluating the same issues.
 
+### Future Improvements (TODO.md)
+
+**TODO.md tracks potential enhancements** - not bugs, but improvements identified during code review. These are prioritized by impact and effort.
+
+When identifying potential improvements:
+1. Add them to TODO.md with detailed descriptions
+2. Include: category, impact, effort, current code, suggested fix
+3. Reference specific file locations and line numbers
+
+When implementing improvements:
+1. Move the completed item to the "Completed Items" section with date and commit hash
+2. Update CHANGELOG.md with the improvement
+
+**Priority levels:**
+- **High**: Reliability/security improvements worth implementing soon
+- **Medium**: Performance or maintainability wins with reasonable effort
+- **Low**: Nice-to-have enhancements for future development cycles
+
 ### Code Review Guidelines
 
 **ALWAYS consult CHANGELOG.md before proposing fixes.** The changelog documents all historical fixes with root causes and solutions. This prevents:
@@ -338,3 +356,12 @@ Sensors are defined in `sensor_data/hybrid_sensors.py` as groups:
 
 - `example-sungrow/`: Working YAML-based Sungrow integration with modbus register definitions
 - `example-solax-modbus/`: Parent project documentation
+
+## Project Documentation
+
+| File | Purpose |
+|------|---------|
+| `CHANGELOG.md` | Version history with detailed fix descriptions |
+| `ISSUES.md` | Known bugs and technical debt requiring fixes |
+| `TODO.md` | Future improvements prioritized by impact/effort |
+| `CLAUDE.md` | Development guidelines (this file) |
