@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.7] - 2025-12-29
+
+### Added
+
+- **1-hour cache TTL for hardware spec sensors** - Applied TTL caching to BDC Rated Power and Battery Capacity sensors. These are hardware specifications that only change if physical equipment is modified. Energy counters intentionally NOT cached as they're used by the HA Energy Dashboard.
+
 ## [0.3.6] - 2025-12-29
 
 ### Added
