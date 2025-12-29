@@ -14,45 +14,7 @@ This document tracks remaining issues identified during code review that have no
 
 ## Important Issues
 
-### 1. Derived Sensor Mutates Controller Private Attributes
-
-**Severity:** Important
-**File:** `custom_components/sungrow_modbus/sensors/sungrow_derived_sensor.py`
-**Lines:** 206-207
-
-**Symptom:** Derived sensor directly mutates private attributes (`_sw_version` and `_model`) on the controller object.
-
-**Current Code:**
-```python
-if REGISTER_PROTOCOL_VERSION in self._register:
-    protocol_version, model_description = decode_inverter_model(new_value)
-    self.base_sensor.controller._sw_version = protocol_version  # Direct mutation!
-    self.base_sensor.controller._model = model_description      # Direct mutation!
-```
-
-**Root Cause:** Violates encapsulation by directly accessing controller internals. Creates tight coupling that will break silently if controller implementation changes.
-
-**Suggested Fix:**
-```python
-# Add setter methods to ModbusController:
-def set_sw_version(self, version: str) -> None:
-    self._sw_version = version
-
-def set_model(self, model: str) -> None:
-    self._model = model
-
-# Then in derived sensor:
-self.base_sensor.controller.set_sw_version(protocol_version)
-self.base_sensor.controller.set_model(model_description)
-```
-
-**Impact:** Medium - code smell that complicates maintenance and debugging.
-
-**Note:** v0.2.0 fixed the same pattern for `_data_received`/`_sensor_groups` in DataRetrieval. This is the same issue with different attributes (`_sw_version`/`_model`).
-
----
-
-### 2. Service Handler Write Result Discarded
+### 1. Service Handler Write Result Discarded
 
 **Severity:** Important
 **File:** `custom_components/sungrow_modbus/__init__.py`
@@ -276,10 +238,9 @@ When adding new issues, use this format:
 
 ## Summary
 
-**2 Important issues** remaining (2025-12-29):
+**1 Important issue** remaining (2025-12-29):
 
-1. Derived sensor mutates controller privates - encapsulation violation
-2. Service handler discards write results - no failure feedback
+1. Service handler discards write results - no failure feedback
 
 **4 Minor issues** remaining:
 
@@ -289,6 +250,7 @@ When adding new issues, use this format:
 4. Hardcoded timeout values
 
 **Resolved issues (see CHANGELOG.md):**
+- Derived sensor mutates controller privates - FIXED in [Unreleased]
 - Clock drift counters not namespaced - FIXED in [Unreleased]
 - Connect return value ignored - FIXED in [Unreleased]
 - Number entity fire-and-forget writes - FIXED in [Unreleased]

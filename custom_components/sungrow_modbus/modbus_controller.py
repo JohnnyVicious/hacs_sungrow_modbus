@@ -524,6 +524,14 @@ class ModbusController:
         """Returns the software version of the inverter."""
         return self._sw_version
 
+    def set_sw_version(self, version: str) -> None:
+        """Set the software/protocol version of the inverter."""
+        self._sw_version = version
+
+    def set_model(self, model: str) -> None:
+        """Set the model description of the inverter."""
+        self._model = model
+
     @property
     def sensor_groups(self):
         """Returns the list of sensor groups."""

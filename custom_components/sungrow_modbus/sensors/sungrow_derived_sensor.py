@@ -203,8 +203,8 @@ class SungrowDerivedSensor(RestoreSensor, SensorEntity):
             # set after
             if REGISTER_PROTOCOL_VERSION in self._register:
                 protocol_version, model_description = decode_inverter_model(new_value)
-                self.base_sensor.controller._sw_version = protocol_version
-                self.base_sensor.controller._model = model_description
+                self.base_sensor.controller.set_sw_version(protocol_version)
+                self.base_sensor.controller.set_model(model_description)
                 new_value = model_description + f"(Protocol {protocol_version})"
 
             # Update state if valid value exists
