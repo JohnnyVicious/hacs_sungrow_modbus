@@ -1091,6 +1091,7 @@ hybrid_sensors = [
     {
         "register_start": 13249,
         "poll_speed": PollSpeed.ONCE,
+        "cache_ttl": 86400,  # 24 hours - firmware rarely changes
         "entities": [
             {
                 "name": "Inverter Firmware Version",
@@ -1120,6 +1121,7 @@ hybrid_sensors = [
     {
         "register_start": 13264,
         "poll_speed": PollSpeed.ONCE,
+        "cache_ttl": 86400,  # 24 hours - firmware rarely changes
         "entities": [
             {
                 "name": "Communication Module Firmware Version",
@@ -1149,6 +1151,7 @@ hybrid_sensors = [
     {
         "register_start": 13279,
         "poll_speed": PollSpeed.ONCE,
+        "cache_ttl": 86400,  # 24 hours - firmware rarely changes
         "feature_requirement": [InverterFeature.BATTERY],
         "entities": [
             {
