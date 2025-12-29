@@ -319,6 +319,7 @@ class TestNumberEntityWriteValidation:
         """Create a SungrowNumberEntity for testing."""
         hass = create_mock_hass()
         controller = create_mock_controller()
+        controller.async_write_holding_register = AsyncMock(return_value=MagicMock())
 
         # Create a mock base sensor with all required attributes
         sensor = MagicMock()
@@ -342,71 +343,74 @@ class TestNumberEntityWriteValidation:
         entity = SungrowNumberEntity(hass, sensor)
         return entity
 
-    def test_valid_write_succeeds(self):
+    @pytest.mark.asyncio
+    async def test_valid_write_succeeds(self):
         """Write within bounds should succeed."""
         entity = self.create_number_entity(min_value=0, max_value=100)
-        entity.schedule_update_ha_state = MagicMock()
+        entity.async_write_ha_state = MagicMock()
         # Entity starts at default=50, so write a different valid value
-        entity.set_native_value(75)
+        await entity.async_set_native_value(75)
         # Controller write should have been called
-        assert entity._hass.create_task.called
-        close_create_task_coroutine(entity._hass)
+        entity.base_sensor.controller.async_write_holding_register.assert_called_once()
 
-    def test_write_at_min_boundary_succeeds(self):
+    @pytest.mark.asyncio
+    async def test_write_at_min_boundary_succeeds(self):
         """Write exactly at min boundary should succeed."""
         entity = self.create_number_entity(min_value=0, max_value=100)
-        entity.schedule_update_ha_state = MagicMock()
+        entity.async_write_ha_state = MagicMock()
         # Entity starts at default=50, so 0 is different
-        entity.set_native_value(0)
-        assert entity._hass.create_task.called
-        close_create_task_coroutine(entity._hass)
+        await entity.async_set_native_value(0)
+        entity.base_sensor.controller.async_write_holding_register.assert_called_once()
 
-    def test_write_at_max_boundary_succeeds(self):
+    @pytest.mark.asyncio
+    async def test_write_at_max_boundary_succeeds(self):
         """Write exactly at max boundary should succeed."""
         entity = self.create_number_entity(min_value=0, max_value=100)
-        entity.schedule_update_ha_state = MagicMock()
+        entity.async_write_ha_state = MagicMock()
         # Entity starts at default=50, so 100 is different
-        entity.set_native_value(100)
-        assert entity._hass.create_task.called
-        close_create_task_coroutine(entity._hass)
+        await entity.async_set_native_value(100)
+        entity.base_sensor.controller.async_write_holding_register.assert_called_once()
 
-    def test_write_below_minimum_raises_error(self):
+    @pytest.mark.asyncio
+    async def test_write_below_minimum_raises_error(self):
         """Write below min should raise HomeAssistantError."""
         entity = self.create_number_entity(min_value=0, max_value=100)
         with pytest.raises(HomeAssistantError, match="below minimum"):
-            entity.set_native_value(-5)
+            await entity.async_set_native_value(-5)
 
-    def test_write_above_maximum_raises_error(self):
+    @pytest.mark.asyncio
+    async def test_write_above_maximum_raises_error(self):
         """Write above max should raise HomeAssistantError."""
         entity = self.create_number_entity(min_value=0, max_value=100)
         with pytest.raises(HomeAssistantError, match="above maximum"):
-            entity.set_native_value(150)
+            await entity.async_set_native_value(150)
 
-    def test_write_no_min_bound_allows_negative(self):
+    @pytest.mark.asyncio
+    async def test_write_no_min_bound_allows_negative(self):
         """When min_value is None, negative values should be allowed."""
         entity = self.create_number_entity(min_value=None, max_value=100)
-        entity.schedule_update_ha_state = MagicMock()
+        entity.async_write_ha_state = MagicMock()
         # Entity starts at default=50, so -50 is different
-        entity.set_native_value(-50)
-        assert entity._hass.create_task.called
-        close_create_task_coroutine(entity._hass)
+        await entity.async_set_native_value(-50)
+        entity.base_sensor.controller.async_write_holding_register.assert_called_once()
 
-    def test_write_no_max_bound_allows_large(self):
+    @pytest.mark.asyncio
+    async def test_write_no_max_bound_allows_large(self):
         """When max_value is None, large values should be allowed."""
         entity = self.create_number_entity(min_value=0, max_value=None)
-        entity.schedule_update_ha_state = MagicMock()
+        entity.async_write_ha_state = MagicMock()
         # Entity starts at default=50, so 99999 is different
-        entity.set_native_value(99999)
-        assert entity._hass.create_task.called
-        close_create_task_coroutine(entity._hass)
+        await entity.async_set_native_value(99999)
+        entity.base_sensor.controller.async_write_holding_register.assert_called_once()
 
-    def test_write_same_value_no_action(self):
+    @pytest.mark.asyncio
+    async def test_write_same_value_no_action(self):
         """Writing the same value should not trigger validation or write."""
         entity = self.create_number_entity(min_value=0, max_value=100)
         entity._attr_native_value = 50
-        entity.set_native_value(50)  # Same as current
-        # create_task should NOT be called (early return)
-        assert not entity._hass.create_task.called
+        await entity.async_set_native_value(50)  # Same as current
+        # Controller write should NOT be called (early return)
+        entity.base_sensor.controller.async_write_holding_register.assert_not_called()
 
 
 class TestSelectEntityValidation:

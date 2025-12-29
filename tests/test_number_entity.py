@@ -219,30 +219,31 @@ class TestSungrowNumberEntity:
 
         assert entity._write_register == 33000
 
-    def test_set_native_value_writes_to_register(self):
-        """Test set_native_value writes correct value to Modbus register."""
+    @pytest.mark.asyncio
+    async def test_set_native_value_writes_to_register(self):
+        """Test async_set_native_value writes correct value to Modbus register."""
         hass = MagicMock()
         hass.data = {DOMAIN: {VALUES: {}}}
-        hass.create_task = MagicMock()
         controller = create_mock_controller()
+        controller.async_write_holding_register = AsyncMock(return_value=MagicMock())
         base_sensor = create_mock_base_sensor(registers=[33000], multiplier=1, controller=controller)
 
         entity = SungrowNumberEntity(hass, base_sensor)
-        entity.schedule_update_ha_state = MagicMock()
+        entity.async_write_ha_state = MagicMock()
         entity._attr_native_value = 50
 
-        entity.set_native_value(100)
+        await entity.async_set_native_value(100)
 
-        hass.create_task.assert_called_once()
+        controller.async_write_holding_register.assert_called_once_with(33000, 100)
         assert entity._attr_native_value == 100
-        close_create_task_coroutine(hass)
 
-    def test_set_native_value_applies_multiplier(self):
-        """Test set_native_value divides by multiplier before writing."""
+    @pytest.mark.asyncio
+    async def test_set_native_value_applies_multiplier(self):
+        """Test async_set_native_value divides by multiplier before writing."""
         hass = MagicMock()
         hass.data = {DOMAIN: {VALUES: {}}}
-        hass.create_task = MagicMock()
         controller = create_mock_controller()
+        controller.async_write_holding_register = AsyncMock(return_value=MagicMock())
         base_sensor = create_mock_base_sensor(
             registers=[33000],
             multiplier=0.1,  # Values displayed as 10x register value
@@ -250,46 +251,50 @@ class TestSungrowNumberEntity:
         )
 
         entity = SungrowNumberEntity(hass, base_sensor)
-        entity.schedule_update_ha_state = MagicMock()
+        entity.async_write_ha_state = MagicMock()
         entity._attr_native_value = 50
 
         # Setting value 100.0, should write 1000 to register (100 / 0.1)
-        entity.set_native_value(100.0)
+        await entity.async_set_native_value(100.0)
 
-        hass.create_task.assert_called_once()
-        close_create_task_coroutine(hass)
+        controller.async_write_holding_register.assert_called_once_with(33000, 1000)
 
-    def test_set_native_value_no_write_when_unchanged(self):
-        """Test set_native_value does nothing when value is unchanged."""
+    @pytest.mark.asyncio
+    async def test_set_native_value_no_write_when_unchanged(self):
+        """Test async_set_native_value does nothing when value is unchanged."""
         hass = MagicMock()
         hass.data = {DOMAIN: {VALUES: {}}}
-        hass.create_task = MagicMock()
-        base_sensor = create_mock_base_sensor()
+        controller = create_mock_controller()
+        controller.async_write_holding_register = AsyncMock(return_value=MagicMock())
+        base_sensor = create_mock_base_sensor(controller=controller)
 
         entity = SungrowNumberEntity(hass, base_sensor)
         entity._attr_native_value = 100
 
-        entity.set_native_value(100)  # Same value
+        await entity.async_set_native_value(100)  # Same value
 
-        hass.create_task.assert_not_called()
+        controller.async_write_holding_register.assert_not_called()
 
-    def test_set_native_value_no_write_when_no_write_register(self):
-        """Test set_native_value does nothing when no write register."""
+    @pytest.mark.asyncio
+    async def test_set_native_value_no_write_when_no_write_register(self):
+        """Test async_set_native_value does nothing when no write register."""
         hass = MagicMock()
         hass.data = {DOMAIN: {VALUES: {}}}
-        hass.create_task = MagicMock()
+        controller = create_mock_controller()
+        controller.async_write_holding_register = AsyncMock(return_value=MagicMock())
         base_sensor = create_mock_base_sensor(
             registers=[33000, 33001],  # Multi-register without explicit write_register
             write_register=None,
+            controller=controller,
         )
 
         entity = SungrowNumberEntity(hass, base_sensor)
         entity._write_register = None  # Explicitly None
         entity._attr_native_value = 50
 
-        entity.set_native_value(100)
+        await entity.async_set_native_value(100)
 
-        hass.create_task.assert_not_called()
+        controller.async_write_holding_register.assert_not_called()
 
     def test_handle_modbus_update_updates_value(self):
         """Test handle_modbus_update updates entity value on register change."""
@@ -451,20 +456,20 @@ class TestNumberEntityLimits:
         assert entity._attr_step == 0.5
         assert entity._attr_native_step == 0.5
 
-    def test_set_value_rounds_to_step(self):
-        """Test set_native_value rounds value appropriately."""
+    @pytest.mark.asyncio
+    async def test_set_value_rounds_to_step(self):
+        """Test async_set_native_value rounds value appropriately."""
         hass = MagicMock()
         hass.data = {DOMAIN: {VALUES: {}}}
-        hass.create_task = MagicMock()
         controller = create_mock_controller()
+        controller.async_write_holding_register = AsyncMock(return_value=MagicMock())
         base_sensor = create_mock_base_sensor(multiplier=1, controller=controller)
 
         entity = SungrowNumberEntity(hass, base_sensor)
-        entity.schedule_update_ha_state = MagicMock()
+        entity.async_write_ha_state = MagicMock()
         entity._attr_native_value = 0
 
-        # Value should be written as integer
-        entity.set_native_value(50.7)
+        # Value should be written as integer (rounded)
+        await entity.async_set_native_value(50.7)
 
-        hass.create_task.assert_called_once()
-        close_create_task_coroutine(hass)
+        controller.async_write_holding_register.assert_called_once_with(33000, 51)

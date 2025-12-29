@@ -41,6 +41,7 @@ async def test_sungrow_number_entity(hass, mock_base_sensor, mock_controller):
 
     # SungrowNumberEntity takes (hass, sensor: SungrowBaseSensor)
     print(f"DEBUG: Input Hass={hass}")
+    mock_controller.async_write_holding_register = AsyncMock(return_value=MagicMock())
     entity = SungrowNumberEntity(hass, mock_base_sensor)
 
     # Check attributes
@@ -50,10 +51,9 @@ async def test_sungrow_number_entity(hass, mock_base_sensor, mock_controller):
     assert entity.native_step == 1
     assert entity.native_unit_of_measurement == "%"
 
-    # Test setting value
-    entity.schedule_update_ha_state = MagicMock()
-    entity.set_native_value(60)
-    await hass.async_block_till_done()
+    # Test setting value (now async)
+    entity.async_write_ha_state = MagicMock()
+    await entity.async_set_native_value(60)
     mock_controller.async_write_holding_register.assert_called_with(100, 60)
 
 
@@ -78,29 +78,13 @@ async def test_sungrow_number_entity_updates(hass, mock_controller):
     sensor.unit_of_measurement = "%"
     sensor.state_class = "measurement"
 
+    mock_controller.async_write_holding_register = AsyncMock(return_value=MagicMock())
     entity = SungrowNumberEntity(hass, sensor)
     assert entity._hass is not None
 
-    # Simulate modbus update
-    # SungrowNumberEntity listens to bus DOMAIN event.
-    # We can invoke handle_modbus_update directly to test logic.
-    event = MagicMock()
-    event.data = {
-        "register": 100,
-        "controller": str(mock_controller),  # Logic uses str(controller) comparison?
-        # helpers.is_correct_controller checks this.
-        # We need mock_controller to match expected.
-        # Let's mock is_correct_controller checks for simplicity or mock attributes properly.
-        # But handle_modbus_update does:
-        # updated_controller = str(event.data.get(CONTROLLER))
-        # if not is_correct_controller(self.base_sensor.controller, ...): return
-    }
-    # It allows test logic to verify update handling.
-    # But simpler to test set_native_value which covers WRITE logic (missing in coverage).
-    # Coverage report showed missing lines in write logic mostly.
-
-    entity.schedule_update_ha_state = MagicMock()
-    entity.set_native_value(55)
-    await hass.async_block_till_done()
-    # write_register is None, so return.
+    # Test async_set_native_value with multi-register (no write_register set)
+    entity._write_register = None  # Ensure no write register
+    entity.async_write_ha_state = MagicMock()
+    await entity.async_set_native_value(55)
+    # write_register is None, so no write should occur
     assert not mock_controller.async_write_holding_register.called
