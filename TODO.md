@@ -69,93 +69,9 @@ except Exception as e:
 
 ---
 
-### 2. Circuit Breaker Pattern
-
-**Category:** Reliability
-**Impact:** High | **Effort:** Medium
-**Codex Review:** VALID
-
-**Problem:**
-Connection retry logic in `data_retrieval.py:121-138` retries up to 20 times with exponential backoff, but there's no circuit breaker. A permanently offline inverter triggers retries for 10+ minutes every time `check_connection` is called. The periodic 2-minute scheduler will trigger another full 20-attempt cycle with no stateful backoff or open/half-open gating.
-
-**Affected Files:**
-- `data_retrieval.py:121-145` - Connection check with exponential backoff (`RETRY_MAX_ATTEMPTS=20`)
-- `modbus_controller.py:460-483` - Reconnection logic (increments `connect_failures` but doesn't stop future attempts)
-
-**Current Behavior:**
-```
-Inverter goes offline
-  → 20 retries over ~10 minutes
-  → Eventually gives up
-  → Next poll cycle starts (2 minutes later)
-  → 20 more retries over ~10 minutes
-  → Repeat forever (wasting resources, flooding logs)
-```
-
-**Suggested Implementation:**
-```python
-from enum import Enum
-from dataclasses import dataclass
-from datetime import datetime, timedelta
-
-class CircuitState(Enum):
-    CLOSED = "closed"      # Normal operation
-    OPEN = "open"          # Failing, reject requests
-    HALF_OPEN = "half_open"  # Testing if recovered
-
-@dataclass
-class CircuitBreaker:
-    failure_threshold: int = 5
-    recovery_timeout: timedelta = timedelta(minutes=5)
-
-    state: CircuitState = CircuitState.CLOSED
-    failure_count: int = 0
-    last_failure_time: datetime | None = None
-
-    def record_success(self) -> None:
-        self.failure_count = 0
-        self.state = CircuitState.CLOSED
-
-    def record_failure(self) -> None:
-        self.failure_count += 1
-        self.last_failure_time = datetime.now()
-        if self.failure_count >= self.failure_threshold:
-            self.state = CircuitState.OPEN
-            _LOGGER.warning(
-                "Circuit breaker OPEN after %d failures. "
-                "Will retry in %s",
-                self.failure_count,
-                self.recovery_timeout
-            )
-
-    def can_execute(self) -> bool:
-        if self.state == CircuitState.CLOSED:
-            return True
-        if self.state == CircuitState.OPEN:
-            if datetime.now() - self.last_failure_time > self.recovery_timeout:
-                self.state = CircuitState.HALF_OPEN
-                return True
-            return False
-        return True  # HALF_OPEN allows one attempt
-```
-
-**Integration Points:**
-- Add `CircuitBreaker` instance to `ModbusController`
-- Check `can_execute()` before attempting connection
-- Call `record_success()` / `record_failure()` based on results
-- Expose circuit state as a diagnostic sensor
-
-**Benefits:**
-- Reduces log spam during extended outages
-- Saves CPU/network resources
-- Provides clear "inverter offline" state to users
-- Automatic recovery when inverter comes back
-
----
-
 ## Medium Priority
 
-### 3. Verbose Debug Logging Mode
+### 2. Verbose Debug Logging Mode (was #3)
 
 **Category:** Features
 **Impact:** Medium | **Effort:** Medium
@@ -496,6 +412,7 @@ Move items here when done, with date and commit reference:
 
 ```
 - [x] 2025-12-29 (e7cb90e) - Write queue API returns actual result via Future
+- [x] 2025-12-29 (044a0a5) - Circuit breaker pattern for connection management
 ```
 
 ---

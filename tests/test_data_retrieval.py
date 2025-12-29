@@ -26,6 +26,12 @@ class TestDataRetrieval:
         self.controller.connected = MagicMock(return_value=True)
         self.controller.poll_speed = {PollSpeed.FAST: 5, PollSpeed.NORMAL: 15, PollSpeed.SLOW: 30}
 
+        # Mock the circuit breaker
+        self.controller.circuit_breaker = MagicMock()
+        self.controller.circuit_breaker.is_open = False
+        self.controller.circuit_breaker.can_attempt = MagicMock(return_value=True)
+        self.controller.circuit_breaker.time_until_retry = None
+
         # Create sensor groups for testing
         self.fast_group = MagicMock(spec=SungrowSensorGroup)
         self.fast_group.poll_speed = PollSpeed.FAST

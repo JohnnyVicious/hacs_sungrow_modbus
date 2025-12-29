@@ -1,7 +1,9 @@
 import asyncio
 import logging
 import time
-from datetime import UTC, datetime
+from dataclasses import dataclass, field
+from datetime import UTC, datetime, timedelta
+from enum import Enum
 
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.template import is_number
@@ -38,6 +40,134 @@ QUEUE_EMPTY_SLEEP = 0.2  # Seconds to wait between queue checks when queue is em
 # overwhelming the device. Write operations use longer delays for safety.
 INTER_FRAME_DELAY_READ_MS = 50
 INTER_FRAME_DELAY_WRITE_MS = 100
+
+# Circuit breaker configuration
+# Prevents repeated connection attempts to offline inverters
+CIRCUIT_BREAKER_FAILURE_THRESHOLD = 5  # Open circuit after this many consecutive failures
+CIRCUIT_BREAKER_RECOVERY_MINUTES = 5  # Wait this long before attempting recovery
+
+
+class CircuitState(Enum):
+    """States for the circuit breaker pattern."""
+
+    CLOSED = "closed"  # Normal operation, connections allowed
+    OPEN = "open"  # Circuit tripped, rejecting connection attempts
+    HALF_OPEN = "half_open"  # Testing if service has recovered
+
+
+@dataclass
+class CircuitBreaker:
+    """Circuit breaker to prevent repeated connection attempts to offline devices.
+
+    The circuit breaker has three states:
+    - CLOSED: Normal operation, all connection attempts are allowed
+    - OPEN: Circuit is tripped after too many failures, rejecting attempts
+    - HALF_OPEN: After recovery timeout, allows one attempt to test recovery
+
+    Usage:
+        breaker = CircuitBreaker()
+
+        if breaker.can_attempt():
+            success = await try_connect()
+            if success:
+                breaker.record_success()
+            else:
+                breaker.record_failure()
+        else:
+            # Skip connection attempt, circuit is open
+            pass
+    """
+
+    failure_threshold: int = CIRCUIT_BREAKER_FAILURE_THRESHOLD
+    recovery_timeout: timedelta = field(default_factory=lambda: timedelta(minutes=CIRCUIT_BREAKER_RECOVERY_MINUTES))
+
+    state: CircuitState = field(default=CircuitState.CLOSED)
+    failure_count: int = field(default=0)
+    last_failure_time: datetime | None = field(default=None)
+    _logger_prefix: str = field(default="")
+
+    def record_success(self) -> None:
+        """Record a successful connection attempt.
+
+        Resets the circuit breaker to CLOSED state and clears failure count.
+        """
+        if self.state != CircuitState.CLOSED:
+            _LOGGER.info(
+                "%sCircuit breaker CLOSED after successful connection",
+                self._logger_prefix,
+            )
+        self.failure_count = 0
+        self.state = CircuitState.CLOSED
+        self.last_failure_time = None
+
+    def record_failure(self) -> None:
+        """Record a failed connection attempt.
+
+        Increments failure count and opens the circuit if threshold is exceeded.
+        """
+        self.failure_count += 1
+        self.last_failure_time = datetime.now(UTC)
+
+        if self.state == CircuitState.HALF_OPEN:
+            # Failed during recovery test, go back to OPEN
+            self.state = CircuitState.OPEN
+            _LOGGER.warning(
+                "%sCircuit breaker OPEN (recovery attempt failed). Will retry in %s",
+                self._logger_prefix,
+                self.recovery_timeout,
+            )
+        elif self.failure_count >= self.failure_threshold and self.state == CircuitState.CLOSED:
+            self.state = CircuitState.OPEN
+            _LOGGER.warning(
+                "%sCircuit breaker OPEN after %d consecutive failures. Will retry in %s",
+                self._logger_prefix,
+                self.failure_count,
+                self.recovery_timeout,
+            )
+
+    def can_attempt(self) -> bool:
+        """Check if a connection attempt is allowed.
+
+        Returns:
+            True if an attempt should be made, False if circuit is open.
+        """
+        if self.state == CircuitState.CLOSED:
+            return True
+
+        if self.state == CircuitState.OPEN:
+            # Check if recovery timeout has passed
+            if self.last_failure_time is not None:
+                elapsed = datetime.now(UTC) - self.last_failure_time
+                if elapsed >= self.recovery_timeout:
+                    self.state = CircuitState.HALF_OPEN
+                    _LOGGER.info(
+                        "%sCircuit breaker HALF_OPEN, attempting recovery",
+                        self._logger_prefix,
+                    )
+                    return True
+            return False
+
+        # HALF_OPEN state allows one attempt
+        return True
+
+    @property
+    def is_open(self) -> bool:
+        """Check if the circuit is currently open (rejecting attempts)."""
+        return self.state == CircuitState.OPEN and not self.can_attempt()
+
+    @property
+    def time_until_retry(self) -> timedelta | None:
+        """Get the time remaining until next retry is allowed.
+
+        Returns:
+            timedelta if circuit is open, None otherwise.
+        """
+        if self.state != CircuitState.OPEN or self.last_failure_time is None:
+            return None
+
+        elapsed = datetime.now(UTC) - self.last_failure_time
+        remaining = self.recovery_timeout - elapsed
+        return remaining if remaining > timedelta(0) else None
 
 
 class ModbusController:
@@ -138,6 +268,11 @@ class ModbusController:
 
         # Controller key for cache namespacing (includes port/path + slave)
         self.controller_key = f"{self.connection_id}_{self.device_id}"
+
+        # Circuit breaker for connection management
+        self.circuit_breaker = CircuitBreaker(
+            _logger_prefix=f"({self.host}.{self.device_id}) ",
+        )
 
     async def process_write_queue(self):
         """Process queued Modbus write requests sequentially.
@@ -448,8 +583,13 @@ class ModbusController:
     async def connect(self):
         """Establishes a connection to the Modbus device.
 
+        Uses circuit breaker pattern to prevent repeated connection attempts
+        to offline devices. When the circuit is open, connection attempts are
+        rejected until the recovery timeout expires.
+
         Returns:
             bool: True if the connection was successful or already established, False otherwise.
+            Returns False immediately if circuit breaker is open.
 
         Raises:
             Exception: If there is an error during the connection attempt.
@@ -457,11 +597,22 @@ class ModbusController:
         if self.connected():
             return True
 
+        # Check circuit breaker before attempting connection
+        if not self.circuit_breaker.can_attempt():
+            remaining = self.circuit_breaker.time_until_retry
+            if remaining:
+                _LOGGER.debug(
+                    f"({self.host}.{self.device_id}) Connection blocked by circuit breaker. "
+                    f"Retry in {remaining.total_seconds():.0f}s"
+                )
+            return False
+
         try:
             await self.client.connect()
             if self.connected():
                 _LOGGER.info(f"({self.host}.{self.device_id}) Connected to Modbus device")
                 self.connect_failures = 0
+                self.circuit_breaker.record_success()
 
                 if self.serial_number is None:
                     _LOGGER.info(f"serial got from device: {self.serial_number}")
@@ -471,12 +622,14 @@ class ModbusController:
                 return True
             else:
                 self.connect_failures += 1
+                self.circuit_breaker.record_failure()
                 _LOGGER.debug(
                     f"({self.connection_id}.{self.device_id}) Connection attempt {self.connect_failures} failed"
                 )
                 return False
         except Exception as e:
             self.connect_failures += 1
+            self.circuit_breaker.record_failure()
             _LOGGER.debug(
                 f"({self.connection_id}.{self.device_id}) Connection error (attempt {self.connect_failures}): {e}"
             )

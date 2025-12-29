@@ -118,9 +118,27 @@ class DataRetrieval:
                     self.first_poll = False
                 return
 
+            # Check if circuit breaker is blocking connections
+            if self.controller.circuit_breaker.is_open:
+                remaining = self.controller.circuit_breaker.time_until_retry
+                if remaining:
+                    _LOGGER.debug(
+                        f"({self.controller.host}.{self.controller.slave}) Circuit breaker open, "
+                        f"skipping connection attempts. Retry in {remaining.total_seconds():.0f}s"
+                    )
+                return
+
             retry_delay = RETRY_DELAY_INITIAL
             retry_count = 0
             while not self.controller.connected() and retry_count < RETRY_MAX_ATTEMPTS:
+                # Check circuit breaker before each attempt (it may have opened during retries)
+                if not self.controller.circuit_breaker.can_attempt():
+                    _LOGGER.info(
+                        f"({self.controller.host}.{self.controller.slave}) Circuit breaker opened, "
+                        "stopping connection retries"
+                    )
+                    break
+
                 try:
                     if await self.controller.connect():
                         _LOGGER.info(
