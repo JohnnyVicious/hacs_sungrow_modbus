@@ -148,8 +148,13 @@ class DataRetrieval:
                     _LOGGER.debug(
                         f"({self.controller.host}.{self.controller.slave}) Modbus connection failed, retrying in {retry_delay:.2f} seconds..."
                     )
+                except asyncio.CancelledError:
+                    raise  # Never swallow cancellation
                 except Exception as e:
-                    _LOGGER.error(f"({self.controller.host}.{self.controller.slave}) Connection error: {e}")
+                    _LOGGER.error(
+                        f"({self.controller.host}.{self.controller.slave}) Connection error: {e}",
+                        exc_info=True,
+                    )
 
                 await asyncio.sleep(retry_delay)
                 retry_delay = min(retry_delay * 2, RETRY_DELAY_MAX)
@@ -368,6 +373,8 @@ class DataRetrieval:
 
                 total_duration = time.perf_counter() - total_start_time
                 _LOGGER.debug(f"{speed.name} update completed in {total_duration:.4f}s")
+        except asyncio.CancelledError:
+            raise  # Never swallow cancellation
         except Exception as e:
             _LOGGER.warning("Error during Modbus polling: %s", e, exc_info=True)
         finally:
@@ -445,5 +452,9 @@ class DataRetrieval:
                         data.get("soc", 0),
                         data.get("temperature", 0),
                     )
+            except asyncio.CancelledError:
+                raise  # Never swallow cancellation
             except Exception as e:
-                _LOGGER.warning("Failed to poll battery stack %d: %s", battery_controller.stack_index, e)
+                _LOGGER.warning(
+                    "Failed to poll battery stack %d: %s", battery_controller.stack_index, e, exc_info=True
+                )

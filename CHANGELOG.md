@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Circuit breaker pattern for connection management** (`modbus_controller.py`, `data_retrieval.py`) - Implemented circuit breaker to prevent repeated connection attempts to offline inverters. Previously, when an inverter went offline, the integration would retry up to 20 times with exponential backoff (~10 minutes), then repeat the entire cycle every 2 minutes indefinitely. This caused log spam and wasted resources. The circuit breaker opens after 5 consecutive connection failures and rejects further attempts for 5 minutes (configurable via `CIRCUIT_BREAKER_FAILURE_THRESHOLD` and `CIRCUIT_BREAKER_RECOVERY_MINUTES`). After the recovery timeout, it enters HALF_OPEN state allowing one test attempt. On success, the circuit closes; on failure, it reopens. Benefits: reduced log noise, lower CPU/network usage during outages, clear "offline" state for users, automatic recovery when the inverter comes back online. Added 15 unit tests for the CircuitBreaker class.
 
+### Changed
+
+- **Specific exception handling for Modbus operations** (`modbus_controller.py`, `battery_controller.py`, `data_retrieval.py`) - Replaced broad `except Exception` handlers with specific exception handling for pymodbus errors. Previously, all exceptions were caught and logged generically, masking pymodbus-specific errors like `ConnectionException` and making debugging harder. Additionally, `asyncio.CancelledError` was unintentionally swallowed, preventing proper task cancellation during shutdown. Now catches exceptions in this order: (1) `asyncio.CancelledError` - re-raised to allow proper cancellation, (2) `ConnectionException` - logged at WARNING level for network issues, (3) `ModbusException` - logged at ERROR level for protocol errors, (4) `OSError` - logged at DEBUG level for low-level network issues, (5) `Exception` - logged at ERROR level with `exc_info=True` for unexpected errors. Benefits: improved debuggability with clearer log messages, proper asyncio cancellation handling, and potential for targeted recovery strategies in the future.
+
 ## [0.3.4] - 2025-12-29
 
 ### Fixed

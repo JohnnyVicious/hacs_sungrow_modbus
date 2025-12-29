@@ -8,64 +8,7 @@ This document tracks potential improvements identified during code review. Items
 
 ## High Priority
 
-### 1. Specific Exception Handling
-
-**Category:** Reliability
-**Impact:** High | **Effort:** Medium
-**Codex Review:** VALID
-
-**Problem:**
-The codebase contains broad `except Exception as e:` handlers that swallow all exceptions without differentiated handling. This masks pymodbus-specific errors (like `ConnectionException`), makes debugging harder, and prevents targeted recovery strategies. Additionally, `asyncio.CancelledError` may be unintentionally caught.
-
-**Affected Files:**
-- `modbus_controller.py:216-254` - Single-write `_execute_write_holding_register`
-- `modbus_controller.py:269-305` - Multi-write operations
-- `modbus_controller.py:391-402`, `417-446` - Read helpers
-- `modbus_controller.py:460-483` - `connect()` method
-- `battery_controller.py:132-147` - Battery stack probe
-- `battery_controller.py:158-178` - `_read_registers`
-- `data_retrieval.py:330-355` - Polling loop (does log with `exc_info`)
-
-**Current Code:**
-```python
-# modbus_controller.py
-try:
-    result = await self._execute_write(register, value, multiple)
-except Exception as e:
-    _LOGGER.error("Write failed: %s", e)
-    result = None
-```
-
-**Suggested Fix:**
-```python
-from pymodbus.exceptions import ModbusException, ConnectionException
-
-try:
-    result = await self._execute_write(register, value, multiple)
-except asyncio.CancelledError:
-    raise  # Never swallow cancellation
-except ConnectionException as e:
-    _LOGGER.warning("Connection lost during write to %s: %s", register, e)
-    await self._handle_connection_loss()
-    result = None
-except ModbusException as e:
-    _LOGGER.error("Modbus error writing to %s: %s", register, e)
-    result = None
-except Exception as e:
-    _LOGGER.error("Unexpected error writing to %s: %s", register, e, exc_info=True)
-    result = None
-```
-
-**Benefits:**
-- Enables targeted recovery (reconnect on ConnectionException, retry on timeout)
-- Improves log clarity for users debugging issues
-- Prevents masking of unexpected exceptions that should bubble up
-- Properly handles asyncio cancellation
-
-**Implementation Notes:**
-- Review pymodbus exception hierarchy: `ModbusException` is base, `ConnectionException` for network issues
-- Keep a final `except Exception` only for truly unexpected errors, and log at ERROR level with `exc_info=True`
-- Consider creating a decorator for common exception handling patterns
+_No high priority items remaining._
 
 ---
 
@@ -413,6 +356,7 @@ Move items here when done, with date and commit reference:
 ```
 - [x] 2025-12-29 (e7cb90e) - Write queue API returns actual result via Future
 - [x] 2025-12-29 (044a0a5) - Circuit breaker pattern for connection management
+- [x] 2025-12-29 (c1a163e) - Specific exception handling with pymodbus-specific exceptions
 ```
 
 ---

@@ -9,12 +9,14 @@ Sungrow batteries communicate via separate Modbus slave addresses:
 These registers are only accessible via the direct LAN port, not through WiNet-S.
 """
 
+import asyncio
 import logging
 from dataclasses import dataclass, field
 from typing import Any
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
+from pymodbus.exceptions import ConnectionException, ModbusException
 
 from .const import BATTERY_SLAVE_BASE, DOMAIN, MANUFACTURER, MAX_BATTERY_STACKS
 from .modbus_controller import ModbusController
@@ -139,8 +141,20 @@ class BatteryController:
                 self.battery.available = True
                 _LOGGER.info("Battery stack %d detected on slave ID %d", self.stack_index, self.slave_id)
                 return True
+        except asyncio.CancelledError:
+            raise  # Never swallow cancellation
+        except ConnectionException as e:
+            _LOGGER.debug("Battery stack %d connection failed on slave ID %d: %s", self.stack_index, self.slave_id, e)
+        except ModbusException as e:
+            _LOGGER.debug("Battery stack %d Modbus error on slave ID %d: %s", self.stack_index, self.slave_id, e)
         except Exception as e:
-            _LOGGER.debug("Battery stack %d not found on slave ID %d: %s", self.stack_index, self.slave_id, e)
+            _LOGGER.warning(
+                "Battery stack %d unexpected error on slave ID %d: %s",
+                self.stack_index,
+                self.slave_id,
+                e,
+                exc_info=True,
+            )
 
         self._available = False
         self.battery.available = False
@@ -159,8 +173,16 @@ class BatteryController:
             if not self.inverter.client.connected:
                 try:
                     await self.inverter.client.connect()
+                except asyncio.CancelledError:
+                    raise  # Never swallow cancellation
+                except ConnectionException as e:
+                    _LOGGER.debug("Connection failed for battery read: %s", e)
+                    return None
+                except OSError as e:
+                    _LOGGER.debug("Network error connecting for battery read: %s", e)
+                    return None
                 except Exception as e:
-                    _LOGGER.error("Failed to connect for battery read: %s", e)
+                    _LOGGER.error("Unexpected error connecting for battery read: %s", e, exc_info=True)
                     return None
 
             try:
@@ -173,8 +195,18 @@ class BatteryController:
                     _LOGGER.debug("Error reading battery registers %d-%d: %s", address, address + count, result)
                     return None
                 return list(result.registers)
+            except asyncio.CancelledError:
+                raise  # Never swallow cancellation
+            except ConnectionException as e:
+                _LOGGER.warning("Connection lost reading battery registers %d-%d: %s", address, address + count, e)
+                return None
+            except ModbusException as e:
+                _LOGGER.debug("Modbus error reading battery registers %d-%d: %s", address, address + count, e)
+                return None
             except Exception as e:
-                _LOGGER.error("Exception reading battery registers %d-%d: %s", address, address + count, e)
+                _LOGGER.error(
+                    "Unexpected error reading battery registers %d-%d: %s", address, address + count, e, exc_info=True
+                )
                 return None
 
     async def read_status(self) -> dict[str, Any]:

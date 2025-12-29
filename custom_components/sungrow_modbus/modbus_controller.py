@@ -8,6 +8,7 @@ from enum import Enum
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.template import is_number
 from pymodbus.client import AsyncModbusSerialClient, AsyncModbusTcpClient
+from pymodbus.exceptions import ConnectionException, ModbusException
 
 from custom_components.sungrow_modbus.client_manager import ModbusClientManager
 from custom_components.sungrow_modbus.const import (
@@ -329,9 +330,14 @@ class ModbusController:
                     self.write_queue.task_done()
                 except asyncio.QueueEmpty:
                     break
+                except ConnectionException as e:
+                    _LOGGER.warning(f"({self.host}.{self.device_id}) Connection lost during shutdown write: {e}")
+                except ModbusException as e:
+                    _LOGGER.warning(f"({self.host}.{self.device_id}) Modbus error during shutdown write: {e}")
                 except Exception as e:
-                    _LOGGER.warning(
-                        f"({self.host}.{self.device_id}) Error processing queued write during shutdown: {e}"
+                    _LOGGER.error(
+                        f"({self.host}.{self.device_id}) Unexpected error during shutdown write: {e}",
+                        exc_info=True,
                     )
             raise  # Re-raise CancelledError for proper cleanup
 
@@ -384,8 +390,19 @@ class ModbusController:
                 )
 
                 return result
+        except asyncio.CancelledError:
+            raise  # Never swallow cancellation
+        except ConnectionException as e:
+            _LOGGER.warning(f"({self.host}.{self.device_id}) Connection lost writing register {register}: {e}")
+            return None
+        except ModbusException as e:
+            _LOGGER.error(f"({self.host}.{self.device_id}) Modbus error writing register {register}: {e}")
+            return None
         except Exception as e:
-            _LOGGER.error(f"Failed to write holding register {register}: {str(e)}")
+            _LOGGER.error(
+                f"({self.host}.{self.device_id}) Unexpected error writing register {register}: {e}",
+                exc_info=True,
+            )
             return None
 
     async def _execute_write_holding_registers(self, start_register, values):
@@ -433,9 +450,22 @@ class ModbusController:
                         },
                     )
                 return result
+        except asyncio.CancelledError:
+            raise  # Never swallow cancellation
+        except ConnectionException as e:
+            _LOGGER.warning(
+                f"({self.host}.{self.device_id}) Connection lost writing registers {start_register}-{start_register + len(values) - 1}: {e}"
+            )
+            return None
+        except ModbusException as e:
+            _LOGGER.error(
+                f"({self.host}.{self.device_id}) Modbus error writing registers {start_register}-{start_register + len(values) - 1}: {e}"
+            )
+            return None
         except Exception as e:
             _LOGGER.error(
-                f"({self.host}.{self.device_id}) Failed to write holding registers {start_register}-{start_register + len(values) - 1}: {str(e)}"
+                f"({self.host}.{self.device_id}) Unexpected error writing registers {start_register}-{start_register + len(values) - 1}: {e}",
+                exc_info=True,
             )
             return None
 
@@ -530,9 +560,22 @@ class ModbusController:
                 )
                 return None
             return await self._async_read_input_register_raw(register, count)
+        except asyncio.CancelledError:
+            raise  # Never swallow cancellation
+        except ConnectionException as e:
+            _LOGGER.warning(
+                f"({self.host}.{self.device_id}) Connection lost reading input registers {register}-{register + count - 1}: {e}"
+            )
+            return None
+        except ModbusException as e:
+            _LOGGER.error(
+                f"({self.host}.{self.device_id}) Modbus error reading input registers {register}-{register + count - 1}: {e}"
+            )
+            return None
         except Exception as e:
             _LOGGER.error(
-                f"({self.host}.{self.device_id}) Exception while reading input registers starting at {register} (count={count}): {str(e)}"
+                f"({self.host}.{self.device_id}) Unexpected error reading input registers {register}-{register + count - 1}: {e}",
+                exc_info=True,
             )
             return None
 
@@ -574,9 +617,22 @@ class ModbusController:
 
                 self._last_modbus_success = datetime.now(UTC)
                 return result.registers
+        except asyncio.CancelledError:
+            raise  # Never swallow cancellation
+        except ConnectionException as e:
+            _LOGGER.warning(
+                f"({self.host}.{self.device_id}) Connection lost reading holding registers {register}-{register + count - 1}: {e}"
+            )
+            return None
+        except ModbusException as e:
+            _LOGGER.error(
+                f"({self.host}.{self.device_id}) Modbus error reading holding registers {register}-{register + count - 1}: {e}"
+            )
+            return None
         except Exception as e:
             _LOGGER.error(
-                f"({self.host}.{self.device_id}) Exception while reading holding registers starting at {register} (count={count}): {str(e)}"
+                f"({self.host}.{self.device_id}) Unexpected error reading holding registers {register}-{register + count - 1}: {e}",
+                exc_info=True,
             )
             return None
 
@@ -627,11 +683,29 @@ class ModbusController:
                     f"({self.connection_id}.{self.device_id}) Connection attempt {self.connect_failures} failed"
                 )
                 return False
-        except Exception as e:
+        except asyncio.CancelledError:
+            raise  # Never swallow cancellation
+        except ConnectionException as e:
             self.connect_failures += 1
             self.circuit_breaker.record_failure()
             _LOGGER.debug(
-                f"({self.connection_id}.{self.device_id}) Connection error (attempt {self.connect_failures}): {e}"
+                f"({self.connection_id}.{self.device_id}) Connection failed (attempt {self.connect_failures}): {e}"
+            )
+            return False
+        except OSError as e:
+            # Network-level errors (connection refused, timeout, etc.)
+            self.connect_failures += 1
+            self.circuit_breaker.record_failure()
+            _LOGGER.debug(
+                f"({self.connection_id}.{self.device_id}) Network error (attempt {self.connect_failures}): {e}"
+            )
+            return False
+        except Exception as e:
+            self.connect_failures += 1
+            self.circuit_breaker.record_failure()
+            _LOGGER.warning(
+                f"({self.connection_id}.{self.device_id}) Unexpected connection error (attempt {self.connect_failures}): {e}",
+                exc_info=True,
             )
             return False
 
