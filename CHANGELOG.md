@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.4] - 2025-12-29
+
 ### Fixed
 
 - **Write queue API returns proper result** (`modbus_controller.py`) - The `async_write_holding_register` and `async_write_holding_registers` methods previously returned `None` immediately after queuing the write request (fire-and-forget pattern). Callers at `sungrow_number_sensor.py:159`, `sungrow_binary_sensor.py:171`, and `__init__.py:109` checked `if result is None` and raised `HomeAssistantError`, causing all entity writes to appear to fail even though the writes were successfully queued. Root cause: v0.3.2 fix added result checking in callers but didn't update the queue API to return actual results. Fixed by having the queue methods create an asyncio.Future, pass it through the queue, and await its resolution after the write completes. The `process_write_queue` method now sets the Future result with the actual write outcome. Tests were updated to mock the new 4-tuple queue format and resolve futures appropriately.
