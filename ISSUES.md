@@ -14,47 +14,7 @@ This document tracks remaining issues identified during code review that have no
 
 ## Important Issues
 
-### 1. AsyncModbus Client close() Not Awaited
-
-**Severity:** Important
-**File:** `custom_components/sungrow_modbus/client_manager.py`
-**Line:** 116
-
-**Symptom:** Potential socket/task leaks when releasing Modbus clients. May cause "unclosed transport" warnings or connection pool exhaustion.
-
-**Current Code:**
-```python
-def release_client(self, connection_id: str):
-    with self._clients_lock:
-        # ...
-        if self._clients[connection_id]["ref_count"] <= 0:
-            client = self._clients[connection_id]["client"]
-            if client.connected:
-                client.close()  # Should be awaited!
-            del self._clients[connection_id]
-```
-
-**Root Cause:** `AsyncModbusTcpClient.close()` and `AsyncModbusSerialClient.close()` are coroutines that need to be awaited. Calling without `await` leaves sockets/tasks open.
-
-**Suggested Fix:**
-```python
-async def release_client(self, connection_id: str):
-    # ... (make method async)
-    if client.connected:
-        await client.close()
-```
-
-Or if sync context is required:
-```python
-if client.connected:
-    asyncio.create_task(client.close())
-```
-
-**Impact:** Medium - can cause resource leaks over time, especially with frequent config reloads or multi-inverter setups.
-
----
-
-### 2. Clock Drift Counters Not Namespaced Per Controller
+### 1. Clock Drift Counters Not Namespaced Per Controller
 
 **Severity:** Important
 **File:** `custom_components/sungrow_modbus/helpers.py`
@@ -89,7 +49,7 @@ def clock_drift_test(hass, controller, hours, minutes, seconds):
 
 ---
 
-### 3. Derived Sensor Mutates Controller Private Attributes
+### 2. Derived Sensor Mutates Controller Private Attributes
 
 **Severity:** Important
 **File:** `custom_components/sungrow_modbus/sensors/sungrow_derived_sensor.py`
@@ -127,7 +87,7 @@ self.base_sensor.controller.set_model(model_description)
 
 ---
 
-### 4. Service Handler Write Result Discarded
+### 3. Service Handler Write Result Discarded
 
 **Severity:** Important
 **File:** `custom_components/sungrow_modbus/__init__.py`
@@ -282,6 +242,23 @@ Issues listed here were identified during code review but intentionally NOT fixe
 
 **Revisit if:** Performance profiling identifies this as a bottleneck, or if type guarantees are strengthened elsewhere.
 
+---
+
+### 3. AsyncModbus Client close() Not Awaited (False Positive)
+
+**File:** `custom_components/sungrow_modbus/client_manager.py`
+**Line:** 116
+
+**What was found:** Initial code review suggested `client.close()` should be awaited.
+
+**Why it was ignored:**
+- False positive - In pymodbus 3.x (version 3.11.4 in use), `close()` is synchronous, not a coroutine
+- Verified with `inspect.iscoroutinefunction(AsyncModbusTcpClient.close)` returns `False`
+- The current code correctly calls `client.close()` synchronously
+- No resource leaks occur with the current implementation
+
+**Revisit if:** pymodbus changes `close()` to be async in a future version.
+
 ### Ignored Issue Template
 
 ```markdown
@@ -334,12 +311,11 @@ When adding new issues, use this format:
 
 ## Summary
 
-**4 Important issues** remaining (2025-12-29):
+**3 Important issues** remaining (2025-12-29):
 
-1. AsyncModbus close() not awaited - potential resource leaks
-2. Clock drift counters not namespaced - multi-inverter interference
-3. Derived sensor mutates controller privates - encapsulation violation
-4. Service handler discards write results - no failure feedback
+1. Clock drift counters not namespaced - multi-inverter interference
+2. Derived sensor mutates controller privates - encapsulation violation
+3. Service handler discards write results - no failure feedback
 
 **4 Minor issues** remaining:
 
@@ -352,6 +328,9 @@ When adding new issues, use this format:
 - Connect return value ignored - FIXED in [Unreleased]
 - Number entity fire-and-forget writes - FIXED in [Unreleased]
 - Switch entity fire-and-forget writes - FIXED in [Unreleased]
+
+**Moved to Ignored/Deferred:**
+- AsyncModbus close() not awaited - FALSE POSITIVE (close() is synchronous in pymodbus 3.x)
 
 **Assessment:** Production ready with caveats. All 410 tests pass. Issues primarily affect edge cases (offline behavior, frequent reloads, multi-inverter).
 
