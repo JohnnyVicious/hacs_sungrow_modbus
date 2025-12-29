@@ -51,7 +51,6 @@ class SungrowNumberEntity(RestoreNumber, NumberEntity):
         self._attr_native_max_value = sensor.max_value
 
         self._attr_native_step = sensor.step
-        self._attr_step = sensor.step
         self._attr_should_poll = False
         self._attr_entity_registry_enabled_default = sensor.enabled
 

@@ -445,15 +445,14 @@ class TestNumberEntityLimits:
         assert entity._attr_native_max_value == 100
         assert entity._attr_native_step == 5
 
-    def test_step_attribute_matches_native_step(self):
-        """Test step and native_step attributes are consistent."""
+    def test_step_attribute_set_correctly(self):
+        """Test native_step attribute is set correctly from sensor definition."""
         hass = MagicMock()
         hass.data = {DOMAIN: {VALUES: {}}}
         base_sensor = create_mock_base_sensor(step=0.5)
 
         entity = SungrowNumberEntity(hass, base_sensor)
 
-        assert entity._attr_step == 0.5
         assert entity._attr_native_step == 0.5
 
     @pytest.mark.asyncio
